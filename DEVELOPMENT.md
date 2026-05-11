@@ -84,6 +84,20 @@ Without `-Build` the script expects both executables already built.
 
 Output: `artifacts\shadow_frame.txt` (dump file with `RenderFrameDump v1` header).
 
+### D3D11 game shell (standalone, Windows-only)
+
+Standalone D3D11 main-window shell that loads a `RenderFrameDump v1` file and renders it through `D3D11Renderer` in its own Win32 window (1280x720). This is NOT GameApp integration — it does not use raylib, does not link `bs3d_game_support`, and does not activate `--renderer d3d11`.
+
+```powershell
+.\build\ci\Debug\bs3d_d3d11_game_shell.exe --frames 3 --load-frame artifacts\shadow_frame.txt
+```
+
+Or build and run through the capture/replay script:
+
+```powershell
+.\tools\renderframe_capture_replay.ps1 -Preset ci -Build
+```
+
 ## Build folders
 
 Official preset build folders live under `build/`:

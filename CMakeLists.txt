@@ -113,6 +113,15 @@ if(WIN32)
     target_link_libraries(bs3d_d3d11_renderer_smoke PRIVATE bs3d_renderer_d3d11)
     target_include_directories(bs3d_d3d11_renderer_smoke PRIVATE include src/render_d3d11 src/game src/render)
     bs3d_enable_warnings(bs3d_d3d11_renderer_smoke)
+
+    add_executable(bs3d_d3d11_game_shell
+        src/render_d3d11/D3D11GameShell.cpp
+        src/render/RenderFrameDump.cpp
+    )
+
+    target_link_libraries(bs3d_d3d11_game_shell PRIVATE bs3d_renderer_d3d11)
+    target_include_directories(bs3d_d3d11_game_shell PRIVATE include src/render_d3d11 src/render)
+    bs3d_enable_warnings(bs3d_d3d11_game_shell)
 endif()
 
 find_package(Python3 COMPONENTS Interpreter QUIET)

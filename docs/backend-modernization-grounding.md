@@ -205,6 +205,13 @@ Interwał budowania shadow frame jest konfigurowalny przez `--renderframe-shadow
 Runtime renderer nadal jest raylibowy.
 `--renderer d3d11` nadal **nie jest aktywny** w grze.
 
+Backend prep status update: istnieje teraz standalone `bs3d_d3d11_game_shell` (Windows-only, `src/render_d3d11/D3D11GameShell.cpp`).
+Tworzy własne okno Win32 (1280x720), inicjalizuje `D3D11Renderer`, ładuje plik `RenderFrameDump v1`, i renderuje załadowaną ramkę przez zadaną liczbę klatek.
+Jest to eksperymentalny prototyp samodzielnego głównego okna D3D11 — nie jest podłączony do `GameApp`, nie używa raylib, nie linkuje `bs3d_game_support`.
+Nie modyfikuje zachowania runtime gry.
+`--renderer d3d11` nadal **nie jest aktywny** w grze.
+Raylib `GameApp` runtime pozostaje bez zmian.
+
 Backend prep status update: `D3D11Renderer` smoke może teraz konsumować `RenderFrame` zbudowany przez `WorldRenderList`-style extraction (`--extraction-frame`).
 Smoke tworzy lokalne `WorldObject`/`WorldAssetDefinition`, konstruuje `WorldRenderList`, przepuszcza dane przez `RenderExtraction::addWorldRenderListFallbackBoxes(RenderFrameBuilder&)` do `RenderFrameBuilder`, a następnie do `D3D11Renderer`.
 Ścieżka: WorldRenderList-style data → RenderExtraction → RenderFrameBuilder → RenderFrame → D3D11Renderer smoke.

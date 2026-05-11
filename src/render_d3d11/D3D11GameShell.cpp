@@ -1,0 +1,229 @@
+#include "D3D11Renderer.h"
+
+#include "RenderFrameDump.h"
+#include "bs3d/render/RenderFrame.h"
+
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+
+#include <windows.h>
+
+#include <cstdlib>
+#include <iostream>
+#include <stdexcept>
+#include <string>
+
+namespace {
+
+struct ShellOptions {
+    std::string loadFramePath;
+    int frames = 120;
+};
+
+LRESULT CALLBACK shellWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam) {
+    (void)wParam;
+    (void)lParam;
+
+    switch (message) {
+    case WM_CLOSE:
+        DestroyWindow(window);
+        return 0;
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        return 0;
+    default:
+        return DefWindowProcW(window, message, wParam, lParam);
+    }
+}
+
+std::string formatWin32Error(DWORD error) {
+    return std::to_string(static_cast<unsigned long>(error));
+}
+
+int parseNonNegativeInt(const std::string& value, const std::string& optionName) {
+    std::size_t parsed = 0;
+    int result = 0;
+    try {
+        result = std::stoi(value, &parsed);
+    } catch (const std::exception&) {
+        throw std::runtime_error(optionName + " requires a non-negative integer");
+    }
+    if (parsed != value.size() || result < 0) {
+        throw std::runtime_error(optionName + " requires a non-negative integer");
+    }
+    return result;
+}
+
+std::string requireValue(int& index, int argc, char** argv, const std::string& optionName) {
+    if (index + 1 >= argc) {
+        throw std::runtime_error(optionName + " requires a value");
+    }
+    return argv[++index];
+}
+
+ShellOptions parseOptions(int argc, char** argv) {
+    ShellOptions options;
+    for (int index = 1; index < argc; ++index) {
+        const std::string arg = argv[index];
+        if (arg == "--frames") {
+            options.frames = parseNonNegativeInt(requireValue(index, argc, argv, arg), arg);
+        } else if (arg == "--load-frame") {
+            options.loadFramePath = requireValue(index, argc, argv, arg);
+        } else if (arg == "--help") {
+            std::cout << "Usage: bs3d_d3d11_game_shell --load-frame <path> [--frames <count>]\n"
+                      << "\n"
+                      << "Standalone D3D11 main-window shell that loads a RenderFrameDump v1 file\n"
+                      << "and renders it through D3D11Renderer.\n"
+                      << "\n"
+                      << "  --load-frame <path>   required: path to RenderFrameDump v1 text file\n"
+                      << "  --frames <count>      frame count before exit (default 120)\n"
+                      << "  --help                print this message\n";
+            std::exit(0);
+        } else {
+            throw std::runtime_error("unknown option: " + arg);
+        }
+    }
+    return options;
+}
+
+HWND createShellWindow(HINSTANCE instance, int width, int height) {
+    const wchar_t* className = L"BS3DD3D11GameShellWindow";
+
+    WNDCLASSEXW windowClass{};
+    windowClass.cbSize = sizeof(windowClass);
+    windowClass.lpfnWndProc = shellWindowProc;
+    windowClass.hInstance = instance;
+    windowClass.hCursor = LoadCursorW(nullptr, MAKEINTRESOURCEW(32512));
+    windowClass.lpszClassName = className;
+
+    if (RegisterClassExW(&windowClass) == 0) {
+        throw std::runtime_error("RegisterClassExW failed with Win32 error " +
+                                 formatWin32Error(GetLastError()));
+    }
+
+    RECT rect{0, 0, width, height};
+    if (AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, FALSE) == FALSE) {
+        throw std::runtime_error("AdjustWindowRect failed with Win32 error " +
+                                 formatWin32Error(GetLastError()));
+    }
+
+    HWND window = CreateWindowExW(0,
+                                  className,
+                                  L"Blok 13 D3D11 Game Shell",
+                                  WS_OVERLAPPEDWINDOW,
+                                  CW_USEDEFAULT,
+                                  CW_USEDEFAULT,
+                                  rect.right - rect.left,
+                                  rect.bottom - rect.top,
+                                  nullptr,
+                                  nullptr,
+                                  instance,
+                                  nullptr);
+    if (window == nullptr) {
+        throw std::runtime_error("CreateWindowExW failed with Win32 error " +
+                                 formatWin32Error(GetLastError()));
+    }
+
+    ShowWindow(window, SW_SHOW);
+    UpdateWindow(window);
+    std::cout << "window created\n";
+    return window;
+}
+
+bs3d::RenderFrame loadFrame(const std::string& path) {
+    bs3d::RenderFrame frame;
+    std::string error;
+    if (!bs3d::readRenderFrameDump(path, frame, &error)) {
+        throw std::runtime_error("failed to load frame dump " + path + ": " + error);
+    }
+    return frame;
+}
+
+int runShell(const ShellOptions& options) {
+    constexpr int width = 1280;
+    constexpr int height = 720;
+
+    HINSTANCE instance = GetModuleHandleW(nullptr);
+    HWND window = createShellWindow(instance, width, height);
+
+    bs3d::D3D11RendererConfig config;
+    config.window = window;
+    config.width = width;
+    config.height = height;
+#if !defined(NDEBUG)
+    config.enableDebugLayer = true;
+#endif
+
+    bs3d::D3D11Renderer renderer;
+
+    std::string error;
+    if (!renderer.initialize(config, &error)) {
+        if (IsWindow(window) != FALSE) {
+            DestroyWindow(window);
+        }
+        throw std::runtime_error("D3D11Renderer initialize failed: " + error);
+    }
+    std::cout << "D3D11Renderer initialized\n";
+
+    bs3d::RenderFrame frame = loadFrame(options.loadFramePath);
+    std::cout << "loaded frame from " << options.loadFramePath << '\n';
+
+    int renderedFrames = 0;
+    bool running = true;
+    MSG message{};
+    while (running && renderedFrames < options.frames) {
+        while (PeekMessageW(&message, nullptr, 0, 0, PM_REMOVE) != FALSE) {
+            if (message.message == WM_QUIT) {
+                running = false;
+                break;
+            }
+            TranslateMessage(&message);
+            DispatchMessageW(&message);
+        }
+
+        if (!running) {
+            break;
+        }
+
+        if ((GetAsyncKeyState(VK_ESCAPE) & 0x8000) != 0) {
+            DestroyWindow(window);
+            running = false;
+            break;
+        }
+
+        renderer.renderFrame(frame);
+        ++renderedFrames;
+    }
+
+    renderer.shutdown();
+    std::cout << "rendered " << renderedFrames << " frames\n";
+    if (IsWindow(window) != FALSE) {
+        DestroyWindow(window);
+    }
+    std::cout << "shutdown clean\n";
+    return 0;
+}
+
+} // namespace
+
+int main(int argc, char** argv) {
+    try {
+        ShellOptions options = parseOptions(argc, argv);
+
+        if (options.loadFramePath.empty()) {
+            std::cerr << "error: --load-frame is required\n"
+                      << "Usage: bs3d_d3d11_game_shell --load-frame <path> [--frames <count>]\n"
+                      << "Run with --help for more information.\n";
+            return 1;
+        }
+
+        return runShell(options);
+    } catch (const std::exception& ex) {
+        std::cerr << "D3D11 game shell failed: " << ex.what() << '\n';
+        return 1;
+    }
+}
