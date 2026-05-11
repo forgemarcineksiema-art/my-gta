@@ -1,0 +1,97 @@
+{
+  "id": "driving_errand_vertical_slice",
+  "title": "Szybki kurs przez osiedle",
+  "steps": [
+    {
+      "phase": "WalkToShop",
+      "objective": "Sprawdź sklep Zenona na piechotę.",
+      "trigger": "shop_walk_intro"
+    },
+    {
+      "phase": "ReturnToBench",
+      "objective": "Wróć do Bogusia pod blokiem.",
+      "trigger": "npc_return_bogus"
+    },
+    {
+      "phase": "ReachVehicle",
+      "objective": "Wsiądź do auta na parkingu.",
+      "trigger": "player_enters_vehicle"
+    },
+    {
+      "phase": "DriveToShop",
+      "objective": "Podejdź pod sklep Zenona.",
+      "trigger": "vehicle_reaches_shop_marker"
+    },
+    {
+      "phase": "ChaseActive",
+      "objective": "Zgub osiedlowy pościg.",
+      "trigger": "sustained_escape_distance"
+    },
+    {
+      "phase": "ReturnToLot",
+      "objective": "Wróć na parking pod blokiem.",
+      "trigger": "vehicle_reaches_dropoff_marker"
+    }
+  ],
+  "dialogue": [
+    {
+      "phase": "WalkToShop",
+      "speaker": "Boguś",
+      "lineKey": "mission.walk_to_shop",
+      "durationSeconds": 3.0
+    },
+    {
+      "phase": "ReturnToBench",
+      "speaker": "Zenon",
+      "lineKey": "mission.return_to_bogus",
+      "durationSeconds": 3.0
+    },
+    {
+      "phase": "ReachVehicle",
+      "speaker": "Misja",
+      "lineKey": "mission.start_hint",
+      "durationSeconds": 2.4
+    },
+    {
+      "phase": "DriveToShop",
+      "speaker": "Bogus",
+      "lineKey": "mission.bogus_intro",
+      "durationSeconds": 3.0
+    },
+    {
+      "phase": "ChaseActive",
+      "speaker": "Rysiek",
+      "lineKey": "mission.rysiek_chase",
+      "durationSeconds": 3.0
+    }
+  ],
+  "npcReactions": [
+    {
+      "phase": "WalkToShop",
+      "speaker": "Halina",
+      "lineKey": "mission.halina_walk_watch",
+      "durationSeconds": 2.1
+    },
+    {
+      "phase": "DriveToShop",
+      "speaker": "Lolek",
+      "lineKey": "mission.lolek_door_spy",
+      "durationSeconds": 2.2
+    },
+    {
+      "phase": "ChaseActive",
+      "speaker": "Dozorca",
+      "lineKey": "mission.dozer_panic",
+      "durationSeconds": 2.5
+    }
+  ],
+  "cutscenes": [
+    {
+      "cutscene": "Intro",
+      "phase": "DriveToShop",
+      "speaker": "Narrator",
+      "lineKey": "mission.cutscene_shop_hunt",
+      "durationSeconds": 2.8
+    }
+  ]
+}

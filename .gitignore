@@ -1,0 +1,49 @@
+# Build directories
+/build/
+/build-dev/
+/out/
+/artifacts/
+/cmake-build-*/
+
+# CMake generated files
+/CMakeCache.txt
+/CMakeFiles/
+/Testing/
+/compile_commands.json
+/cmake_install.cmake
+/install_manifest.txt
+
+# Visual Studio / IDE
+/.vs/
+/.vscode/
+/.idea/
+*.user
+*.suo
+*.VC.db
+*.VC.opendb
+
+# Python cache
+/.pytest_cache/
+__pycache__/
+*.pyc
+
+# Binary/debug artifacts
+*.obj
+*.o
+*.pdb
+*.ilk
+*.exe
+*.dll
+*.lib
+
+# Logs / temp files
+*.log
+*.tmp
+
+# Local presets and env
+/CMakeUserPresets.json
+.env
+.env.*
+
+# Keep source assets even if they use model extensions
+!data/assets/models/**/*.obj

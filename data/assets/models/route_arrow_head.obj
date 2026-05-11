@@ -1,0 +1,7 @@
+# Flat triangular route arrow head, authored for ground guidance.
+o route_arrow_head
+v 0.00 0.00 0.55
+v -0.50 0.00 -0.45
+v 0.50 0.00 -0.45
+vn 0.000000 1.000000 0.000000
+f 1//1 3//1 2//1

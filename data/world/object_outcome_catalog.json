@@ -1,0 +1,145 @@
+{
+  "schemaVersion": 1,
+  "outcomes": [
+    {
+      "id": "shop_door_checked",
+      "label": "Shop door checked",
+      "source": "object:shop_door_front",
+      "category": "object_use",
+      "location": "Shop",
+      "speaker": "Drzwi",
+      "line": "Klamka chodzi, ale Zenon i tak woli obslugiwac przez spojrzenie.",
+      "missionTag": "shop_entry_probe",
+      "worldEvent": {
+        "type": "PublicNuisance",
+        "intensity": 0.12,
+        "cooldownSeconds": 4.0
+      }
+    },
+    {
+      "id": "shop_rolling_grille_checked",
+      "label": "Shop rolling grille checked",
+      "source": "object:shop_rolling_grille",
+      "category": "object_use",
+      "location": "Shop",
+      "speaker": "Roleta",
+      "line": "Porysowana roleta pamieta wiecej zamkniec niz promocji.",
+      "missionTag": "shop_grille_probe",
+      "worldEvent": {
+        "type": "PublicNuisance",
+        "intensity": 0.14,
+        "cooldownSeconds": 3.5
+      }
+    },
+    {
+      "idPattern": "shop_prices_read_*",
+      "label": "Shop price cards read",
+      "source": "tag:shop_price_card",
+      "category": "object_use",
+      "location": "Shop",
+      "speaker": "Kartka",
+      "line": "Promocja wyglada legalnie, dopoki nie policzysz groszy.",
+      "missionTag": "shop_price_probe"
+    },
+    {
+      "idPattern": "shop_notice_read_*",
+      "label": "Shop notice read",
+      "source": "tag:shop_notice",
+      "category": "object_use",
+      "location": "Shop",
+      "speaker": "Kartka Zenona",
+      "line": "Kartka ma ton urzedowy, ale charakter prywatnej grozby.",
+      "missionTag": "shop_notice_probe"
+    },
+    {
+      "idPattern": "parking_sign_read_*",
+      "label": "Parking sign read",
+      "source": "tag:parking_sign",
+      "category": "object_use",
+      "location": "Parking",
+      "speaker": "Znak",
+      "line": "Znak stojacy tu od lat bardziej zabrania niz pomaga.",
+      "missionTag": "parking_sign_read"
+    },
+    {
+      "id": "block_intercom_buzzed",
+      "label": "Block intercom buzzed",
+      "source": "object:block13_intercom_panel",
+      "category": "object_use",
+      "location": "Block",
+      "speaker": "Domofon",
+      "line": "Trzeszczy tak, jakby caly blok mial zaraz odpowiedziec naraz.",
+      "missionTag": "block_intercom_probe",
+      "worldEvent": {
+        "type": "PublicNuisance",
+        "intensity": 0.2,
+        "cooldownSeconds": 3.0
+      }
+    },
+    {
+      "idPattern": "block_notice_read_*",
+      "label": "Block notice read",
+      "source": "tag:block_notice",
+      "category": "object_use",
+      "location": "Block",
+      "speaker": "Ogloszenie",
+      "line": "Spoldzielnia informuje, ze wszystko jest tymczasowe od lat.",
+      "missionTag": "block_notice_probe"
+    },
+    {
+      "idPattern": "garage_door_checked_*",
+      "label": "Garage door checked",
+      "source": "asset:garage_door_segment",
+      "category": "object_use",
+      "location": "Garage",
+      "speaker": "Garaz",
+      "line": "Blacha trzeszczy. To brzmi jak przyszla robota dla gruza.",
+      "missionTag": "garage_probe",
+      "worldEvent": {
+        "type": "PublicNuisance",
+        "intensity": 0.16,
+        "cooldownSeconds": 3.0
+      }
+    },
+    {
+      "id": "bogus_bench_checked",
+      "label": "Bogus bench checked",
+      "source": "asset:bench",
+      "category": "object_use",
+      "location": "Block",
+      "speaker": "Lawka",
+      "line": "Tu zaczyna sie wiecej spraw, niz powinno sie zaczynac na lawce.",
+      "missionTag": "bench_probe"
+    },
+    {
+      "idPattern": "trash_disturbed_*",
+      "label": "Trash disturbed",
+      "source": "tag:trash_dressing",
+      "category": "object_use",
+      "location": "Trash",
+      "speaker": "Smietnik",
+      "line": "Robi halas wystarczajacy, zeby ktos mial zdanie.",
+      "missionTag": "trash_noise",
+      "worldEvent": {
+        "type": "PublicNuisance",
+        "intensity": 0.18,
+        "cooldownSeconds": 2.5
+      }
+    },
+    {
+      "idPattern": "glass_peeked_*",
+      "label": "Glass peeked through",
+      "source": "tag:glass_surface",
+      "category": "object_use",
+      "location": "Shop",
+      "speaker": "Szyba",
+      "line": "Widac sklep, ceny i powod, zeby jeszcze nie robic sceny.",
+      "missionTag": "glass_peek",
+      "worldEvent": {
+        "type": "ShopTrouble",
+        "intensity": 0.10,
+        "cooldownSeconds": 5.0
+      }
+    }
+  ]
+}

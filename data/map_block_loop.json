@@ -1,0 +1,15 @@
+{
+  "id": "one_block_loop",
+  "spawn": {
+    "player": [-12.0, 0.0, -7.0],
+    "vehicle": [-7.0, 0.0, 9.4],
+    "npc": [-12.0, 0.0, -10.0],
+    "shop": [18.0, 0.0, -18.0],
+    "dropoff": [-12.0, 0.0, -10.0]
+  },
+  "performanceTarget": {
+    "resolution": "1280x720",
+    "fps": 60
+  },
+  "style": "primitive-first low-poly block satire"
+}

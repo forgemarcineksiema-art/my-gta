@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "lines": {
+    "mission.walk_to_shop": "Idź do Zenona i sprawdź, czy sklep jeszcze udaje normalny.",
+    "mission.return_to_bogus": "Powiedz Bogusiowi, że Zenon widzi więcej, niż powinien.",
+    "mission.start_hint": "Teraz wsiądź do gruza z parkingu. Bez pytań.",
+    "mission.bogus_intro": "Dobra, szybki kurs pod sklep i wracamy.",
+    "mission.rysiek_chase": "No i elegancko. Tylko czemu oni za nami jadą.",
+    "mission.halina_walk_watch": "Halina z okna już patrzy, więc idź jak człowiek.",
+    "mission.lolek_door_spy": "Lolek patrzy z boku i daje znak, że ktoś odchodzi w ciemność.",
+    "mission.dozer_panic": "Dozorca dzwoni, że znowu coś głośno jedzie.",
+    "mission.cutscene_shop_hunt": "Wjeżdżasz pod Zenona. Miej oko na siebie."
+  }
+}

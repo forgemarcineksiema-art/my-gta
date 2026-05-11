@@ -1,0 +1,76 @@
+# Development Workflow
+
+Status: LIVE
+Last verified against code: 2026-05-10
+Owner: project workflow
+
+Do not run random `blokowa_satyra.exe` files from Explorer.
+
+Use the checked-in run scripts so the executable path and data root are explicit.
+
+## Daily dev run
+
+```powershell
+.\tools\run_dev.ps1
+```
+
+This uses:
+
+- **Preset:** `dev-tools`
+- **Expected multi-config exe:** `build/dev-tools/Debug/blokowa_satyra.exe`
+- **Fallback single-config exe:** `build/dev-tools/blokowa_satyra.exe`
+- **Data root:** `<repo>/data`
+- **Default game args:** `--data-root <repo>/data --no-load-save`
+
+The script prints absolute root, binary directory, data root, and executable path before launch.
+
+## Release smoke
+
+```powershell
+.\tools\run_release_smoke.ps1
+```
+
+This uses:
+
+- **Preset:** `release`
+- **Expected multi-config exe:** `build/release/Release/blokowa_satyra.exe`
+- **Fallback single-config exe:** `build/release/blokowa_satyra.exe`
+- **Data root:** `<repo>/data`
+- **Default game args:** `--data-root <repo>/data --no-audio --no-save --no-load-save --smoke-frames 3`
+
+## Quality gates
+
+```powershell
+python tools\validate_assets.py data\assets
+python tools\validate_world_contract.py data --asset-root data\assets
+cmake --preset ci
+cmake --build --preset ci
+ctest --preset ci
+.\tools\ci_smoke.ps1 -Preset ci
+```
+
+Or run the combined CI helper:
+
+```powershell
+.\tools\ci_verify.ps1 -Preset ci
+```
+
+## Build folders
+
+Official preset build folders live under `build/`:
+
+- `build/debug`
+- `build/release`
+- `build/dev-tools`
+- `build/ci-core`
+- `build/ci`
+
+`build-dev` is a legacy manual build folder. Do not use it for normal development. After confirming there is nothing local you need inside it, remove it manually with:
+
+```powershell
+Remove-Item -Recurse -Force .\build-dev
+```
+
+## Runtime identity
+
+The game window title and debug HUD show build identity, DevTools status, executable path, and data root. If these do not point to the expected `build/dev-tools` executable and `<repo>/data`, stop and fix the launch path before debugging gameplay.

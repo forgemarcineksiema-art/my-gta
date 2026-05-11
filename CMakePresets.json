@@ -1,0 +1,105 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 25,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "debug",
+      "displayName": "Debug",
+      "binaryDir": "${sourceDir}/build/debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "BS3D_BUILD_GAME": "ON",
+        "BS3D_ENABLE_DEV_TOOLS": "OFF"
+      }
+    },
+    {
+      "name": "release",
+      "displayName": "Release",
+      "binaryDir": "${sourceDir}/build/release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "BS3D_BUILD_GAME": "ON",
+        "BS3D_ENABLE_DEV_TOOLS": "OFF"
+      }
+    },
+    {
+      "name": "dev-tools",
+      "displayName": "Debug With Dev Tools",
+      "binaryDir": "${sourceDir}/build/dev-tools",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "BS3D_BUILD_GAME": "ON",
+        "BS3D_ENABLE_DEV_TOOLS": "ON"
+      }
+    },
+    {
+      "name": "ci-core",
+      "displayName": "CI Core Quality Gate",
+      "binaryDir": "${sourceDir}/build/ci-core",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "BS3D_BUILD_GAME": "OFF",
+        "BS3D_ENABLE_DEV_TOOLS": "OFF"
+      }
+    },
+    {
+      "name": "ci",
+      "displayName": "CI Quality Gate",
+      "binaryDir": "${sourceDir}/build/ci",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "BS3D_BUILD_GAME": "ON",
+        "BS3D_ENABLE_DEV_TOOLS": "OFF"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "debug",
+      "configurePreset": "debug",
+      "configuration": "Debug"
+    },
+    {
+      "name": "release",
+      "configurePreset": "release",
+      "configuration": "Release"
+    },
+    {
+      "name": "dev-tools",
+      "configurePreset": "dev-tools",
+      "configuration": "Debug"
+    },
+    {
+      "name": "ci-core",
+      "configurePreset": "ci-core",
+      "configuration": "Debug"
+    },
+    {
+      "name": "ci",
+      "configurePreset": "ci",
+      "configuration": "Debug"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "ci-core",
+      "configurePreset": "ci-core",
+      "configuration": "Debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "ci",
+      "configurePreset": "ci",
+      "configuration": "Debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ]
+}

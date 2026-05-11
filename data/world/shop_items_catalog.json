@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "shops": [
+    {
+      "id": "zenon_market",
+      "name": "Sklep Zenona",
+      "locationTag": "Blok13",
+      "kind": "spozywczy",
+      "owner": "Zenon",
+      "isOpen": true,
+      "tags": ["grocer", "hero", "interior"]
+    },
+    {
+      "id": "punkt_7",
+      "name": "Sklep Kebabik",
+      "locationTag": "Blok13",
+      "kind": "jadlospozywczy",
+      "owner": "Wes",
+      "isOpen": true,
+      "tags": ["fastFood", "night"]
+    }
+  ],
+  "items": [
+    {
+      "id": "zenon_bread",
+      "shopId": "zenon_market",
+      "name": "Bułka z pasztetem",
+      "category": "food",
+      "price": 18,
+      "currency": "zl",
+      "description": "Klasyczna bułka z kurczakiem i ogórkiem."
+    },
+    {
+      "id": "zenon_juice",
+      "shopId": "zenon_market",
+      "name": "Kawa zimna",
+      "category": "drink",
+      "price": 8,
+      "currency": "zl",
+      "description": "Zimna kawa na szybko."
+    },
+    {
+      "id": "kebab_keb",
+      "shopId": "punkt_7",
+      "name": "Kebab",
+      "category": "food",
+      "price": 22,
+      "currency": "zl",
+      "description": "Ciężki, sycący kebab."
+    },
+    {
+      "id": "kebab_fritki",
+      "shopId": "punkt_7",
+      "name": "Frytki",
+      "category": "side",
+      "price": 12,
+      "currency": "zl",
+      "description": "Duża porcja ziemniaczanych frytek."
+    }
+  ]
+}
+
