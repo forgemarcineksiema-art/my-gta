@@ -2625,12 +2625,33 @@ void GameApp::run(const GameRunOptions& options) {
 
                 if (options.d3d11ShadowDiagnostics) {
                     const auto& d3d11Stats = sidecar.lastD3D11Stats();
+                    int supportedBoxes = 0;
+                    for (const auto& prim : shadowFrame.primitives) {
+                        if (prim.kind != RenderPrimitiveKind::Box) {
+                            continue;
+                        }
+                        if (prim.bucket == RenderBucket::Opaque ||
+                            prim.bucket == RenderBucket::Vehicle ||
+                            prim.bucket == RenderBucket::Decal ||
+                            prim.bucket == RenderBucket::Glass ||
+                            prim.bucket == RenderBucket::Translucent ||
+                            prim.bucket == RenderBucket::Debug) {
+                            ++supportedBoxes;
+                        }
+                    }
+                    const int boxCoveragePct = supportedBoxes > 0
+                        ? (d3d11Stats.drawnBoxes * 100) / supportedBoxes
+                        : 100;
+                    const int lineCoveragePct = stats.debugLines > 0
+                        ? (d3d11Stats.drawnDebugLines * 100) / stats.debugLines
+                        : 100;
                     TraceLog(LOG_INFO,
                              "RenderFrame shadow diag: built=%d submitted=%d prims=%d lines=%d valid=%d "
                              "opaque=%d vehicle=%d decal=%d glass=%d transl=%d debug=%d "
                              "sidecarInit=%d sidecarCalls=%d sidecarValid=%d "
                              "drawnBoxes=%d skipKinds=%d skipBuckets=%d skipPrims=%d "
-                             "drawnLines=%d skipLines=%d",
+                             "drawnLines=%d skipLines=%d "
+                             "supportedBoxes=%d boxCoveragePct=%d lineCoveragePct=%d",
                              shadowFramesBuilt,
                              shadowFramesSubmitted,
                              stats.totalPrimitives,
@@ -2650,7 +2671,10 @@ void GameApp::run(const GameRunOptions& options) {
                              d3d11Stats.skippedUnsupportedBuckets,
                              d3d11Stats.skippedPrimitives,
                              d3d11Stats.drawnDebugLines,
-                             d3d11Stats.skippedDebugLines);
+                             d3d11Stats.skippedDebugLines,
+                             supportedBoxes,
+                             boxCoveragePct,
+                             lineCoveragePct);
                     if (!sidecar.isInitialized() && options.d3d11ShadowWindow) {
                         TraceLog(LOG_WARNING, "RenderFrame shadow diag: sidecar error: %s", sidecar.lastError());
                     }

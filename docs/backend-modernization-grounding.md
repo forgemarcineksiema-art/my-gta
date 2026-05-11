@@ -190,6 +190,7 @@ Sidecar renderuje tylko wspierany podzbiór `RenderFrame` (Box + debug lines) z 
 Zamknięcie okna sidecara (X) wyłącza sidecar bez zamykania głównego okna raylib — game kontynuuje normalne działanie.
 `isCloseRequested()` / `hasError()` umożliwiają inspekcję stanu sidecara.
 Diagnostyka D3D11 shadow zawiera teraz pokrycie rysowania D3D11: `drawnBoxes`, `skippedUnsupportedKinds`, `skippedUnsupportedBuckets`, `skippedPrimitives`, `drawnDebugLines`, `skippedDebugLines`.
+Diagnostyka zawiera teraz współczynniki pokrycia (procentowe): `supportedBoxes` (liczba wspieranych Box prymitywów w shadow frame), `boxCoveragePct` (drawnBoxes / supportedBoxes * 100), `lineCoveragePct` (drawnDebugLines / debugLines * 100).
 Pokrycie D3D11 jest raportowane tylko gdy sidecar jest zainicjalizowany; przy niezainicjalizowanym rendererze wszystkie liczniki są zero.
 `tools/d3d11_shadow_smoke.ps1` automatyzuje weryfikację obu ścieżek shadow sidecar (z i bez okna D3D11).
 `RenderFrameDump` (src/render/RenderFrameDump.h/.cpp) umożliwia zapis/odczyt shadow `RenderFrame` do/z pliku tekstowego. Format to **"RenderFrameDump v1"**: celowo ograniczony (tylko `RenderCamera`, prymitywy `Box` i debug lines). Brak serializacji `Mesh`, `Texture`, `HUD`, materiałów/pipeline'u shaderów. Nagłówek wersji jest wymagany przy odczycie; niepoprawny lub nieobsługiwany nagłówek zwraca błąd. Nieznane wartości `RenderBucket`/`RenderPrimitiveKind` nie są akceptowane przy parsowaniu.
