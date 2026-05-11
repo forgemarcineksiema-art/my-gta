@@ -80,7 +80,7 @@ if(WIN32)
         src/d3d11_spike/D3D11Boot.cpp
     )
 
-    target_link_libraries(bs3d_d3d11_boot PRIVATE d3d11 dxgi)
+    target_link_libraries(bs3d_d3d11_boot PRIVATE d3d11 dxgi d3dcompiler)
     bs3d_enable_warnings(bs3d_d3d11_boot)
 endif()
 

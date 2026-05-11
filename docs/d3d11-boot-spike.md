@@ -6,7 +6,8 @@ Status: standalone Windows-only boot spike.
 
 - **Creates a Win32 window**: opens a 1280x720 window titled `Blok 13 D3D11 Boot Spike`.
 - **Initializes Direct3D 11**: creates an `ID3D11Device`, `ID3D11DeviceContext`, `IDXGISwapChain`, and render target view.
-- **Clears and presents**: clears the back buffer to a visible color, presents the swapchain, and exits after a fixed frame count.
+- **Clears, draws, and presents**: clears the back buffer, draws a hardcoded colored triangle, presents the swapchain, and exits after a fixed frame count.
+- **Compiles in-memory HLSL**: compiles a tiny vertex shader and pixel shader with `D3DCompile`, then creates an input layout and immutable vertex buffer.
 - **Handles basic shutdown**: processes Windows messages and exits on close, destroy, or Escape.
 
 ## What it does not do
@@ -15,7 +16,7 @@ Status: standalone Windows-only boot spike.
 - **No runtime integration**: it is not wired into `GameApp`, `IRenderer`, or `RendererFactory`.
 - **No RenderFrame drawing**: it does not consume `RenderFrame` commands.
 - **No gameplay changes**: the active game runtime remains raylib.
-- **No shader pass**: it does not compile HLSL and does not link `d3dcompiler`.
+- **No production shader system**: it does not load shaders from disk and does not have a material pipeline.
 - **No third-party dependencies**: it uses Win32 and system Direct3D 11 libraries only.
 
 ## Build
@@ -27,7 +28,7 @@ cmake --preset ci
 cmake --build --preset ci --target bs3d_d3d11_boot
 ```
 
-The target is only defined on Windows. It links `d3d11` and `dxgi`, and does not link raylib or `bs3d_game_support`.
+The target is only defined on Windows. It links `d3d11`, `dxgi`, and `d3dcompiler`, and does not link raylib or `bs3d_game_support`.
 
 ## Run
 
@@ -50,4 +51,4 @@ The default frame count is 120:
 .\build\ci\bs3d_d3d11_boot.exe
 ```
 
-Expected logs include window creation, D3D11 device creation, swapchain creation, rendered frame count, and clean shutdown.
+Expected logs include window creation, D3D11 device creation, swapchain creation, triangle pipeline creation, rendered frame count, and clean shutdown.

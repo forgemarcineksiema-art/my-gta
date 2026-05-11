@@ -3,6 +3,7 @@
 #include <windows.h>
 
 #include <d3d11.h>
+#include <d3dcompiler.h>
 #include <dxgi.h>
 
 #if __has_include(<wrl/client.h>)
@@ -13,6 +14,7 @@
 #endif
 
 #include <cstdlib>
+#include <cstring>
 #include <iomanip>
 #include <iostream>
 #include <iterator>
@@ -81,6 +83,16 @@ struct D3D11State {
     ComPtr<ID3D11DeviceContext> context;
     ComPtr<IDXGISwapChain> swapChain;
     ComPtr<ID3D11RenderTargetView> renderTargetView;
+    ComPtr<ID3D11VertexShader> vertexShader;
+    ComPtr<ID3D11PixelShader> pixelShader;
+    ComPtr<ID3D11InputLayout> inputLayout;
+    ComPtr<ID3D11Buffer> vertexBuffer;
+    D3D11_VIEWPORT viewport{};
+};
+
+struct TriangleVertex {
+    float position[3];
+    float color[4];
 };
 
 std::string formatHresult(HRESULT hr) {
@@ -92,6 +104,37 @@ std::string formatHresult(HRESULT hr) {
 
 std::string formatWin32Error(DWORD error) {
     return std::to_string(static_cast<unsigned long>(error));
+}
+
+ComPtr<ID3DBlob> compileShader(const char* source, const char* entryPoint, const char* target) {
+    UINT compileFlags = D3DCOMPILE_ENABLE_STRICTNESS;
+#if !defined(NDEBUG)
+    compileFlags |= D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+#endif
+
+    ComPtr<ID3DBlob> shaderBlob;
+    ComPtr<ID3DBlob> errorBlob;
+    const HRESULT hr = D3DCompile(source,
+                                  std::strlen(source),
+                                  "bs3d_d3d11_boot_triangle",
+                                  nullptr,
+                                  nullptr,
+                                  entryPoint,
+                                  target,
+                                  compileFlags,
+                                  0,
+                                  shaderBlob.GetAddressOf(),
+                                  errorBlob.GetAddressOf());
+    if (FAILED(hr)) {
+        std::string errorText = "no compiler diagnostics";
+        if (errorBlob.Get() != nullptr && errorBlob->GetBufferPointer() != nullptr) {
+            errorText.assign(static_cast<const char*>(errorBlob->GetBufferPointer()), errorBlob->GetBufferSize());
+        }
+        throw std::runtime_error(std::string("D3DCompile failed for ") + entryPoint + " (" + target +
+                                 ") with HRESULT " + formatHresult(hr) + ": " + errorText);
+    }
+
+    return shaderBlob;
 }
 
 int parseNonNegativeInt(const std::string& value, const std::string& optionName) {
@@ -272,14 +315,91 @@ D3D11State createD3D11State(HWND window, int width, int height) {
         throw std::runtime_error("ID3D11Device::CreateRenderTargetView failed with HRESULT " + formatHresult(hr));
     }
 
-    D3D11_VIEWPORT viewport{};
-    viewport.Width = static_cast<float>(width);
-    viewport.Height = static_cast<float>(height);
-    viewport.MinDepth = 0.0f;
-    viewport.MaxDepth = 1.0f;
-    state.context->RSSetViewports(1, &viewport);
+    state.viewport.Width = static_cast<float>(width);
+    state.viewport.Height = static_cast<float>(height);
+    state.viewport.MinDepth = 0.0f;
+    state.viewport.MaxDepth = 1.0f;
 
     return state;
+}
+
+void createTrianglePipeline(D3D11State& state) {
+    const char* shaderSource = R"(
+struct VSInput {
+    float3 position : POSITION;
+    float4 color : COLOR;
+};
+
+struct PSInput {
+    float4 position : SV_Position;
+    float4 color : COLOR;
+};
+
+PSInput VSMain(VSInput input) {
+    PSInput output;
+    output.position = float4(input.position, 1.0f);
+    output.color = input.color;
+    return output;
+}
+
+float4 PSMain(PSInput input) : SV_Target {
+    return input.color;
+}
+)";
+
+    ComPtr<ID3DBlob> vertexShaderBlob = compileShader(shaderSource, "VSMain", "vs_5_0");
+    ComPtr<ID3DBlob> pixelShaderBlob = compileShader(shaderSource, "PSMain", "ps_5_0");
+
+    HRESULT hr = state.device->CreateVertexShader(vertexShaderBlob->GetBufferPointer(),
+                                                  vertexShaderBlob->GetBufferSize(),
+                                                  nullptr,
+                                                  state.vertexShader.GetAddressOf());
+    if (FAILED(hr)) {
+        throw std::runtime_error("ID3D11Device::CreateVertexShader failed with HRESULT " + formatHresult(hr));
+    }
+
+    hr = state.device->CreatePixelShader(pixelShaderBlob->GetBufferPointer(),
+                                         pixelShaderBlob->GetBufferSize(),
+                                         nullptr,
+                                         state.pixelShader.GetAddressOf());
+    if (FAILED(hr)) {
+        throw std::runtime_error("ID3D11Device::CreatePixelShader failed with HRESULT " + formatHresult(hr));
+    }
+
+    const D3D11_INPUT_ELEMENT_DESC inputElements[] = {
+        {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0},
+    };
+    hr = state.device->CreateInputLayout(inputElements,
+                                         static_cast<UINT>(std::size(inputElements)),
+                                         vertexShaderBlob->GetBufferPointer(),
+                                         vertexShaderBlob->GetBufferSize(),
+                                         state.inputLayout.GetAddressOf());
+    if (FAILED(hr)) {
+        throw std::runtime_error("ID3D11Device::CreateInputLayout failed with HRESULT " + formatHresult(hr));
+    }
+
+    const TriangleVertex vertices[] = {
+        {{0.0f, 0.65f, 0.0f}, {1.0f, 0.18f, 0.12f, 1.0f}},
+        {{0.65f, -0.55f, 0.0f}, {0.12f, 0.85f, 0.22f, 1.0f}},
+        {{-0.65f, -0.55f, 0.0f}, {0.16f, 0.45f, 1.0f, 1.0f}},
+    };
+
+    D3D11_BUFFER_DESC vertexBufferDesc{};
+    vertexBufferDesc.ByteWidth = static_cast<UINT>(sizeof(vertices));
+    vertexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
+    vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+
+    D3D11_SUBRESOURCE_DATA vertexData{};
+    vertexData.pSysMem = vertices;
+
+    hr = state.device->CreateBuffer(&vertexBufferDesc, &vertexData, state.vertexBuffer.GetAddressOf());
+    if (FAILED(hr)) {
+        throw std::runtime_error("ID3D11Device::CreateBuffer failed for triangle vertex buffer with HRESULT " +
+                                 formatHresult(hr));
+    }
+
+    std::cout << "triangle pipeline created\n";
 }
 
 int runBootSpike(const BootOptions& options) {
@@ -289,6 +409,7 @@ int runBootSpike(const BootOptions& options) {
     HINSTANCE instance = GetModuleHandleW(nullptr);
     HWND window = createBootWindow(instance, width, height);
     D3D11State d3d11 = createD3D11State(window, width, height);
+    createTrianglePipeline(d3d11);
 
     int renderedFrames = 0;
     bool running = true;
@@ -317,6 +438,17 @@ int runBootSpike(const BootOptions& options) {
         ID3D11RenderTargetView* renderTargetView = d3d11.renderTargetView.Get();
         d3d11.context->OMSetRenderTargets(1, &renderTargetView, nullptr);
         d3d11.context->ClearRenderTargetView(d3d11.renderTargetView.Get(), clearColor);
+        d3d11.context->RSSetViewports(1, &d3d11.viewport);
+
+        ID3D11Buffer* vertexBuffers[] = {d3d11.vertexBuffer.Get()};
+        const UINT strides[] = {sizeof(TriangleVertex)};
+        const UINT offsets[] = {0};
+        d3d11.context->IASetInputLayout(d3d11.inputLayout.Get());
+        d3d11.context->IASetVertexBuffers(0, 1, vertexBuffers, strides, offsets);
+        d3d11.context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        d3d11.context->VSSetShader(d3d11.vertexShader.Get(), nullptr, 0);
+        d3d11.context->PSSetShader(d3d11.pixelShader.Get(), nullptr, 0);
+        d3d11.context->Draw(3, 0);
 
         const HRESULT hr = d3d11.swapChain->Present(1, 0);
         if (FAILED(hr)) {
