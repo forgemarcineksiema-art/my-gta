@@ -2609,11 +2609,13 @@ void GameApp::run(const GameRunOptions& options) {
                 }
 
                 if (options.d3d11ShadowDiagnostics) {
+                    const auto& d3d11Stats = sidecar.lastD3D11Stats();
                     TraceLog(LOG_INFO,
                              "RenderFrame shadow diag: built=%d submitted=%d prims=%d lines=%d valid=%d "
                              "opaque=%d vehicle=%d decal=%d glass=%d transl=%d debug=%d "
-                             "sidecarInit=%d sidecarCalls=%d sidecarValid=%d"
-                             "%s%s",
+                             "sidecarInit=%d sidecarCalls=%d sidecarValid=%d "
+                             "drawnBoxes=%d skipKinds=%d skipBuckets=%d skipPrims=%d "
+                             "drawnLines=%d skipLines=%d",
                              shadowFramesBuilt,
                              shadowFramesSubmitted,
                              stats.totalPrimitives,
@@ -2628,9 +2630,12 @@ void GameApp::run(const GameRunOptions& options) {
                              sidecar.isInitialized() ? 1 : 0,
                              sidecar.isInitialized() ? sidecar.renderCalls() : 0,
                              sidecar.isInitialized() ? (sidecar.lastFrameValid() ? 1 : 0) : 1,
-                             sidecar.isInitialized() ? " drawnBoxes=" : "",
-                             sidecar.isInitialized() ? std::to_string(sidecar.lastD3D11Stats().drawnBoxes).c_str()
-                                                      : "");
+                             d3d11Stats.drawnBoxes,
+                             d3d11Stats.skippedUnsupportedKinds,
+                             d3d11Stats.skippedUnsupportedBuckets,
+                             d3d11Stats.skippedPrimitives,
+                             d3d11Stats.drawnDebugLines,
+                             d3d11Stats.skippedDebugLines);
                     if (!sidecar.isInitialized() && options.d3d11ShadowWindow) {
                         TraceLog(LOG_WARNING, "RenderFrame shadow diag: sidecar error: %s", sidecar.lastError());
                     }
