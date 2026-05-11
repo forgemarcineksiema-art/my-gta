@@ -140,6 +140,7 @@ Przyszłe backendy renderera powinny walidować i podsumowywać `RenderFrame` pr
 Backend spike status update: istnieje teraz samodzielny, Windows-only spike `bs3d_d3d11_boot`.
 Ten target tworzy okno Win32, inicjalizuje Direct3D 11, czyści, rysuje hardcoded triangle, presentuje swapchain przez krótki przebieg i kończy działanie.
 `bs3d_d3d11_boot` potwierdza teraz pierwszą ścieżkę rysowania D3D11: shader, input layout, vertex buffer i draw call dla hardcoded triangle.
+`bs3d_d3d11_boot` potwierdza też minimalną ścieżkę constant-buffer update i transform w shaderze dla tego standalone triangle spike.
 Nie jest podłączony do runtime renderingu, `GameApp`, `IRenderer` ani `RendererFactory`.
 `D3D11Renderer` nadal **nie jest zaimplementowany**.
 Aktywne renderowanie runtime nadal jest raylibowe.

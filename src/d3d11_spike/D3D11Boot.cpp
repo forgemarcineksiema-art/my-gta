@@ -14,6 +14,7 @@
 #endif
 
 #include <cstdlib>
+#include <cmath>
 #include <cstring>
 #include <iomanip>
 #include <iostream>
@@ -87,6 +88,7 @@ struct D3D11State {
     ComPtr<ID3D11PixelShader> pixelShader;
     ComPtr<ID3D11InputLayout> inputLayout;
     ComPtr<ID3D11Buffer> vertexBuffer;
+    ComPtr<ID3D11Buffer> constantBuffer;
     D3D11_VIEWPORT viewport{};
 };
 
@@ -94,6 +96,36 @@ struct TriangleVertex {
     float position[3];
     float color[4];
 };
+
+struct Matrix4 {
+    float values[16];
+};
+
+struct alignas(16) TriangleConstants {
+    // CPU matrices are row-major and consumed by HLSL as mul(row_vector, row_major_matrix).
+    float mvp[16];
+};
+
+static_assert(sizeof(TriangleConstants) % 16 == 0, "D3D11 constant buffers must be 16-byte aligned");
+
+Matrix4 identityMatrix() {
+    return Matrix4{{1.0f, 0.0f, 0.0f, 0.0f,
+                    0.0f, 1.0f, 0.0f, 0.0f,
+                    0.0f, 0.0f, 1.0f, 0.0f,
+                    0.0f, 0.0f, 0.0f, 1.0f}};
+}
+
+Matrix4 zRotationMatrix(float radians) {
+    const float c = std::cos(radians);
+    const float s = std::sin(radians);
+
+    Matrix4 matrix = identityMatrix();
+    matrix.values[0] = c;
+    matrix.values[1] = s;
+    matrix.values[4] = -s;
+    matrix.values[5] = c;
+    return matrix;
+}
 
 std::string formatHresult(HRESULT hr) {
     std::ostringstream out;
@@ -335,9 +367,13 @@ struct PSInput {
     float4 color : COLOR;
 };
 
+cbuffer TransformConstants : register(b0) {
+    row_major float4x4 mvp;
+};
+
 PSInput VSMain(VSInput input) {
     PSInput output;
-    output.position = float4(input.position, 1.0f);
+    output.position = mul(float4(input.position, 1.0f), mvp);
     output.color = input.color;
     return output;
 }
@@ -399,7 +435,36 @@ float4 PSMain(PSInput input) : SV_Target {
                                  formatHresult(hr));
     }
 
+    D3D11_BUFFER_DESC constantBufferDesc{};
+    constantBufferDesc.ByteWidth = static_cast<UINT>(sizeof(TriangleConstants));
+    constantBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+    constantBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+    constantBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+
+    hr = state.device->CreateBuffer(&constantBufferDesc, nullptr, state.constantBuffer.GetAddressOf());
+    if (FAILED(hr)) {
+        throw std::runtime_error("ID3D11Device::CreateBuffer failed for triangle constant buffer with HRESULT " +
+                                 formatHresult(hr));
+    }
+
     std::cout << "triangle pipeline created\n";
+    std::cout << "constant buffer created\n";
+}
+
+void updateTriangleConstants(D3D11State& state, int frameIndex) {
+    TriangleConstants constants{};
+    const Matrix4 mvp = zRotationMatrix(static_cast<float>(frameIndex) * 0.08f);
+    std::memcpy(constants.mvp, mvp.values, sizeof(constants.mvp));
+
+    D3D11_MAPPED_SUBRESOURCE mapped{};
+    const HRESULT hr = state.context->Map(state.constantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+    if (FAILED(hr)) {
+        throw std::runtime_error("ID3D11DeviceContext::Map failed for triangle constant buffer with HRESULT " +
+                                 formatHresult(hr));
+    }
+
+    std::memcpy(mapped.pData, &constants, sizeof(constants));
+    state.context->Unmap(state.constantBuffer.Get(), 0);
 }
 
 int runBootSpike(const BootOptions& options) {
@@ -439,14 +504,17 @@ int runBootSpike(const BootOptions& options) {
         d3d11.context->OMSetRenderTargets(1, &renderTargetView, nullptr);
         d3d11.context->ClearRenderTargetView(d3d11.renderTargetView.Get(), clearColor);
         d3d11.context->RSSetViewports(1, &d3d11.viewport);
+        updateTriangleConstants(d3d11, renderedFrames);
 
         ID3D11Buffer* vertexBuffers[] = {d3d11.vertexBuffer.Get()};
         const UINT strides[] = {sizeof(TriangleVertex)};
         const UINT offsets[] = {0};
+        ID3D11Buffer* constantBuffers[] = {d3d11.constantBuffer.Get()};
         d3d11.context->IASetInputLayout(d3d11.inputLayout.Get());
         d3d11.context->IASetVertexBuffers(0, 1, vertexBuffers, strides, offsets);
         d3d11.context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
         d3d11.context->VSSetShader(d3d11.vertexShader.Get(), nullptr, 0);
+        d3d11.context->VSSetConstantBuffers(0, 1, constantBuffers);
         d3d11.context->PSSetShader(d3d11.pixelShader.Get(), nullptr, 0);
         d3d11.context->Draw(3, 0);
 
