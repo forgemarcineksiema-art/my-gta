@@ -1,5 +1,6 @@
 #include "RenderExtraction.h"
 #include "bs3d/render/IRenderer.h"
+#include "bs3d/render/RenderFrameBuilder.h"
 #include "bs3d/render/RenderFrameValidation.h"
 #include "bs3d/render/WorldRenderList.h"
 
@@ -445,6 +446,180 @@ void recordingRendererConsumesExtractedWorldRenderListFrame() {
            "recording renderer sees translucent bucket fourth");
 }
 
+// ---------- RenderFrameBuilder tests ----------
+
+bs3d::RenderPrimitiveCommand makePrimitive(bs3d::RenderBucket bucket, const std::string& sourceId = "") {
+    bs3d::RenderPrimitiveCommand command;
+    command.bucket = bucket;
+    command.sourceId = sourceId;
+    return command;
+}
+
+void builderEmptyBuildIsValid() {
+    bs3d::RenderFrameBuilder builder;
+    const bs3d::RenderFrame frame = builder.build();
+
+    expect(frame.primitives.empty(), "empty builder builds frame with no primitives");
+    expect(frame.debugLines.empty(), "empty builder builds frame with no debug lines");
+    expect(builder.validate().valid, "empty builder validates successfully");
+}
+
+void builderStoresCameraAndWorldStyle() {
+    bs3d::RenderCamera camera;
+    camera.position = {10.0f, 20.0f, 30.0f};
+    camera.fovy = 60.0f;
+
+    bs3d::WorldPresentationStyle style;
+    style.groundPlaneSize = 99.0f;
+    style.worldCullDistance = 200.0f;
+
+    bs3d::RenderFrameBuilder builder;
+    builder.setCamera(camera).setWorldStyle(style);
+    const bs3d::RenderFrame frame = builder.build();
+
+    expectNear(frame.camera.position.x, 10.0f, 0.001f, "builder stores camera position x");
+    expectNear(frame.camera.position.y, 20.0f, 0.001f, "builder stores camera position y");
+    expectNear(frame.camera.fovy, 60.0f, 0.001f, "builder stores camera fovy");
+    expectNear(frame.worldStyle.groundPlaneSize, 99.0f, 0.001f, "builder stores world style ground plane size");
+    expectNear(frame.worldStyle.worldCullDistance, 200.0f, 0.001f, "builder stores world style cull distance");
+}
+
+void builderReordersPrimitivesIntoProductionOrder() {
+    bs3d::RenderFrameBuilder builder;
+    // Add in deliberately scrambled order.
+    builder.addPrimitive(makePrimitive(bs3d::RenderBucket::Hud, "hud_1"));
+    builder.addPrimitive(makePrimitive(bs3d::RenderBucket::Opaque, "opaque_1"));
+    builder.addPrimitive(makePrimitive(bs3d::RenderBucket::Sky, "sky_1"));
+    builder.addPrimitive(makePrimitive(bs3d::RenderBucket::Translucent, "translucent_1"));
+    builder.addPrimitive(makePrimitive(bs3d::RenderBucket::Vehicle, "vehicle_1"));
+    builder.addPrimitive(makePrimitive(bs3d::RenderBucket::Ground, "ground_1"));
+    builder.addPrimitive(makePrimitive(bs3d::RenderBucket::Debug, "debug_1"));
+    builder.addPrimitive(makePrimitive(bs3d::RenderBucket::Decal, "decal_1"));
+    builder.addPrimitive(makePrimitive(bs3d::RenderBucket::Glass, "glass_1"));
+
+    const bs3d::RenderFrame frame = builder.build();
+
+    expect(frame.primitives.size() == 9, "builder emits all 9 primitives");
+    expect(frame.primitives[0].bucket == bs3d::RenderBucket::Sky, "builder output[0] is Sky");
+    expect(frame.primitives[1].bucket == bs3d::RenderBucket::Ground, "builder output[1] is Ground");
+    expect(frame.primitives[2].bucket == bs3d::RenderBucket::Opaque, "builder output[2] is Opaque");
+    expect(frame.primitives[3].bucket == bs3d::RenderBucket::Vehicle, "builder output[3] is Vehicle");
+    expect(frame.primitives[4].bucket == bs3d::RenderBucket::Decal, "builder output[4] is Decal");
+    expect(frame.primitives[5].bucket == bs3d::RenderBucket::Glass, "builder output[5] is Glass");
+    expect(frame.primitives[6].bucket == bs3d::RenderBucket::Translucent, "builder output[6] is Translucent");
+    expect(frame.primitives[7].bucket == bs3d::RenderBucket::Debug, "builder output[7] is Debug");
+    expect(frame.primitives[8].bucket == bs3d::RenderBucket::Hud, "builder output[8] is Hud");
+
+    expect(bs3d::isRenderFrameBucketOrderValid(frame), "builder output has valid bucket order");
+}
+
+void builderPreservesInsertionOrderInsideBucket() {
+    bs3d::RenderFrameBuilder builder;
+    builder.addPrimitive(makePrimitive(bs3d::RenderBucket::Opaque, "first"));
+    builder.addPrimitive(makePrimitive(bs3d::RenderBucket::Opaque, "second"));
+    builder.addPrimitive(makePrimitive(bs3d::RenderBucket::Opaque, "third"));
+
+    const bs3d::RenderFrame frame = builder.build();
+
+    expect(frame.primitives.size() == 3, "builder emits 3 opaque primitives");
+    expect(frame.primitives[0].sourceId == "first", "builder preserves insertion order: first");
+    expect(frame.primitives[1].sourceId == "second", "builder preserves insertion order: second");
+    expect(frame.primitives[2].sourceId == "third", "builder preserves insertion order: third");
+}
+
+void builderIncludesDebugLines() {
+    bs3d::RenderFrameBuilder builder;
+    builder.addDebugLine({0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, {255, 0, 0, 255});
+    builder.addDebugLine(bs3d::RenderLineCommand{{2.0f, 2.0f, 2.0f}, {3.0f, 3.0f, 3.0f}, {0, 255, 0, 255}});
+
+    const bs3d::RenderFrame frame = builder.build();
+
+    expect(frame.debugLines.size() == 2, "builder includes both debug lines");
+    expectNear(frame.debugLines[0].start.x, 0.0f, 0.001f, "builder debug line 0 start x");
+    expectNear(frame.debugLines[0].end.x, 1.0f, 0.001f, "builder debug line 0 end x");
+    expect(frame.debugLines[0].tint.r == 255 && frame.debugLines[0].tint.g == 0,
+           "builder debug line 0 tint");
+    expectNear(frame.debugLines[1].start.x, 2.0f, 0.001f, "builder debug line 1 start x");
+    expect(frame.debugLines[1].tint.g == 255, "builder debug line 1 tint green");
+}
+
+void builderStatsMatchSummarize() {
+    bs3d::RenderFrameBuilder builder;
+    builder.addPrimitive(makePrimitive(bs3d::RenderBucket::Sky));
+    builder.addPrimitive(makePrimitive(bs3d::RenderBucket::Opaque));
+    builder.addPrimitive(makePrimitive(bs3d::RenderBucket::Opaque));
+    builder.addPrimitive(makePrimitive(bs3d::RenderBucket::Vehicle));
+    builder.addPrimitive(makePrimitive(bs3d::RenderBucket::Hud));
+    builder.addDebugLine({0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {255, 255, 255, 255});
+
+    const bs3d::RenderFrameStats builderStats = builder.stats();
+    const bs3d::RenderFrameStats frameStats = bs3d::summarizeRenderFrame(builder.build());
+
+    expect(builderStats.totalPrimitives == frameStats.totalPrimitives,
+           "builder.stats() totalPrimitives matches summarizeRenderFrame");
+    expect(builderStats.debugLines == frameStats.debugLines,
+           "builder.stats() debugLines matches summarizeRenderFrame");
+    expect(builderStats.sky == frameStats.sky,
+           "builder.stats() sky matches summarizeRenderFrame");
+    expect(builderStats.opaque == frameStats.opaque,
+           "builder.stats() opaque matches summarizeRenderFrame");
+    expect(builderStats.vehicle == frameStats.vehicle,
+           "builder.stats() vehicle matches summarizeRenderFrame");
+    expect(builderStats.hud == frameStats.hud,
+           "builder.stats() hud matches summarizeRenderFrame");
+    expect(builderStats.totalPrimitives == 5, "builder.stats() counts 5 total primitives");
+    expect(builderStats.debugLines == 1, "builder.stats() counts 1 debug line");
+}
+
+void builderValidateSucceedsForBuilderOutput() {
+    bs3d::RenderFrameBuilder builder;
+    builder.addPrimitive(makePrimitive(bs3d::RenderBucket::Hud));
+    builder.addPrimitive(makePrimitive(bs3d::RenderBucket::Sky));
+    builder.addPrimitive(makePrimitive(bs3d::RenderBucket::Opaque));
+
+    const bs3d::RenderFrameValidationResult result = builder.validate();
+    expect(result.valid, "builder.validate() succeeds even when primitives were added in scrambled order");
+    expect(result.message.empty(), "builder.validate() has no error message");
+}
+
+void builderDoesNotRequireBackendTypes() {
+    // This test verifies at compile time that RenderFrameBuilder does not pull
+    // in any GPU, raylib, DirectX, or platform headers.  If it compiles, it
+    // passes.  We also verify that zero-value MeshHandle and MaterialHandle are
+    // accepted.
+    bs3d::RenderPrimitiveCommand command;
+    command.mesh = bs3d::MeshHandle{0};
+    command.material = bs3d::MaterialHandle{0};
+    command.bucket = bs3d::RenderBucket::Opaque;
+
+    bs3d::RenderFrameBuilder builder;
+    builder.addPrimitive(command);
+    const bs3d::RenderFrame frame = builder.build();
+
+    expect(frame.primitives.size() == 1, "builder accepts zero-value handles");
+    expect(frame.primitives[0].mesh.id == 0, "builder preserves zero mesh handle");
+    expect(frame.primitives[0].material.id == 0, "builder preserves zero material handle");
+}
+
+void builderDebugLinesDoNotAffectPrimitiveOrdering() {
+    bs3d::RenderFrameBuilder builder;
+    builder.addPrimitive(makePrimitive(bs3d::RenderBucket::Hud, "hud"));
+    builder.addDebugLine({0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, {255, 255, 255, 255});
+    builder.addPrimitive(makePrimitive(bs3d::RenderBucket::Sky, "sky"));
+    builder.addDebugLine({2.0f, 2.0f, 2.0f}, {3.0f, 3.0f, 3.0f}, {0, 0, 0, 255});
+
+    const bs3d::RenderFrame frame = builder.build();
+
+    expect(frame.primitives.size() == 2, "debug lines do not create extra primitives");
+    expect(frame.primitives[0].bucket == bs3d::RenderBucket::Sky,
+           "debug lines between primitives do not affect ordering: sky first");
+    expect(frame.primitives[1].bucket == bs3d::RenderBucket::Hud,
+           "debug lines between primitives do not affect ordering: hud second");
+    expect(frame.debugLines.size() == 2, "debug lines are still present");
+    expect(bs3d::isRenderFrameBucketOrderValid(frame),
+           "frame with interleaved debug lines has valid bucket order");
+}
+
 } // namespace
 
 int main() {
@@ -465,6 +640,15 @@ int main() {
     emptyRenderFrameValidationSucceeds();
     recordingRendererConsumesEmptyRenderFrame();
     recordingRendererConsumesExtractedWorldRenderListFrame();
+    builderEmptyBuildIsValid();
+    builderStoresCameraAndWorldStyle();
+    builderReordersPrimitivesIntoProductionOrder();
+    builderPreservesInsertionOrderInsideBucket();
+    builderIncludesDebugLines();
+    builderStatsMatchSummarize();
+    builderValidateSucceedsForBuilderOutput();
+    builderDoesNotRequireBackendTypes();
+    builderDebugLinesDoNotAffectPrimitiveOrdering();
     std::cout << "render frame tests passed\n";
     return 0;
 }

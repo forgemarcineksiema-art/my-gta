@@ -111,6 +111,12 @@ Backend prep status update: `WorldRenderList` został przeniesiony do małego, b
 Runtime renderer nadal jest raylibowy.
 D3D11 nadal **nie jest zaimplementowany**.
 
+Backend prep status update: istnieje teraz backend-neutralny `RenderFrameBuilder` (`include/bs3d/render/RenderFrameBuilder.h`).
+`RenderFrameBuilder` akumuluje komendy prymitywów wg bucketu i buduje `RenderFrame` w produkcyjnej kolejności renderowania.
+Jest helperem kontraktowym/testowym — **nie jest render grafem i sam nic nie rysuje**.
+Aktywne renderowanie runtime nadal jest raylibowe.
+D3D11 nadal **nie jest zaimplementowany**.
+
 Backend prep status update: istnieje teraz backend-neutralny interfejs `IRenderer`, który konsumuje `RenderFrame`.
 Testowy `RecordingRenderer` istnieje tylko w testach i zapisuje wyłącznie liczniki komend.
 Aktywne renderowanie runtime nadal przechodzi przez raylibowe `WorldRenderer`, `HudRenderer` i `DebugRenderer`.
