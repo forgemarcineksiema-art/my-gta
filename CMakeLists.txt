@@ -65,6 +65,16 @@ bs3d_enable_warnings(bs3d_tests)
 enable_testing()
 add_test(NAME bs3d_core_tests COMMAND bs3d_tests)
 
+add_executable(bs3d_render_tests
+    tests/render_frame_tests.cpp
+    src/game/RenderExtraction.cpp
+)
+
+target_link_libraries(bs3d_render_tests PRIVATE bs3d_core)
+target_include_directories(bs3d_render_tests PRIVATE include src/game)
+bs3d_enable_warnings(bs3d_render_tests)
+add_test(NAME bs3d_render_frame_tests COMMAND bs3d_render_tests)
+
 find_package(Python3 COMPONENTS Interpreter QUIET)
 if(Python3_Interpreter_FOUND)
     add_test(NAME bs3d_asset_validation
@@ -169,6 +179,7 @@ if(BS3D_BUILD_GAME)
         src/game/PropSimulationSystem.cpp
         src/game/RaylibInputReader.cpp
         src/game/RaylibPlatform.cpp
+        src/game/RenderExtraction.cpp
         src/game/RuntimeMapEditor.cpp
         src/game/GameHudPainter.cpp
         src/game/GameHudLayout.cpp

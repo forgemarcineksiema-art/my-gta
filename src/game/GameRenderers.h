@@ -10,6 +10,7 @@
 #include "bs3d/core/WorldCollision.h"
 #include "bs3d/core/WorldEventLedger.h"
 #include "bs3d/core/WorldRewirPressure.h"
+#include "bs3d/render/RenderTypes.h"
 
 #include "CharacterArtModel.h"
 #include "WorldAssetRegistry.h"
@@ -18,24 +19,6 @@
 #include <vector>
 
 namespace bs3d {
-
-using RenderColor = WorldObjectTint;
-
-struct RenderCamera {
-    Vec3 position{};
-    Vec3 target{};
-    Vec3 up{0.0f, 1.0f, 0.0f};
-    float fovy = 45.0f;
-    int projection = 0;
-};
-
-struct WorldPresentationStyle {
-    RenderColor skyColor{};
-    RenderColor groundColor{};
-    RenderColor horizonHazeColor{};
-    float groundPlaneSize = 78.0f;
-    float worldCullDistance = 140.0f;
-};
 
 const WorldPresentationStyle& defaultWorldPresentationStyle();
 

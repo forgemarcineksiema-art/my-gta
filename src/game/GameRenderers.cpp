@@ -38,7 +38,15 @@ Color toColor(WorldObjectTint tint) {
     return {tint.r, tint.g, tint.b, tint.a};
 }
 
+Color toColor(RenderColor tint) {
+    return {tint.r, tint.g, tint.b, tint.a};
+}
+
 RenderColor toRenderColor(Color tint) {
+    return {tint.r, tint.g, tint.b, tint.a};
+}
+
+RenderColor toRenderColor(WorldObjectTint tint) {
     return {tint.r, tint.g, tint.b, tint.a};
 }
 

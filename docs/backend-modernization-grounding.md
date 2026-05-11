@@ -96,6 +96,11 @@ Backend prep status update: istnieją teraz backend-neutralne interfejsy `IPlatf
 Obecnie jedynymi implementacjami runtime są `RaylibPlatform` i `RaylibInputReader`.
 To nadal **nie oznacza**, że D3D11 ani PhysX są zaimplementowane.
 
+Backend prep status update: istnieje teraz backend-neutralny szkielet `RenderFrame` / listy komend renderu.
+Obecny renderer runtime nadal jest raylibowy i nadal używa istniejących klas `WorldRenderer`, `HudRenderer` i `DebugRenderer`.
+D3D11 nadal **nie jest zaimplementowany**.
+Przyszłe prace nad rendererem powinny konsumować `RenderFrame`, zamiast kopiować raylibowe natychmiastowe wywołania typu `DrawCubeV`, `DrawSphere`, `DrawModelEx` albo stos `rlPushMatrix`.
+
 ## 7) First safe implementation pass (pierwszy bezpieczny pass – rekomendacja)
 
 Następny pass w kodzie (nie w ramach tej dokumentacji) powinien być mały, odwracalny i nie zmieniać zachowania:

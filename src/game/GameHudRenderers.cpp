@@ -28,7 +28,15 @@ HudColor color(unsigned char r, unsigned char g, unsigned char b, unsigned char 
     return {r, g, b, a};
 }
 
+HudColor toHudColor(RenderColor tint) {
+    return {tint.r, tint.g, tint.b, tint.a};
+}
+
 Color toRayColor(RenderColor tint) {
+    return {tint.r, tint.g, tint.b, tint.a};
+}
+
+Color toRayColor(HudColor tint) {
     return {tint.r, tint.g, tint.b, tint.a};
 }
 
@@ -206,7 +214,7 @@ void HudRenderer::drawObjectiveCompass(const HudSnapshot& snapshot) {
 
     HudDrawSink& sink = hudDrawSink();
     const ObjectiveMarker& marker = snapshot.objectiveMarker;
-    const HudColor markerColor = marker.color;
+    const HudColor markerColor = toHudColor(marker.color);
     const HudObjectiveCompassLayout compassLayout = objectiveCompassLayout(snapshot, hudProjection());
 
     if (compassLayout.offscreen) {
