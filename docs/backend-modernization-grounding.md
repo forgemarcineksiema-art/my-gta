@@ -147,6 +147,12 @@ Nie jest podłączony do runtime renderingu, `GameApp`, `IRenderer` ani `Rendere
 `D3D11Renderer` nadal **nie jest zaimplementowany**.
 Aktywne renderowanie runtime nadal jest raylibowe.
 
+Backend spike status update: `bs3d_d3d11_boot` został zrefaktoryzowany z jednego monolitycznego pliku na lokalne moduły spike (D3D11BootMain, D3D11BootWindow, D3D11BootDevice, D3D11BootPipeline).
+Wszystkie typy D3D11 pozostają lokalne w `src/d3d11_spike/` — żaden nie jest wyeksponowany przez publiczne nagłówki silnika.
+Zachowanie spike'a jest identyczne jak przed refaktoryzacją.
+Aktywne renderowanie runtime nadal jest raylibowe.
+`D3D11Renderer` nadal **nie jest zaimplementowany**.
+
 ## 7) First safe implementation pass (pierwszy bezpieczny pass – rekomendacja)
 
 Następny pass w kodzie (nie w ramach tej dokumentacji) powinien być mały, odwracalny i nie zmieniać zachowania:

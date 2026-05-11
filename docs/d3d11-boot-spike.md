@@ -20,6 +20,19 @@ Status: standalone Windows-only boot spike.
 - **No mesh loading or textures**: the draw path is still a hardcoded indexed cube only, with no mesh loader, texture loader, material pipeline, or shader files on disk.
 - **No third-party dependencies**: it uses Win32 and system Direct3D 11 libraries only.
 
+## Source structure
+
+The spike code is split into small local modules under `src/d3d11_spike/`:
+
+| File | Responsibility |
+|---|---|
+| `D3D11BootMain.cpp` | `main()`, option parsing, high-level `runBootSpike()` orchestration and render loop |
+| `D3D11BootWindow.h/.cpp` | Win32 window creation, window proc |
+| `D3D11BootDevice.h/.cpp` | D3D11 device/context/swapchain/RTV creation, depth buffer/depth-stencil state, viewport, COM helpers |
+| `D3D11BootPipeline.h/.cpp` | Shader compilation, cube vertex/index buffer, input layout, constant buffer, transform update |
+
+All types remain local to the spike — no D3D11 types are exposed through public engine headers in `include/bs3d/`.
+
 ## Build
 
 Configure and build the normal CI preset:

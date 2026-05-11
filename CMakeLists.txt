@@ -77,7 +77,10 @@ add_test(NAME bs3d_render_frame_tests COMMAND bs3d_render_tests)
 
 if(WIN32)
     add_executable(bs3d_d3d11_boot
-        src/d3d11_spike/D3D11Boot.cpp
+        src/d3d11_spike/D3D11BootMain.cpp
+        src/d3d11_spike/D3D11BootWindow.cpp
+        src/d3d11_spike/D3D11BootDevice.cpp
+        src/d3d11_spike/D3D11BootPipeline.cpp
     )
 
     target_link_libraries(bs3d_d3d11_boot PRIVATE d3d11 dxgi d3dcompiler)
