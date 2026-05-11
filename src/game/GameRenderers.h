@@ -11,6 +11,7 @@
 #include "bs3d/core/WorldEventLedger.h"
 #include "bs3d/core/WorldRewirPressure.h"
 #include "bs3d/render/RenderTypes.h"
+#include "bs3d/render/WorldRenderList.h"
 
 #include "CharacterArtModel.h"
 #include "WorldAssetRegistry.h"
@@ -310,14 +311,6 @@ struct CharacterRenderOptions {
 
 bool shouldRenderCharacterPart(CharacterPartRole role, CharacterRenderOptions options);
 Vec3 vehicleDriverSeatPosition(Vec3 vehiclePosition, float vehicleYawRadians);
-
-struct WorldRenderList {
-    std::vector<const WorldObject*> opaque;
-    std::vector<const WorldObject*> translucent;
-    std::vector<const WorldObject*> glass;
-    std::vector<const WorldObject*> transparent;
-    int culled = 0;
-};
 
 WorldRenderList buildWorldRenderList(const std::vector<WorldObject>& objects,
                                      const WorldAssetRegistry& registry,

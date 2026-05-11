@@ -106,6 +106,11 @@ To nadal jest eksperymentalna/data-only ścieżka graniczna; aktywny renderer ru
 D3D11 nadal **nie jest zaimplementowany**.
 Ta ekstrakcja jest krokiem pośrednim pod przyszły backend renderera, nie zamianą obecnego renderowania.
 
+Backend prep status update: `WorldRenderList` został przeniesiony do małego, backend-neutralnego nagłówka `include/bs3d/render/WorldRenderList.h`.
+`RenderExtraction` nie zależy już od `GameRenderers.h`.
+Runtime renderer nadal jest raylibowy.
+D3D11 nadal **nie jest zaimplementowany**.
+
 ## 7) First safe implementation pass (pierwszy bezpieczny pass – rekomendacja)
 
 Następny pass w kodzie (nie w ramach tej dokumentacji) powinien być mały, odwracalny i nie zmieniać zachowania:

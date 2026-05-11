@@ -1,5 +1,5 @@
 #include "RenderExtraction.h"
-#include "GameRenderers.h"
+#include "bs3d/render/WorldRenderList.h"
 
 #include "bs3d/render/RenderFrame.h"
 #include "bs3d/render/RenderTypes.h"

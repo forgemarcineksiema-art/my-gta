@@ -1,6 +1,6 @@
 #include "RenderExtraction.h"
 
-#include "GameRenderers.h"
+#include "bs3d/render/WorldRenderList.h"
 
 #include <algorithm>
 #include <string>
