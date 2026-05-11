@@ -1,7 +1,8 @@
 param(
     [string]$Preset = "ci",
     [string]$Configuration = "Debug",
-    [int]$SmokeFrames = 3
+    [int]$SmokeFrames = 3,
+    [switch]$Build
 )
 
 $ErrorActionPreference = "Stop"
@@ -27,7 +28,7 @@ function Resolve-GameExecutable {
     }
 
     $candidateText = ($candidates | ForEach-Object { "  $_" }) -join [Environment]::NewLine
-    throw "Game executable not found. Checked:$([Environment]::NewLine)$candidateText. Run cmake --build --preset $Preset first."
+    throw "Game executable not found. Checked:$([Environment]::NewLine)$candidateText. Run with -Build or: cmake --build --preset $Preset --target blokowa_satyra"
 }
 
 $SourceRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
@@ -43,6 +44,16 @@ if ($ConfigurePreset.cacheVariables.BS3D_BUILD_GAME -eq "OFF") {
 
 $BinaryDir = $ConfigurePreset.binaryDir.Replace('${sourceDir}', $SourceRoot)
 $BinaryDir = [System.IO.Path]::GetFullPath($BinaryDir)
+
+if ($Build) {
+    Write-Host "Building blokowa_satyra (preset $Preset)..."
+    cmake --build --preset $Preset --target blokowa_satyra
+    if ($LASTEXITCODE -ne 0) {
+        throw "Build failed with exit code $LASTEXITCODE"
+    }
+    Write-Host "Build completed"
+}
+
 $ExePath = Resolve-GameExecutable -BinaryDir $BinaryDir -Configuration $Configuration
 
 Write-Host "== Blok 13 D3D11 Shadow Sidecar Smoke =="
