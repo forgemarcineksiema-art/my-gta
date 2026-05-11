@@ -4,6 +4,7 @@
 #include "WorldAssetRegistry.h"
 
 #include "bs3d/render/RenderFrame.h"
+#include "bs3d/render/RenderFrameBuilder.h"
 
 #include <vector>
 
@@ -31,6 +32,10 @@ void addWorldFallbackBox(RenderFrame& frame,
 void addDebugLine(RenderFrame& frame, Vec3 start, Vec3 end, RenderColor tint);
 WorldRenderExtractionStats addWorldRenderListFallbackBoxes(
     RenderFrame& frame,
+    const WorldRenderList& renderList,
+    const std::vector<WorldAssetDefinition>& assetDefinitions);
+WorldRenderExtractionStats addWorldRenderListFallbackBoxes(
+    RenderFrameBuilder& builder,
     const WorldRenderList& renderList,
     const std::vector<WorldAssetDefinition>& assetDefinitions);
 

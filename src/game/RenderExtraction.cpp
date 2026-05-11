@@ -138,6 +138,37 @@ void appendCommands(RenderFrame& frame,
     }
 }
 
+void builderAddFallbackBox(RenderFrameBuilder& builder,
+                           const WorldObject& object,
+                           const WorldAssetDefinition& definition,
+                           RenderBucket bucket) {
+    RenderPrimitiveCommand command;
+    command.kind = RenderPrimitiveKind::Box;
+    command.bucket = bucket;
+    command.transform.position = object.position + definition.visualOffset;
+    command.transform.position.y += definition.fallbackSize.y * object.scale.y * 0.5f;
+    command.transform.scale = object.scale;
+    command.transform.yawRadians = object.yawRadians;
+    command.size = {definition.fallbackSize.x * object.scale.x,
+                    definition.fallbackSize.y * object.scale.y,
+                    definition.fallbackSize.z * object.scale.z};
+    command.tint = object.hasTintOverride ? toRenderColor(object.tintOverride) : toRenderColor(definition.fallbackColor);
+    command.sourceId = object.id;
+    builder.addPrimitive(command);
+}
+
+void builderAppendCommands(RenderFrameBuilder& builder,
+                           const std::vector<WorldRenderExtractionCommandSource>& sources,
+                           RenderBucket bucket,
+                           int& bucketCount,
+                           WorldRenderExtractionStats& stats) {
+    for (const WorldRenderExtractionCommandSource& source : sources) {
+        builderAddFallbackBox(builder, *source.object, *source.definition, bucket);
+        ++bucketCount;
+        ++stats.totalCommands;
+    }
+}
+
 } // namespace
 
 RenderFrame makeEmptyRenderFrame(RenderCamera camera, WorldPresentationStyle style) {
@@ -192,6 +223,31 @@ WorldRenderExtractionStats addWorldRenderListFallbackBoxes(
     appendCommands(frame, decal, RenderBucket::Decal, stats.decalCommands, stats);
     appendCommands(frame, glass, RenderBucket::Glass, stats.glassCommands, stats);
     appendCommands(frame, translucent, RenderBucket::Translucent, stats.translucentCommands, stats);
+    return stats;
+}
+
+WorldRenderExtractionStats addWorldRenderListFallbackBoxes(
+    RenderFrameBuilder& builder,
+    const WorldRenderList& renderList,
+    const std::vector<WorldAssetDefinition>& assetDefinitions) {
+    WorldRenderExtractionStats stats;
+    std::vector<const WorldObject*> seen;
+    std::vector<WorldRenderExtractionCommandSource> opaque;
+    std::vector<WorldRenderExtractionCommandSource> vehicle;
+    std::vector<WorldRenderExtractionCommandSource> decal;
+    std::vector<WorldRenderExtractionCommandSource> glass;
+    std::vector<WorldRenderExtractionCommandSource> translucent;
+
+    addObjectSources(renderList.opaque, assetDefinitions, seen, opaque, vehicle, decal, glass, translucent, stats);
+    addObjectSources(renderList.translucent, assetDefinitions, seen, opaque, vehicle, decal, glass, translucent, stats);
+    addObjectSources(renderList.glass, assetDefinitions, seen, opaque, vehicle, decal, glass, translucent, stats);
+    addObjectSources(renderList.transparent, assetDefinitions, seen, opaque, vehicle, decal, glass, translucent, stats);
+
+    builderAppendCommands(builder, opaque, RenderBucket::Opaque, stats.opaqueCommands, stats);
+    builderAppendCommands(builder, vehicle, RenderBucket::Vehicle, stats.vehicleCommands, stats);
+    builderAppendCommands(builder, decal, RenderBucket::Decal, stats.decalCommands, stats);
+    builderAppendCommands(builder, glass, RenderBucket::Glass, stats.glassCommands, stats);
+    builderAppendCommands(builder, translucent, RenderBucket::Translucent, stats.translucentCommands, stats);
     return stats;
 }
 

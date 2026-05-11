@@ -666,6 +666,169 @@ void builderFrameWithMultipleBoxesAndDebugLinesValidates() {
     expect(bs3d::isRenderFrameBucketOrderValid(frame), "builder smoke frame has valid bucket order");
 }
 
+// ---------- Builder extraction tests ----------
+
+void builderExtractionEmitsExpectedPrimitiveCount() {
+    bs3d::WorldObject obj0;
+    obj0.id = "test_shop";
+    obj0.assetId = "shop_1";
+    obj0.position = {0.0f, 0.0f, 0.0f};
+
+    bs3d::WorldObject obj1;
+    obj1.id = "test_vehicle";
+    obj1.assetId = "vehicle_1";
+    obj1.position = {2.5f, 0.0f, 1.5f};
+
+    bs3d::WorldAssetDefinition shopDef;
+    shopDef.id = "shop_1";
+    shopDef.fallbackSize = {1.0f, 1.0f, 1.0f};
+    shopDef.renderBucket = "Opaque";
+
+    bs3d::WorldAssetDefinition vehicleDef;
+    vehicleDef.id = "vehicle_1";
+    vehicleDef.fallbackSize = {1.0f, 1.0f, 1.0f};
+    vehicleDef.renderBucket = "Vehicle";
+
+    std::vector<bs3d::WorldAssetDefinition> definitions = {shopDef, vehicleDef};
+
+    bs3d::WorldRenderList renderList;
+    renderList.opaque = {&obj0};
+    renderList.transparent = {&obj1};
+
+    bs3d::RenderFrameBuilder builder;
+    const auto stats = bs3d::addWorldRenderListFallbackBoxes(builder, renderList, definitions);
+
+    const bs3d::RenderFrame frame = builder.build();
+
+    expect(frame.primitives.size() == 2, "builder extraction emits 2 primitives");
+    expect(stats.totalCommands == 2, "builder extraction stats records 2 total commands");
+    expect(stats.opaqueCommands == 1, "builder extraction stats records 1 opaque command");
+    expect(stats.vehicleCommands == 1, "builder extraction stats records 1 vehicle command");
+    expect(stats.skippedMissingDefinition == 0, "builder extraction has no missing definitions");
+    expect(stats.skippedDebugOnly == 0, "builder extraction has no DebugOnly skips");
+}
+
+void builderExtractionPreservesBucketOrder() {
+    bs3d::WorldObject obj0;
+    obj0.id = "test_glass";
+    obj0.assetId = "glass_1";
+    obj0.position = {0.0f, 0.0f, 0.0f};
+
+    bs3d::WorldObject obj1;
+    obj1.id = "test_opaque";
+    obj1.assetId = "opaque_1";
+    obj1.position = {1.0f, 0.0f, 0.0f};
+
+    bs3d::WorldObject obj2;
+    obj2.id = "test_vehicle";
+    obj2.assetId = "vehicle_1";
+    obj2.position = {2.0f, 0.0f, 0.0f};
+
+    bs3d::WorldAssetDefinition glassDef;
+    glassDef.id = "glass_1";
+    glassDef.renderBucket = "Glass";
+
+    bs3d::WorldAssetDefinition opaqueDef;
+    opaqueDef.id = "opaque_1";
+    opaqueDef.renderBucket = "Opaque";
+
+    bs3d::WorldAssetDefinition vehicleDef;
+    vehicleDef.id = "vehicle_1";
+    vehicleDef.renderBucket = "Vehicle";
+
+    std::vector<bs3d::WorldAssetDefinition> definitions = {glassDef, opaqueDef, vehicleDef};
+
+    bs3d::WorldRenderList renderList;
+    renderList.opaque = {&obj1};
+    renderList.transparent = {&obj0, &obj2};
+
+    bs3d::RenderFrameBuilder builder;
+    bs3d::addWorldRenderListFallbackBoxes(builder, renderList, definitions);
+
+    const bs3d::RenderFrame frame = builder.build();
+
+    expect(bs3d::isRenderFrameBucketOrderValid(frame),
+           "builder extraction preserves production bucket order");
+    expect(frame.primitives[0].bucket == bs3d::RenderBucket::Opaque,
+           "builder extraction: Opaque before Vehicle before Glass");
+    expect(frame.primitives[1].bucket == bs3d::RenderBucket::Vehicle,
+           "builder extraction: Vehicle second");
+    expect(frame.primitives[2].bucket == bs3d::RenderBucket::Glass,
+           "builder extraction: Glass last");
+}
+
+void builderExtractionCountsMissingDefinitions() {
+    bs3d::WorldObject obj;
+    obj.id = "test_opaque";
+    obj.assetId = "opaque_1";
+    obj.position = {0.0f, 0.0f, 0.0f};
+
+    bs3d::WorldObject objMissing;
+    objMissing.id = "test_missing";
+    objMissing.assetId = "nonexistent_1";
+
+    bs3d::WorldAssetDefinition opaqueDef;
+    opaqueDef.id = "opaque_1";
+    opaqueDef.renderBucket = "Opaque";
+
+    std::vector<bs3d::WorldAssetDefinition> definitions = {opaqueDef};
+
+    bs3d::WorldRenderList renderList;
+    renderList.opaque = {&obj, &objMissing};
+
+    bs3d::RenderFrameBuilder builder;
+    const auto stats = bs3d::addWorldRenderListFallbackBoxes(builder, renderList, definitions);
+
+    expect(stats.skippedMissingDefinition == 1,
+           "builder extraction counts missing definition");
+    expect(stats.totalCommands == 1,
+           "builder extraction only emits one command for the found definition");
+    expect(stats.opaqueCommands == 1,
+           "builder extraction opaque command comes from found definition");
+
+    const bs3d::RenderFrame frame = builder.build();
+    expect(frame.primitives.size() == 1,
+           "builder extraction frame has 1 primitive (missing skipped)");
+}
+
+void builderExtractionSkipsDebugOnly() {
+    bs3d::WorldObject obj;
+    obj.id = "test_opaque";
+    obj.assetId = "opaque_1";
+    obj.position = {0.0f, 0.0f, 0.0f};
+
+    bs3d::WorldObject objDebug;
+    objDebug.id = "test_debug_only";
+    objDebug.assetId = "debug_1";
+
+    bs3d::WorldAssetDefinition opaqueDef;
+    opaqueDef.id = "opaque_1";
+    opaqueDef.renderBucket = "Opaque";
+
+    bs3d::WorldAssetDefinition debugDef;
+    debugDef.id = "debug_1";
+    debugDef.renderBucket = "DebugOnly";
+
+    std::vector<bs3d::WorldAssetDefinition> definitions = {opaqueDef, debugDef};
+
+    bs3d::WorldRenderList renderList;
+    renderList.opaque = {&obj, &objDebug};
+
+    bs3d::RenderFrameBuilder builder;
+    const auto stats = bs3d::addWorldRenderListFallbackBoxes(builder, renderList, definitions);
+
+    expect(stats.skippedDebugOnly == 1,
+           "builder extraction counts DebugOnly skip");
+    expect(stats.totalCommands == 1,
+           "builder extraction only emits one command for non-DebugOnly");
+    expect(stats.opaqueCommands == 1,
+           "builder extraction opaque command not DebugOnly");
+
+    const bs3d::RenderFrame frame = builder.build();
+    expect(frame.primitives.size() == 1,
+           "builder extraction frame has 1 primitive (DebugOnly skipped)");
+}
+
 // ---------- NullRenderer tests ----------
 
 void nullRendererConsumesEmptyRenderFrame() {
@@ -892,6 +1055,54 @@ void d3d11RendererRecordsExpectedStatsForBuilderFrameWhenUninitialized() {
     expect(renderer.lastFrameValid(),
            "D3D11Renderer validates builder smoke frame as valid");
 }
+
+void d3d11RendererRecordsExpectedStatsForExtractionFrameWhenUninitialized() {
+    bs3d::WorldObject obj0;
+    obj0.id = "test_opaque";
+    obj0.assetId = "opaque_1";
+    obj0.position = {0.0f, 0.0f, 0.0f};
+
+    bs3d::WorldObject obj1;
+    obj1.id = "test_vehicle";
+    obj1.assetId = "vehicle_1";
+    obj1.position = {2.0f, 0.0f, 1.0f};
+
+    bs3d::WorldAssetDefinition opaqueDef;
+    opaqueDef.id = "opaque_1";
+    opaqueDef.fallbackSize = {1.0f, 1.0f, 1.0f};
+    opaqueDef.renderBucket = "Opaque";
+
+    bs3d::WorldAssetDefinition vehicleDef;
+    vehicleDef.id = "vehicle_1";
+    vehicleDef.fallbackSize = {1.0f, 1.0f, 1.0f};
+    vehicleDef.renderBucket = "Vehicle";
+
+    std::vector<bs3d::WorldAssetDefinition> definitions = {opaqueDef, vehicleDef};
+
+    bs3d::WorldRenderList renderList;
+    renderList.opaque = {&obj0};
+    renderList.transparent = {&obj1};
+
+    bs3d::RenderFrameBuilder builder;
+    bs3d::addWorldRenderListFallbackBoxes(builder, renderList, definitions);
+    builder.addDebugLine({0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {255, 0, 0, 255});
+
+    bs3d::D3D11Renderer renderer;
+    renderer.renderFrame(builder.build());
+
+    expect(!renderer.isInitialized(), "D3D11Renderer remains uninitialized for extraction frame stats test");
+    expect(renderer.renderCalls() == 1, "D3D11Renderer records render call for extraction frame");
+    expect(renderer.lastStats().totalPrimitives == 2,
+           "D3D11Renderer records 2 primitives from extraction frame");
+    expect(renderer.lastStats().debugLines == 1,
+           "D3D11Renderer records 1 debug line from extraction frame");
+    expect(renderer.lastStats().opaque == 1,
+           "D3D11Renderer records opaque bucket from extraction frame");
+    expect(renderer.lastStats().vehicle == 1,
+           "D3D11Renderer records vehicle bucket from extraction frame");
+    expect(renderer.lastFrameValid(),
+           "D3D11Renderer validates extraction frame as valid");
+}
 #endif
 
 // ---------- RendererFactory tests ----------
@@ -967,6 +1178,10 @@ int main() {
     builderDoesNotRequireBackendTypes();
     builderDebugLinesDoNotAffectPrimitiveOrdering();
     builderFrameWithMultipleBoxesAndDebugLinesValidates();
+    builderExtractionEmitsExpectedPrimitiveCount();
+    builderExtractionPreservesBucketOrder();
+    builderExtractionCountsMissingDefinitions();
+    builderExtractionSkipsDebugOnly();
     nullRendererConsumesEmptyRenderFrame();
     nullRendererConsumesBuilderOutput();
     nullRendererRecordsRenderFrameStats();
@@ -981,6 +1196,7 @@ int main() {
     d3d11RendererRejectsInvalidInitConfigWithoutGpu();
     d3d11RendererRecordsStatsWithNonDefaultCameraWhenUninitialized();
     d3d11RendererRecordsExpectedStatsForBuilderFrameWhenUninitialized();
+    d3d11RendererRecordsExpectedStatsForExtractionFrameWhenUninitialized();
 #endif
     factoryCreatesNullRenderer();
     factoryReturnsErrorForRaylibBackend();

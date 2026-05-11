@@ -149,6 +149,13 @@ Runtime renderer nadal jest raylibowy.
 `GameApp` nadal nie jest podłączony do D3D11.
 `RendererFactory` nie jest podłączony do D3D11.
 
+Backend prep status update: `D3D11Renderer` smoke może teraz konsumować `RenderFrame` zbudowany przez `WorldRenderList`-style extraction (`--extraction-frame`).
+Smoke tworzy lokalne `WorldObject`/`WorldAssetDefinition`, konstruuje `WorldRenderList`, przepuszcza dane przez `RenderExtraction::addWorldRenderListFallbackBoxes(RenderFrameBuilder&)` do `RenderFrameBuilder`, a następnie do `D3D11Renderer`.
+Ścieżka: WorldRenderList-style data → RenderExtraction → RenderFrameBuilder → RenderFrame → D3D11Renderer smoke.
+Runtime renderer nadal jest raylibowy.
+`GameApp` nadal nie jest podłączony do D3D11.
+`RendererFactory`/`BackendKinds` nadal nie są podłączone.
+
 Backend prep status update: istnieje teraz backend-neutralny interfejs `IRenderer`, który konsumuje `RenderFrame`.
 Testowy `RecordingRenderer` istnieje tylko w testach i zapisuje wyłącznie liczniki komend.
 Aktywne renderowanie runtime nadal przechodzi przez raylibowe `WorldRenderer`, `HudRenderer` i `DebugRenderer`.

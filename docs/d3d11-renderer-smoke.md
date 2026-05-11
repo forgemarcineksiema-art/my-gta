@@ -13,6 +13,7 @@ Status: standalone Windows-only smoke executable for the production-facing `D3D1
 - **Optionally draws debug lines**: with `--debug-lines`, submits basic world-space `RenderFrame.debugLines` as one-pixel/default D3D11 `LINELIST` lines.
 - **Optionally uses RenderFrame.camera**: with `--camera`, builds a `RenderFrame` with a non-default `RenderCamera` (eye at `(0, 2, -5)`, target at origin, fovy 60°). This exercises the `D3D11Renderer` camera-based view/projection path instead of the fallback fixed camera.
 - **Optionally builds frame through RenderFrameBuilder**: with `--builder-frame`, constructs a `RenderFrame` using `RenderFrameBuilder` (include/bs3d/render/RenderFrameBuilder.h) instead of manual primitive vector construction. The builder-constructed frame includes 2 Box primitives in supported buckets (Opaque, Vehicle), 3 debug lines, and valid production bucket order. This exercises the render-contract path: RenderFrameBuilder -> RenderFrame -> D3D11Renderer smoke. If `--camera` is combined with `--builder-frame`, a non-default `RenderCamera` is used.
+- **Optionally builds frame through WorldRenderList extraction**: with `--extraction-frame`, constructs local `WorldObject` instances and `WorldAssetDefinition` definitions, builds a `WorldRenderList`, then passes data through `RenderExtraction::addWorldRenderListFallbackBoxes(RenderFrameBuilder&, ...)` into `RenderFrameBuilder`, finally submitting to `D3D11Renderer`. This exercises: WorldRenderList-style data → RenderExtraction → RenderFrameBuilder → RenderFrame → D3D11Renderer smoke. Includes 6 WorldObjects across Opaque, Vehicle, Decal, Glass, missing-definition, and DebugOnly buckets; missing definitions and DebugOnly are skipped/counted. If `--camera` is combined with `--extraction-frame`, a non-default `RenderCamera` (eye at `(0, 4, -8)`, target at `(2, 0, 1)`, fovy 60°) is used.
 - **Exercises tiny Box subset**: `D3D11Renderer` can draw Box primitives for the Opaque, Vehicle, and Debug buckets with a private in-memory shader, cube vertex/index buffers, dynamic constant buffer, and depth-stencil state.
 - **Exercises tiny debug-line subset**: debug lines use a private in-memory shader, input layout, and dynamic vertex buffer, and are currently drawn after boxes through the same depth-tested path.
 - **Exercises shutdown**: calls `D3D11Renderer::shutdown()` before closing the window.
@@ -60,6 +61,8 @@ cmake --build --preset ci --target bs3d_d3d11_renderer_smoke
 .\build\ci\Debug\bs3d_d3d11_renderer_smoke.exe --frames 3 --two-boxes --debug-lines --camera
 .\build\ci\Debug\bs3d_d3d11_renderer_smoke.exe --frames 3 --builder-frame
 .\build\ci\Debug\bs3d_d3d11_renderer_smoke.exe --frames 3 --builder-frame --camera
+.\build\ci\Debug\bs3d_d3d11_renderer_smoke.exe --frames 3 --extraction-frame
+.\build\ci\Debug\bs3d_d3d11_renderer_smoke.exe --frames 3 --extraction-frame --camera
 ```
 
 For single-config generators the executable may be directly under `build\ci`.

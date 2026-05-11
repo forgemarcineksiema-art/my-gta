@@ -1,6 +1,8 @@
 #include "D3D11Renderer.h"
 
+#include "RenderExtraction.h"
 #include "bs3d/render/RenderFrameBuilder.h"
+#include "bs3d/render/WorldRenderList.h"
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -25,6 +27,7 @@ struct SmokeOptions {
     bool drawDebugLines = false;
     bool useCamera = false;
     bool useBuilderFrame = false;
+    bool useExtractionFrame = false;
 };
 
 LRESULT CALLBACK smokeWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam) {
@@ -85,8 +88,10 @@ SmokeOptions parseOptions(int argc, char** argv) {
             options.useCamera = true;
         } else if (arg == "--builder-frame") {
             options.useBuilderFrame = true;
+        } else if (arg == "--extraction-frame") {
+            options.useExtractionFrame = true;
         } else if (arg == "--help") {
-            std::cout << "Usage: bs3d_d3d11_renderer_smoke [--frames <count>] [--box] [--two-boxes] [--debug-lines] [--camera] [--builder-frame]\n";
+            std::cout << "Usage: bs3d_d3d11_renderer_smoke [--frames <count>] [--box] [--two-boxes] [--debug-lines] [--camera] [--builder-frame] [--extraction-frame]\n";
             std::exit(0);
         } else {
             throw std::runtime_error("unknown option: " + arg);
@@ -185,6 +190,106 @@ bs3d::RenderFrame makeSmokeFrame(const SmokeOptions& options, int frameIndex) {
         const auto validationResult = builder.validate();
         if (!validationResult.valid) {
             std::cerr << "RenderFrameBuilder smoke frame validation failed: " << validationResult.message << '\n';
+        }
+
+        return builder.build();
+    }
+
+    if (options.useExtractionFrame) {
+        bs3d::RenderFrameBuilder builder;
+
+        if (options.useCamera) {
+            bs3d::RenderCamera camera;
+            camera.position = {0.0f, 4.0f, -8.0f};
+            camera.target = {2.0f, 0.0f, 1.0f};
+            camera.up = {0.0f, 1.0f, 0.0f};
+            camera.fovy = 60.0f;
+            builder.setCamera(camera);
+        }
+
+        bs3d::WorldObject obj0;
+        obj0.id = "smoke_extraction_shop";
+        obj0.assetId = "shop_1";
+        obj0.position = {0.0f, 0.0f, 0.0f};
+        obj0.scale = {1.0f, 1.0f, 1.0f};
+
+        bs3d::WorldObject obj1;
+        obj1.id = "smoke_extraction_vehicle";
+        obj1.assetId = "vehicle_1";
+        obj1.position = {2.5f, 0.0f, 1.5f};
+        obj1.scale = {1.0f, 1.0f, 1.0f};
+        obj1.yawRadians = 0.3f;
+
+        bs3d::WorldObject obj2;
+        obj2.id = "smoke_extraction_barrier";
+        obj2.assetId = "barrier_1";
+        obj2.position = {1.0f, 0.0f, -2.0f};
+        obj2.scale = {0.8f, 1.0f, 1.2f};
+
+        bs3d::WorldObject obj3;
+        obj3.id = "smoke_extraction_glass";
+        obj3.assetId = "glass_1";
+        obj3.position = {-1.5f, 0.0f, 0.5f};
+        obj3.scale = {1.0f, 1.0f, 1.0f};
+
+        bs3d::WorldObject obj4;
+        obj4.id = "smoke_extraction_missing";
+        obj4.assetId = "nonexistent_asset";
+        obj4.position = {5.0f, 0.0f, 5.0f};
+
+        bs3d::WorldObject obj5;
+        obj5.id = "smoke_extraction_debug_only";
+        obj5.assetId = "debug_only_1";
+        obj5.position = {-3.0f, 0.0f, 3.0f};
+
+        bs3d::WorldAssetDefinition shopDef;
+        shopDef.id = "shop_1";
+        shopDef.fallbackSize = {1.4f, 1.2f, 1.4f};
+        shopDef.fallbackColor = {220, 200, 60, 255};
+        shopDef.renderBucket = "Opaque";
+
+        bs3d::WorldAssetDefinition vehicleDef;
+        vehicleDef.id = "vehicle_1";
+        vehicleDef.fallbackSize = {1.6f, 0.9f, 3.0f};
+        vehicleDef.fallbackColor = {80, 120, 255, 255};
+        vehicleDef.renderBucket = "Vehicle";
+
+        bs3d::WorldAssetDefinition barrierDef;
+        barrierDef.id = "barrier_1";
+        barrierDef.fallbackSize = {1.8f, 0.6f, 0.3f};
+        barrierDef.fallbackColor = {255, 80, 40, 255};
+        barrierDef.renderBucket = "Decal";
+
+        bs3d::WorldAssetDefinition glassDef;
+        glassDef.id = "glass_1";
+        glassDef.fallbackSize = {1.0f, 1.0f, 1.0f};
+        glassDef.fallbackColor = {180, 220, 255, 128};
+        glassDef.renderBucket = "Glass";
+
+        bs3d::WorldAssetDefinition debugOnlyDef;
+        debugOnlyDef.id = "debug_only_1";
+        debugOnlyDef.fallbackSize = {1.0f, 1.0f, 1.0f};
+        debugOnlyDef.fallbackColor = {255, 0, 255, 255};
+        debugOnlyDef.renderBucket = "DebugOnly";
+
+        std::vector<bs3d::WorldAssetDefinition> definitions = {shopDef, vehicleDef, barrierDef, glassDef, debugOnlyDef};
+
+        bs3d::WorldRenderList renderList;
+        renderList.opaque = {&obj0};
+        renderList.translucent = {&obj3};
+        renderList.glass = {};
+        renderList.transparent = {&obj1, &obj2, &obj4, &obj5};
+
+        const auto stats = bs3d::addWorldRenderListFallbackBoxes(builder, renderList, definitions);
+        (void)stats;
+
+        builder.addDebugLine({-3.0f, 0.0f, 0.0f}, {3.0f, 0.0f, 0.0f}, {255, 40, 40, 255});
+        builder.addDebugLine({0.0f, -3.0f, 0.0f}, {0.0f, 3.0f, 0.0f}, {40, 255, 80, 255});
+        builder.addDebugLine({0.0f, 0.0f, -3.0f}, {0.0f, 0.0f, 3.0f}, {80, 140, 255, 255});
+
+        const auto validationResult = builder.validate();
+        if (!validationResult.valid) {
+            std::cerr << "Extraction smoke frame validation failed: " << validationResult.message << '\n';
         }
 
         return builder.build();
