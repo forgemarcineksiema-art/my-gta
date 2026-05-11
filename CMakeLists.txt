@@ -75,6 +75,15 @@ target_include_directories(bs3d_render_tests PRIVATE include src/game)
 bs3d_enable_warnings(bs3d_render_tests)
 add_test(NAME bs3d_render_frame_tests COMMAND bs3d_render_tests)
 
+if(WIN32)
+    add_executable(bs3d_d3d11_boot
+        src/d3d11_spike/D3D11Boot.cpp
+    )
+
+    target_link_libraries(bs3d_d3d11_boot PRIVATE d3d11 dxgi)
+    bs3d_enable_warnings(bs3d_d3d11_boot)
+endif()
+
 find_package(Python3 COMPONENTS Interpreter QUIET)
 if(Python3_Interpreter_FOUND)
     add_test(NAME bs3d_asset_validation

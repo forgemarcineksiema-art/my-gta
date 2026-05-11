@@ -137,6 +137,12 @@ Aktywne renderowanie runtime nadal jest raylibowe.
 D3D11 nadal **nie jest zaimplementowany**.
 Przyszłe backendy renderera powinny walidować i podsumowywać `RenderFrame` przed rysowaniem.
 
+Backend spike status update: istnieje teraz samodzielny, Windows-only spike `bs3d_d3d11_boot`.
+Ten target tworzy okno Win32, inicjalizuje Direct3D 11, czyści/presentuje swapchain przez krótki przebieg i kończy działanie.
+Nie jest podłączony do runtime renderingu, `GameApp`, `IRenderer` ani `RendererFactory`.
+`D3D11Renderer` nadal **nie jest zaimplementowany**.
+Aktywne renderowanie runtime nadal jest raylibowe.
+
 ## 7) First safe implementation pass (pierwszy bezpieczny pass – rekomendacja)
 
 Następny pass w kodzie (nie w ramach tej dokumentacji) powinien być mały, odwracalny i nie zmieniać zachowania:
@@ -196,7 +202,7 @@ A first backend-prep code pass is successful only if:
 | Renderer | Physics | Status |
 |---|---|---|
 | raylib | custom WorldCollision | Implemented / current baseline |
-| d3d11 | custom WorldCollision | Aspirational / planned (NOT implemented) |
+| d3d11 | custom WorldCollision | Standalone boot spike only; production renderer NOT implemented |
 | raylib | physx | Aspirational / planned (NOT implemented) |
 | d3d11 | physx | Aspirational / long-term target (NOT implemented) |
 
