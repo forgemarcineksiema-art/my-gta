@@ -33,6 +33,8 @@ void printHelp(std::ostream& out) {
     out << "Usage: blokowa_satyra [options]\n"
         << "  --data-root <path>       Data catalog root, defaults to data\n"
         << "  --save-path <path>       Save file path\n"
+        << "  --renderer <raylib>      Renderer backend (planned: d3d11, not implemented)\n"
+        << "  --physics <custom>       Physics backend (planned: physx, not implemented)\n"
         << "  --smoke-frames <count>   Exit after count rendered frames\n"
         << "  --no-load-save           Skip loading save at startup\n"
         << "  --no-save                Disable save writes\n"
@@ -64,6 +66,24 @@ int main(int argc, char** argv) {
                 options.dataRoot = requireValue(index, argc, argv, arg);
             } else if (arg == "--save-path") {
                 options.savePath = requireValue(index, argc, argv, arg);
+            } else if (arg == "--renderer") {
+                const std::string value = requireValue(index, argc, argv, arg);
+                if (value == "raylib") {
+                    options.rendererBackend = bs3d::RendererBackendKind::Raylib;
+                } else if (value == "d3d11") {
+                    throw std::runtime_error("Backend planned but not implemented yet: d3d11");
+                } else {
+                    throw std::runtime_error("Unknown renderer backend: " + value);
+                }
+            } else if (arg == "--physics") {
+                const std::string value = requireValue(index, argc, argv, arg);
+                if (value == "custom") {
+                    options.physicsBackend = bs3d::PhysicsBackendKind::Custom;
+                } else if (value == "physx") {
+                    throw std::runtime_error("Backend planned but not implemented yet: physx");
+                } else {
+                    throw std::runtime_error("Unknown physics backend: " + value);
+                }
             } else if (arg == "--smoke-frames") {
                 options.smokeFrames = parseNonNegativeInt(requireValue(index, argc, argv, arg), arg);
             } else {

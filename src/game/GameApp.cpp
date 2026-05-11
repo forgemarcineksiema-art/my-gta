@@ -109,6 +109,8 @@ std::string runtimeWindowTitle(const GameRunOptions& options) {
     std::ostringstream title;
     title << "Blok 13 | " << buildStampText() << " | " << devToolsStatusText() << " | data "
           << resolvedPathText(options.dataRoot);
+    title << " | renderer " << bs3d::rendererBackendName(options.rendererBackend) << " | physics "
+          << bs3d::physicsBackendName(options.physicsBackend);
     if (!options.executablePath.empty()) {
         title << " | exe " << resolvedPathText(options.executablePath);
     }

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "bs3d/backend/BackendKinds.h"
+
 #include <string>
 
 namespace bs3d {
@@ -12,6 +14,8 @@ struct GameRunOptions {
     std::string savePath = "artifacts/savegame_intro.sav";
     std::string executablePath;
     int smokeFrames = 0;
+    RendererBackendKind rendererBackend = RendererBackendKind::Raylib;
+    PhysicsBackendKind physicsBackend = PhysicsBackendKind::Custom;
 };
 
 class GameApp {

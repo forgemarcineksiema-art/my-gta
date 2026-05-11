@@ -80,14 +80,17 @@ To są realne „punkty zaczepienia” do modernizacji, ale **nie kopiujemy ich 
 
 Kierunek modernizacji ma umożliwić w przyszłości wybór backendów, ale **dzisiejsze zachowanie pozostaje bez zmian**.
 
-- **Aspirational (Target interface)**:
-  - `--renderer raylib|d3d11`
-  - `--physics custom|physx`
-- **Implemented (Current behavior)**:
+- **Implemented (Supported values today)**:
   - renderer: `raylib`
   - fizyka: `custom` (`WorldCollision`)
+- **Aspirational (Planned values; NOT implemented)**:
+  - renderer: `d3d11`
+  - fizyka: `physx`
+- **Implemented (Current CLI surface)**:
+  - `--renderer <raylib>` (planned value `d3d11` fails with a clear error)
+  - `--physics <custom>` (planned value `physx` fails with a clear error)
 
-Uwaga: samo pojawienie się flag/konfiguracji nie jest równoznaczne z implementacją D3D11/PhysX.
+Uwaga (explicit): **CLI flags do not mean d3d11/physx are implemented**. To jest tylko plumbing pod przyszłe prace.
 
 ## 7) First safe implementation pass (pierwszy bezpieczny pass – rekomendacja)
 
@@ -148,9 +151,9 @@ A first backend-prep code pass is successful only if:
 | Renderer | Physics | Status |
 |---|---|---|
 | raylib | custom WorldCollision | Implemented / current baseline |
-| d3d11 | custom WorldCollision | Aspirational / planned |
-| raylib | physx | Aspirational / planned spike |
-| d3d11 | physx | Aspirational / long-term target |
+| d3d11 | custom WorldCollision | Aspirational / planned (NOT implemented) |
+| raylib | physx | Aspirational / planned (NOT implemented) |
+| d3d11 | physx | Aspirational / long-term target (NOT implemented) |
 
 ## 12) Do not port raylib mental model into DX11
 

@@ -28,7 +28,6 @@ __pycache__/
 *.pyc
 
 # Binary/debug artifacts
-*.obj
 *.o
 *.pdb
 *.ilk
