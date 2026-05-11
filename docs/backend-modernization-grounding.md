@@ -138,11 +138,11 @@ D3D11 nadal **nie jest zaimplementowany**.
 Przyszłe backendy renderera powinny walidować i podsumowywać `RenderFrame` przed rysowaniem.
 
 Backend spike status update: istnieje teraz samodzielny, Windows-only spike `bs3d_d3d11_boot`.
-Ten target tworzy okno Win32, inicjalizuje Direct3D 11, czyści, rysuje hardcoded triangle, presentuje swapchain przez krótki przebieg i kończy działanie.
-`bs3d_d3d11_boot` potwierdza teraz pierwszą ścieżkę rysowania D3D11: shader, input layout, vertex buffer i draw call dla hardcoded triangle.
-`bs3d_d3d11_boot` potwierdza też minimalną ścieżkę constant-buffer update i transform w shaderze dla tego standalone triangle spike.
+Ten target tworzy okno Win32, inicjalizuje Direct3D 11, czyści, rysuje hardcoded indexed colored cube, presentuje swapchain przez krótki przebieg i kończy działanie.
+`bs3d_d3d11_boot` potwierdza teraz pierwszą ścieżkę rysowania D3D11: shader, input layout, vertex buffer, index buffer i draw call dla hardcoded colored cube.
+`bs3d_d3d11_boot` potwierdza też minimalną ścieżkę constant-buffer update i model/view/projection transform w shaderze dla tego standalone spike.
 `bs3d_d3d11_boot` potwierdza teraz minimalną ścieżkę depth buffer + depth-stencil state (D24_UNORM_S8_UINT, DepthEnable/LESS, clear depth co klatkę).
-`bs3d_d3d11_boot` potwierdza teraz minimalną ścieżkę indexed geometry: vertex buffer + index buffer (uint16_t, TRIANGLELIST) dla hardcoded colored quad.
+`bs3d_d3d11_boot` potwierdza teraz minimalną ścieżkę indexed geometry: vertex buffer + index buffer (uint16_t, TRIANGLELIST) dla hardcoded colored cube.
 Nie jest podłączony do runtime renderingu, `GameApp`, `IRenderer` ani `RendererFactory`.
 `D3D11Renderer` nadal **nie jest zaimplementowany**.
 Aktywne renderowanie runtime nadal jest raylibowe.

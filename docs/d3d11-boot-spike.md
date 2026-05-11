@@ -6,7 +6,7 @@ Status: standalone Windows-only boot spike.
 
 - **Creates a Win32 window**: opens a 1280x720 window titled `Blok 13 D3D11 Boot Spike`.
 - **Initializes Direct3D 11**: creates an `ID3D11Device`, `ID3D11DeviceContext`, `IDXGISwapChain`, and render target view.
-- **Clears, transforms, draws, and presents**: clears the back buffer and depth buffer, updates a tiny constant-buffer MVP transform, draws a hardcoded indexed colored quad with depth testing enabled, presents the swapchain, and exits after a fixed frame count.
+- **Clears, transforms, draws, and presents**: clears the back buffer and depth buffer, updates a tiny constant-buffer model/view/projection transform, draws a hardcoded indexed colored cube with depth testing enabled, presents the swapchain, and exits after a fixed frame count.
 - **Compiles in-memory HLSL**: compiles a tiny vertex shader and pixel shader with `D3DCompile`, then creates an input layout, immutable vertex buffer, immutable index buffer, and dynamic constant buffer.
 - **Handles basic shutdown**: processes Windows messages and exits on close, destroy, or Escape.
 
@@ -17,7 +17,7 @@ Status: standalone Windows-only boot spike.
 - **No RenderFrame drawing**: it does not consume `RenderFrame` commands.
 - **No gameplay changes**: the active game runtime remains raylib.
 - **No production shader system**: it does not load shaders from disk and does not have a material pipeline.
-- **No mesh loading or textures**: the draw path is still a hardcoded indexed quad only.
+- **No mesh loading or textures**: the draw path is still a hardcoded indexed cube only, with no mesh loader, texture loader, material pipeline, or shader files on disk.
 - **No third-party dependencies**: it uses Win32 and system Direct3D 11 libraries only.
 
 ## Build
@@ -52,4 +52,4 @@ The default frame count is 120:
 .\build\ci\bs3d_d3d11_boot.exe
 ```
 
-Expected logs include window creation, D3D11 device creation, swapchain creation, depth buffer creation, indexed quad pipeline creation, constant buffer creation, rendered frame count, and clean shutdown.
+Expected logs include window creation, D3D11 device creation, swapchain creation, depth buffer creation, indexed cube pipeline creation, constant buffer creation, rendered frame count, and clean shutdown.

@@ -120,15 +120,64 @@ Matrix4 identityMatrix() {
                     0.0f, 0.0f, 0.0f, 1.0f}};
 }
 
-Matrix4 zRotationMatrix(float radians) {
+Matrix4 multiplyMatrix(const Matrix4& left, const Matrix4& right) {
+    Matrix4 result{};
+    for (int row = 0; row < 4; ++row) {
+        for (int column = 0; column < 4; ++column) {
+            float value = 0.0f;
+            for (int index = 0; index < 4; ++index) {
+                value += left.values[row * 4 + index] * right.values[index * 4 + column];
+            }
+            result.values[row * 4 + column] = value;
+        }
+    }
+    return result;
+}
+
+Matrix4 translationMatrix(float x, float y, float z) {
+    Matrix4 matrix = identityMatrix();
+    matrix.values[12] = x;
+    matrix.values[13] = y;
+    matrix.values[14] = z;
+    return matrix;
+}
+
+Matrix4 xRotationMatrix(float radians) {
+    const float c = std::cos(radians);
+    const float s = std::sin(radians);
+
+    Matrix4 matrix = identityMatrix();
+    matrix.values[5] = c;
+    matrix.values[6] = s;
+    matrix.values[9] = -s;
+    matrix.values[10] = c;
+    return matrix;
+}
+
+Matrix4 yRotationMatrix(float radians) {
     const float c = std::cos(radians);
     const float s = std::sin(radians);
 
     Matrix4 matrix = identityMatrix();
     matrix.values[0] = c;
-    matrix.values[1] = s;
-    matrix.values[4] = -s;
-    matrix.values[5] = c;
+    matrix.values[2] = -s;
+    matrix.values[8] = s;
+    matrix.values[10] = c;
+    return matrix;
+}
+
+Matrix4 perspectiveMatrix(float verticalFovRadians, float aspectRatio, float nearPlane, float farPlane) {
+    const float yScale = 1.0f / std::tan(verticalFovRadians * 0.5f);
+    const float xScale = yScale / aspectRatio;
+    const float zScale = farPlane / (farPlane - nearPlane);
+    const float zOffset = (-nearPlane * farPlane) / (farPlane - nearPlane);
+
+    Matrix4 matrix{};
+    matrix.values[0] = xScale;
+    matrix.values[5] = yScale;
+    matrix.values[10] = zScale;
+    matrix.values[11] = 1.0f;
+    matrix.values[14] = zOffset;
     return matrix;
 }
 
@@ -153,7 +202,7 @@ ComPtr<ID3DBlob> compileShader(const char* source, const char* entryPoint, const
     ComPtr<ID3DBlob> errorBlob;
     const HRESULT hr = D3DCompile(source,
                                   std::strlen(source),
-                                  "bs3d_d3d11_boot_triangle",
+                                  "bs3d_d3d11_boot_cube",
                                   nullptr,
                                   nullptr,
                                   entryPoint,
@@ -395,7 +444,7 @@ D3D11State createD3D11State(HWND window, int width, int height) {
     return state;
 }
 
-void createQuadPipeline(D3D11State& state) {
+void createCubePipeline(D3D11State& state) {
     const char* shaderSource = R"(
 struct VSInput {
     float3 position : POSITION;
@@ -456,10 +505,14 @@ float4 PSMain(PSInput input) : SV_Target {
     }
 
     const Vertex vertices[] = {
-        {{-0.55f,  0.55f, 0.0f}, {1.0f, 0.18f, 0.12f, 1.0f}},
-        {{ 0.55f,  0.55f, 0.0f}, {0.12f, 0.85f, 0.22f, 1.0f}},
-        {{ 0.55f, -0.55f, 0.0f}, {0.16f, 0.45f, 1.0f, 1.0f}},
-        {{-0.55f, -0.55f, 0.0f}, {0.88f, 0.72f, 0.12f, 1.0f}},
+        {{-0.6f, -0.6f, -0.6f}, {1.0f, 0.10f, 0.08f, 1.0f}},
+        {{-0.6f,  0.6f, -0.6f}, {1.0f, 0.72f, 0.10f, 1.0f}},
+        {{ 0.6f,  0.6f, -0.6f}, {0.12f, 0.86f, 0.20f, 1.0f}},
+        {{ 0.6f, -0.6f, -0.6f}, {0.10f, 0.45f, 1.0f, 1.0f}},
+        {{-0.6f, -0.6f,  0.6f}, {0.90f, 0.12f, 1.0f, 1.0f}},
+        {{-0.6f,  0.6f,  0.6f}, {0.20f, 0.95f, 0.95f, 1.0f}},
+        {{ 0.6f,  0.6f,  0.6f}, {0.92f, 0.92f, 0.92f, 1.0f}},
+        {{ 0.6f, -0.6f,  0.6f}, {0.98f, 0.45f, 0.12f, 1.0f}},
     };
 
     D3D11_BUFFER_DESC vertexBufferDesc{};
@@ -472,11 +525,18 @@ float4 PSMain(PSInput input) : SV_Target {
 
     hr = state.device->CreateBuffer(&vertexBufferDesc, &vertexData, state.vertexBuffer.GetAddressOf());
     if (FAILED(hr)) {
-        throw std::runtime_error("ID3D11Device::CreateBuffer failed for quad vertex buffer with HRESULT " +
+        throw std::runtime_error("ID3D11Device::CreateBuffer failed for cube vertex buffer with HRESULT " +
                                  formatHresult(hr));
     }
 
-    const uint16_t indices[] = {0, 1, 2, 0, 2, 3};
+    const uint16_t indices[] = {
+        0, 1, 2, 0, 2, 3,
+        4, 6, 5, 4, 7, 6,
+        4, 5, 1, 4, 1, 0,
+        3, 2, 6, 3, 6, 7,
+        1, 5, 6, 1, 6, 2,
+        4, 0, 3, 4, 3, 7,
+    };
 
     D3D11_BUFFER_DESC indexBufferDesc{};
     indexBufferDesc.ByteWidth = static_cast<UINT>(sizeof(indices));
@@ -488,7 +548,7 @@ float4 PSMain(PSInput input) : SV_Target {
 
     hr = state.device->CreateBuffer(&indexBufferDesc, &indexData, state.indexBuffer.GetAddressOf());
     if (FAILED(hr)) {
-        throw std::runtime_error("ID3D11Device::CreateBuffer failed for quad index buffer with HRESULT " +
+        throw std::runtime_error("ID3D11Device::CreateBuffer failed for cube index buffer with HRESULT " +
                                  formatHresult(hr));
     }
 
@@ -504,13 +564,19 @@ float4 PSMain(PSInput input) : SV_Target {
                                  formatHresult(hr));
     }
 
-    std::cout << "indexed quad pipeline created\n";
+    std::cout << "indexed cube pipeline created\n";
     std::cout << "constant buffer created\n";
 }
 
-void updateTransformConstants(D3D11State& state, int frameIndex) {
+void updateTransformConstants(D3D11State& state, int frameIndex, float aspectRatio) {
     TransformConstants constants{};
-    const Matrix4 mvp = zRotationMatrix(static_cast<float>(frameIndex) * 0.08f);
+    constexpr float pi = 3.14159265358979323846f;
+    const float frame = static_cast<float>(frameIndex);
+    const Matrix4 model =
+        multiplyMatrix(xRotationMatrix(0.45f + frame * 0.025f), yRotationMatrix(frame * 0.055f));
+    const Matrix4 view = translationMatrix(0.0f, 0.0f, 4.0f);
+    const Matrix4 projection = perspectiveMatrix(65.0f * pi / 180.0f, aspectRatio, 0.1f, 100.0f);
+    const Matrix4 mvp = multiplyMatrix(multiplyMatrix(model, view), projection);
     std::memcpy(constants.mvp, mvp.values, sizeof(constants.mvp));
 
     D3D11_MAPPED_SUBRESOURCE mapped{};
@@ -531,7 +597,7 @@ int runBootSpike(const BootOptions& options) {
     HINSTANCE instance = GetModuleHandleW(nullptr);
     HWND window = createBootWindow(instance, width, height);
     D3D11State d3d11 = createD3D11State(window, width, height);
-    createQuadPipeline(d3d11);
+    createCubePipeline(d3d11);
 
     int renderedFrames = 0;
     bool running = true;
@@ -564,7 +630,7 @@ int runBootSpike(const BootOptions& options) {
         d3d11.context->ClearDepthStencilView(d3d11.depthStencilView.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
         d3d11.context->OMSetDepthStencilState(d3d11.depthStencilState.Get(), 0);
         d3d11.context->RSSetViewports(1, &d3d11.viewport);
-        updateTransformConstants(d3d11, renderedFrames);
+        updateTransformConstants(d3d11, renderedFrames, d3d11.viewport.Width / d3d11.viewport.Height);
 
         ID3D11Buffer* vertexBuffers[] = {d3d11.vertexBuffer.Get()};
         const UINT strides[] = {sizeof(Vertex)};
@@ -577,7 +643,7 @@ int runBootSpike(const BootOptions& options) {
         d3d11.context->VSSetShader(d3d11.vertexShader.Get(), nullptr, 0);
         d3d11.context->VSSetConstantBuffers(0, 1, constantBuffers);
         d3d11.context->PSSetShader(d3d11.pixelShader.Get(), nullptr, 0);
-        d3d11.context->DrawIndexed(6, 0, 0);
+        d3d11.context->DrawIndexed(36, 0, 0);
 
         const HRESULT hr = d3d11.swapChain->Present(1, 0);
         if (FAILED(hr)) {
