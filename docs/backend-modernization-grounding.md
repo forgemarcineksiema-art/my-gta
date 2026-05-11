@@ -117,6 +117,14 @@ Jest helperem kontraktowym/testowym — **nie jest render grafem i sam nic nie r
 Aktywne renderowanie runtime nadal jest raylibowe.
 D3D11 nadal **nie jest zaimplementowany**.
 
+Backend prep status update: istnieje teraz `NullRenderer` (`include/bs3d/render/NullRenderer.h`) jako backend-neutralny no-op/testowy renderer implementujący `IRenderer`.
+`NullRenderer` nie otwiera okna, nie używa GPU i zapisuje statystyki oraz wyniki walidacji każdego skonsumowanego `RenderFrame`.
+Istnieje szkielet `RendererFactory` (`include/bs3d/render/RendererFactory.h`) jako przyszły seam do tworzenia rendererów.
+Aktualnie jedyna działająca ścieżka fabryki to `NullRenderer` (przez `useNullRenderer = true`).
+Raylib `IRenderer` adapter **nie jest zaimplementowany** — legacy runtime nadal używa `WorldRenderer`/`HudRenderer`/`DebugRenderer`.
+D3D11 nadal **nie jest zaimplementowany**.
+Aktywne renderowanie runtime nadal jest raylibowe.
+
 Backend prep status update: istnieje teraz backend-neutralny interfejs `IRenderer`, który konsumuje `RenderFrame`.
 Testowy `RecordingRenderer` istnieje tylko w testach i zapisuje wyłącznie liczniki komend.
 Aktywne renderowanie runtime nadal przechodzi przez raylibowe `WorldRenderer`, `HudRenderer` i `DebugRenderer`.

@@ -1,5 +1,7 @@
 #include "RenderExtraction.h"
 #include "bs3d/render/IRenderer.h"
+#include "bs3d/render/NullRenderer.h"
+#include "bs3d/render/RendererFactory.h"
 #include "bs3d/render/RenderFrameBuilder.h"
 #include "bs3d/render/RenderFrameValidation.h"
 #include "bs3d/render/WorldRenderList.h"
@@ -620,6 +622,124 @@ void builderDebugLinesDoNotAffectPrimitiveOrdering() {
            "frame with interleaved debug lines has valid bucket order");
 }
 
+// ---------- NullRenderer tests ----------
+
+void nullRendererConsumesEmptyRenderFrame() {
+    bs3d::NullRenderer renderer;
+    const bs3d::RenderFrame frame;
+
+    renderer.renderFrame(frame);
+
+    expect(std::string(renderer.backendName()) == "null", "NullRenderer exposes backend name 'null'");
+    expect(renderer.renderCalls() == 1, "NullRenderer records one render call");
+    expect(renderer.lastStats().totalPrimitives == 0, "NullRenderer records zero primitives for empty frame");
+    expect(renderer.lastStats().debugLines == 0, "NullRenderer records zero debug lines for empty frame");
+    expect(renderer.lastFrameValid(), "NullRenderer validates empty frame as valid");
+}
+
+void nullRendererConsumesBuilderOutput() {
+    bs3d::RenderFrameBuilder builder;
+    builder.addPrimitive(makePrimitive(bs3d::RenderBucket::Sky, "sky"));
+    builder.addPrimitive(makePrimitive(bs3d::RenderBucket::Opaque, "opaque"));
+    builder.addPrimitive(makePrimitive(bs3d::RenderBucket::Hud, "hud"));
+    builder.addDebugLine({0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, {255, 255, 255, 255});
+
+    bs3d::NullRenderer renderer;
+    renderer.renderFrame(builder.build());
+
+    expect(renderer.renderCalls() == 1, "NullRenderer consumes builder output");
+    expect(renderer.lastStats().totalPrimitives == 3, "NullRenderer records 3 primitives from builder");
+    expect(renderer.lastStats().debugLines == 1, "NullRenderer records 1 debug line from builder");
+    expect(renderer.lastStats().sky == 1, "NullRenderer records sky bucket from builder");
+    expect(renderer.lastStats().opaque == 1, "NullRenderer records opaque bucket from builder");
+    expect(renderer.lastStats().hud == 1, "NullRenderer records hud bucket from builder");
+}
+
+void nullRendererRecordsRenderFrameStats() {
+    bs3d::NullRenderer renderer;
+    bs3d::RenderFrame frame;
+    frame.primitives.push_back({bs3d::RenderPrimitiveKind::Box, bs3d::RenderBucket::Opaque});
+    frame.primitives.push_back({bs3d::RenderPrimitiveKind::Sphere, bs3d::RenderBucket::Vehicle});
+    bs3d::addDebugLine(frame, {0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {255, 255, 255, 255});
+
+    renderer.renderFrame(frame);
+
+    expect(renderer.lastStats().totalPrimitives == 2, "NullRenderer stats counts 2 primitives");
+    expect(renderer.lastStats().debugLines == 1, "NullRenderer stats counts 1 debug line");
+    expect(renderer.lastStats().opaque == 1, "NullRenderer stats counts opaque");
+    expect(renderer.lastStats().vehicle == 1, "NullRenderer stats counts vehicle");
+}
+
+void nullRendererRecordsValidationSuccessForValidFrames() {
+    bs3d::RenderFrameBuilder builder;
+    builder.addPrimitive(makePrimitive(bs3d::RenderBucket::Hud));
+    builder.addPrimitive(makePrimitive(bs3d::RenderBucket::Sky));
+
+    bs3d::NullRenderer renderer;
+    renderer.renderFrame(builder.build());
+
+    expect(renderer.lastFrameValid(), "NullRenderer records validation success for valid builder frame");
+    expect(renderer.lastValidation().valid, "NullRenderer lastValidation reports valid");
+    expect(renderer.lastValidation().message.empty(), "NullRenderer lastValidation has no error for valid frame");
+}
+
+void nullRendererRecordsValidationFailureForInvalidBucketOrder() {
+    bs3d::RenderFrame frame;
+    frame.primitives.push_back({bs3d::RenderPrimitiveKind::Box, bs3d::RenderBucket::Hud});
+    frame.primitives.push_back({bs3d::RenderPrimitiveKind::Box, bs3d::RenderBucket::Sky});
+
+    bs3d::NullRenderer renderer;
+    renderer.renderFrame(frame);
+
+    expect(!renderer.lastFrameValid(), "NullRenderer records validation failure for invalid bucket order");
+    expect(!renderer.lastValidation().valid, "NullRenderer lastValidation reports invalid");
+    expect(renderer.lastValidation().message.find("Sky") != std::string::npos,
+           "NullRenderer validation message names the out-of-order bucket");
+}
+
+// ---------- RendererFactory tests ----------
+
+void factoryCreatesNullRenderer() {
+    bs3d::RendererFactoryRequest request;
+    request.useNullRenderer = true;
+
+    bs3d::RendererFactoryResult result = bs3d::createRenderer(request);
+
+    expect(result.ok(), "factory returns ok for NullRenderer request");
+    expect(result.renderer != nullptr, "factory returns non-null renderer");
+    expect(result.error.empty(), "factory returns no error for NullRenderer request");
+    expect(std::string(result.renderer->backendName()) == "null",
+           "factory-created renderer has backend name 'null'");
+}
+
+void factoryReturnsErrorForRaylibBackend() {
+    bs3d::RendererFactoryRequest request;
+    request.backend = bs3d::RendererBackendKind::Raylib;
+    request.useNullRenderer = false;
+
+    bs3d::RendererFactoryResult result = bs3d::createRenderer(request);
+
+    expect(!result.ok(), "factory returns not-ok for Raylib without null override");
+    expect(result.renderer == nullptr, "factory returns null renderer for Raylib request");
+    expect(!result.error.empty(), "factory returns error message for Raylib request");
+    expect(result.error.find("not implemented") != std::string::npos,
+           "factory error mentions 'not implemented'");
+    expect(result.error.find("WorldRenderer") != std::string::npos
+           || result.error.find("legacy") != std::string::npos,
+           "factory error references legacy runtime path");
+}
+
+void factoryDoesNotPretendRaylibAdapterExists() {
+    bs3d::RendererFactoryRequest request;
+    request.backend = bs3d::RendererBackendKind::Raylib;
+    request.useNullRenderer = false;
+
+    bs3d::RendererFactoryResult result = bs3d::createRenderer(request);
+
+    expect(result.renderer == nullptr, "factory does not return a fake Raylib IRenderer adapter");
+    expect(!result.ok(), "factory does not pretend Raylib IRenderer adapter is available");
+}
+
 } // namespace
 
 int main() {
@@ -649,6 +769,14 @@ int main() {
     builderValidateSucceedsForBuilderOutput();
     builderDoesNotRequireBackendTypes();
     builderDebugLinesDoNotAffectPrimitiveOrdering();
+    nullRendererConsumesEmptyRenderFrame();
+    nullRendererConsumesBuilderOutput();
+    nullRendererRecordsRenderFrameStats();
+    nullRendererRecordsValidationSuccessForValidFrames();
+    nullRendererRecordsValidationFailureForInvalidBucketOrder();
+    factoryCreatesNullRenderer();
+    factoryReturnsErrorForRaylibBackend();
+    factoryDoesNotPretendRaylibAdapterExists();
     std::cout << "render frame tests passed\n";
     return 0;
 }
