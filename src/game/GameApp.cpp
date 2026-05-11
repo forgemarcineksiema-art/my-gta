@@ -2561,7 +2561,7 @@ void GameApp::run(const GameRunOptions& options) {
 
             ++renderedFrames;
 
-            if (options.renderFrameShadow && (renderedFrames == 1 || renderedFrames % 120 == 0)) {
+            if (options.renderFrameShadow && (renderedFrames == 1 || renderedFrames % options.renderFrameShadowInterval == 0)) {
                 const RuntimeRenderSnapshot& renderSnapshot = runtime.currentRenderSnapshot;
                 const Vec3 cameraPos{renderSnapshot.camera.position.x,
                                      renderSnapshot.camera.position.y,

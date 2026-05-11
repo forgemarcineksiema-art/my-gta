@@ -13,6 +13,7 @@ struct GameRunOptions {
     bool renderFrameShadow = false;
     bool d3d11ShadowWindow = false;
     bool d3d11ShadowDiagnostics = false;
+    int renderFrameShadowInterval = 120;
     std::string dataRoot = "data";
     std::string savePath = "artifacts/savegame_intro.sav";
     std::string executablePath;

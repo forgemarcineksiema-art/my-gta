@@ -191,6 +191,7 @@ Na non-Windows flaga jest akceptowana ale sidecar zwraca błąd "Windows-only" i
 `--d3d11-shadow-diagnostics` rozszerza log o szczegółowe statystyki bucketa (opaque/vehicle/decal/glass/translucent/debug), status inicjalizacji sidecara, renderCalls i lastFrameValid.
 Diagnostics loguje PO sidecar.submit(), więc sidecarCalls/lastFrameValid odzwierciedlają właśnie wysłaną ramkę.
 Log zawiera też liczniki built/submitted shadow frames.
+Interwał budowania shadow frame jest konfigurowalny przez `--renderframe-shadow-interval <count>` (domyślnie 120, minimum 1).
 Runtime renderer nadal jest raylibowy.
 `--renderer d3d11` nadal **nie jest aktywny** w grze.
 
