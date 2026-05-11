@@ -36,7 +36,6 @@ LRESULT CALLBACK shadowSidecarWindowProc(HWND window, UINT message, WPARAM wPara
         DestroyWindow(window);
         return 0;
     case WM_DESTROY:
-        PostQuitMessage(0);
         return 0;
     default:
         return DefWindowProcW(window, message, wParam, lParam);
@@ -89,6 +88,7 @@ struct D3D11ShadowSidecar::Impl {
     std::unique_ptr<IRenderer> factoryOwned;
     std::string error;
     bool initialized = false;
+    bool closeRequested = false;
 };
 
 D3D11ShadowSidecar::D3D11ShadowSidecar() : impl_(std::make_unique<Impl>()) {}
@@ -167,10 +167,19 @@ void D3D11ShadowSidecar::shutdown() {
         impl_->window = nullptr;
     }
     impl_->initialized = false;
+    impl_->closeRequested = false;
 }
 
 bool D3D11ShadowSidecar::isInitialized() const {
     return impl_->initialized;
+}
+
+bool D3D11ShadowSidecar::isCloseRequested() const {
+    return impl_->closeRequested;
+}
+
+bool D3D11ShadowSidecar::hasError() const {
+    return !impl_->error.empty();
 }
 
 void D3D11ShadowSidecar::submit(const RenderFrame& frame) {
@@ -193,6 +202,11 @@ void D3D11ShadowSidecar::pumpMessages() {
     while (PeekMessageW(&message, impl_->window, 0, 0, PM_REMOVE) != FALSE) {
         TranslateMessage(&message);
         DispatchMessageW(&message);
+    }
+    if (IsWindow(impl_->window) == FALSE) {
+        impl_->window = nullptr;
+        impl_->closeRequested = true;
+        impl_->initialized = false;
     }
 }
 
@@ -228,14 +242,17 @@ namespace bs3d {
 struct D3D11ShadowSidecar::Impl {
     std::string error = "D3D11 shadow sidecar is Windows-only";
     bool initialized = false;
+    bool closeRequested = false;
 };
 
 D3D11ShadowSidecar::D3D11ShadowSidecar() : impl_(std::make_unique<Impl>()) {}
 D3D11ShadowSidecar::~D3D11ShadowSidecar() = default;
 
 bool D3D11ShadowSidecar::initialize() { impl_->error = "D3D11 shadow sidecar is Windows-only"; return false; }
-void D3D11ShadowSidecar::shutdown() {}
+void D3D11ShadowSidecar::shutdown() { impl_->closeRequested = false; }
 bool D3D11ShadowSidecar::isInitialized() const { return false; }
+bool D3D11ShadowSidecar::isCloseRequested() const { return false; }
+bool D3D11ShadowSidecar::hasError() const { return true; }
 void D3D11ShadowSidecar::submit(const RenderFrame&) {}
 const char* D3D11ShadowSidecar::lastError() const { return impl_->error.c_str(); }
 void D3D11ShadowSidecar::pumpMessages() {}

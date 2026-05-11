@@ -187,6 +187,8 @@ Po włączeniu, `GameApp` otwiera osobne okno Win32 (640x360, "Blok 13 D3D11 Sha
 Główne renderowanie raylib pozostaje bez zmian; D3D11 nie zastępuje `GameApp` renderingu.
 Sidecar renderuje tylko wspierany podzbiór `RenderFrame` (Box + debug lines) z danych `WorldRenderList`.
 `D3D11ShadowSidecar` jest prywatnym helperem w `src/game/`; nie wystawia typów D3D11/Win32 w publicznych nagłówkach.
+Zamknięcie okna sidecara (X) wyłącza sidecar bez zamykania głównego okna raylib — game kontynuuje normalne działanie.
+`isCloseRequested()` / `hasError()` umożliwiają inspekcję stanu sidecara.
 Na non-Windows flaga jest akceptowana ale sidecar zwraca błąd "Windows-only" i kontynuuje działanie gry.
 `--d3d11-shadow-diagnostics` rozszerza log o szczegółowe statystyki bucketa (opaque/vehicle/decal/glass/translucent/debug), status inicjalizacji sidecara, renderCalls i lastFrameValid.
 Diagnostics loguje PO sidecar.submit(), więc sidecarCalls/lastFrameValid odzwierciedlają właśnie wysłaną ramkę.

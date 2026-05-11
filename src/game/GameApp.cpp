@@ -2532,6 +2532,7 @@ void GameApp::run(const GameRunOptions& options) {
         int renderedFrames = 0;
         int shadowFramesBuilt = 0;
         int shadowFramesSubmitted = 0;
+        bool sidecarCloseLogged = false;
 
         D3D11ShadowSidecar sidecar;
         if (options.d3d11ShadowWindow) {
@@ -2634,6 +2635,12 @@ void GameApp::run(const GameRunOptions& options) {
 
             if (sidecar.isInitialized()) {
                 sidecar.pumpMessages();
+            }
+
+            if (sidecar.isCloseRequested() && !sidecarCloseLogged) {
+                sidecarCloseLogged = true;
+                sidecar.shutdown();
+                TraceLog(LOG_INFO, "D3D11 shadow sidecar closed; continuing raylib runtime");
             }
 
             if (options.smokeFrames > 0 && renderedFrames >= options.smokeFrames) {

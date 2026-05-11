@@ -24,6 +24,8 @@ public:
     bool initialize();
     void shutdown();
     bool isInitialized() const;
+    bool isCloseRequested() const;
+    bool hasError() const;
     void submit(const RenderFrame& frame);
     const char* lastError() const;
 
