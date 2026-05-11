@@ -1,4 +1,5 @@
 #include "RenderExtraction.h"
+#include "bs3d/render/IRenderer.h"
 #include "bs3d/render/WorldRenderList.h"
 
 #include "bs3d/render/RenderFrame.h"
@@ -25,6 +26,76 @@ void expectNear(float actual, float expected, float epsilon, const std::string& 
         std::exit(1);
     }
 }
+
+class RecordingRenderer : public bs3d::IRenderer {
+public:
+    const char* backendName() const override {
+        return "recording";
+    }
+
+    void renderFrame(const bs3d::RenderFrame& frame) override {
+        ++renderCalls;
+        lastPrimitiveCount = static_cast<int>(frame.primitives.size());
+        lastDebugLineCount = static_cast<int>(frame.debugLines.size());
+        skyCount = 0;
+        groundCount = 0;
+        opaqueCount = 0;
+        vehicleCount = 0;
+        decalCount = 0;
+        glassCount = 0;
+        translucentCount = 0;
+        debugCount = 0;
+        hudCount = 0;
+        lastBuckets.clear();
+
+        for (const bs3d::RenderPrimitiveCommand& command : frame.primitives) {
+            lastBuckets.push_back(command.bucket);
+            switch (command.bucket) {
+            case bs3d::RenderBucket::Sky:
+                ++skyCount;
+                break;
+            case bs3d::RenderBucket::Ground:
+                ++groundCount;
+                break;
+            case bs3d::RenderBucket::Opaque:
+                ++opaqueCount;
+                break;
+            case bs3d::RenderBucket::Vehicle:
+                ++vehicleCount;
+                break;
+            case bs3d::RenderBucket::Decal:
+                ++decalCount;
+                break;
+            case bs3d::RenderBucket::Glass:
+                ++glassCount;
+                break;
+            case bs3d::RenderBucket::Translucent:
+                ++translucentCount;
+                break;
+            case bs3d::RenderBucket::Debug:
+                ++debugCount;
+                break;
+            case bs3d::RenderBucket::Hud:
+                ++hudCount;
+                break;
+            }
+        }
+    }
+
+    int renderCalls = 0;
+    int lastPrimitiveCount = 0;
+    int lastDebugLineCount = 0;
+    int skyCount = 0;
+    int groundCount = 0;
+    int opaqueCount = 0;
+    int vehicleCount = 0;
+    int decalCount = 0;
+    int glassCount = 0;
+    int translucentCount = 0;
+    int debugCount = 0;
+    int hudCount = 0;
+    std::vector<bs3d::RenderBucket> lastBuckets;
+};
 
 void emptyRenderFrameHasNoCommands() {
     bs3d::RenderCamera camera;
@@ -233,6 +304,63 @@ void debugOnlyDefinitionsAreSkippedAndCounted() {
     expect(stats.totalCommands == 0, "debug-only extraction counts zero emitted commands");
 }
 
+void recordingRendererConsumesEmptyRenderFrame() {
+    RecordingRenderer recordingRenderer;
+    bs3d::IRenderer* renderer = &recordingRenderer;
+    const bs3d::RenderFrame frame;
+
+    renderer->renderFrame(frame);
+
+    expect(std::string(renderer->backendName()) == "recording", "recording renderer exposes backend name");
+    expect(recordingRenderer.renderCalls == 1, "recording renderer consumes an empty frame");
+    expect(recordingRenderer.lastPrimitiveCount == 0, "recording renderer records zero primitives");
+    expect(recordingRenderer.lastDebugLineCount == 0, "recording renderer records zero debug lines");
+    expect(recordingRenderer.lastBuckets.empty(), "recording renderer records no buckets for empty frame");
+}
+
+void recordingRendererConsumesExtractedWorldRenderListFrame() {
+    bs3d::WorldObject opaque = worldObject("opaque_object", "opaque_asset");
+    bs3d::WorldObject decal = worldObject("decal_object", "decal_asset");
+    bs3d::WorldObject glass = worldObject("glass_object", "glass_asset");
+    bs3d::WorldObject translucent = worldObject("translucent_object", "translucent_asset");
+    bs3d::WorldRenderList renderList;
+    renderList.transparent.push_back(&translucent);
+    renderList.transparent.push_back(&glass);
+    renderList.transparent.push_back(&decal);
+    renderList.opaque.push_back(&opaque);
+    const std::vector<bs3d::WorldAssetDefinition> definitions{
+        assetDefinition("translucent_asset", "Translucent"),
+        assetDefinition("glass_asset", "Glass"),
+        assetDefinition("decal_asset", "Decal"),
+        assetDefinition("opaque_asset", "Opaque"),
+    };
+
+    bs3d::RenderFrame frame;
+    bs3d::addWorldRenderListFallbackBoxes(frame, renderList, definitions);
+    bs3d::addDebugLine(frame, {0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, {255, 255, 255, 255});
+
+    RecordingRenderer recordingRenderer;
+    bs3d::IRenderer& renderer = recordingRenderer;
+    renderer.renderFrame(frame);
+
+    expect(recordingRenderer.renderCalls == 1, "recording renderer consumes extracted render frame");
+    expect(recordingRenderer.lastPrimitiveCount == 4, "recording renderer records extracted primitive count");
+    expect(recordingRenderer.lastDebugLineCount == 1, "recording renderer records extracted debug line count");
+    expect(recordingRenderer.opaqueCount == 1, "recording renderer counts opaque bucket");
+    expect(recordingRenderer.decalCount == 1, "recording renderer counts decal bucket");
+    expect(recordingRenderer.glassCount == 1, "recording renderer counts glass bucket");
+    expect(recordingRenderer.translucentCount == 1, "recording renderer counts translucent bucket");
+    expect(recordingRenderer.lastBuckets.size() == 4, "recording renderer records production bucket order");
+    expect(recordingRenderer.lastBuckets[0] == bs3d::RenderBucket::Opaque,
+           "recording renderer sees opaque bucket first");
+    expect(recordingRenderer.lastBuckets[1] == bs3d::RenderBucket::Decal,
+           "recording renderer sees decal bucket second");
+    expect(recordingRenderer.lastBuckets[2] == bs3d::RenderBucket::Glass,
+           "recording renderer sees glass bucket third");
+    expect(recordingRenderer.lastBuckets[3] == bs3d::RenderBucket::Translucent,
+           "recording renderer sees translucent bucket fourth");
+}
+
 } // namespace
 
 int main() {
@@ -246,6 +374,8 @@ int main() {
     worldRenderListExtractionOrdersBuckets();
     missingDefinitionsAreSkippedAndCounted();
     debugOnlyDefinitionsAreSkippedAndCounted();
+    recordingRendererConsumesEmptyRenderFrame();
+    recordingRendererConsumesExtractedWorldRenderListFrame();
     std::cout << "render frame tests passed\n";
     return 0;
 }

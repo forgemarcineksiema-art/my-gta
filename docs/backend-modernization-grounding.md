@@ -111,6 +111,12 @@ Backend prep status update: `WorldRenderList` został przeniesiony do małego, b
 Runtime renderer nadal jest raylibowy.
 D3D11 nadal **nie jest zaimplementowany**.
 
+Backend prep status update: istnieje teraz backend-neutralny interfejs `IRenderer`, który konsumuje `RenderFrame`.
+Testowy `RecordingRenderer` istnieje tylko w testach i zapisuje wyłącznie liczniki komend.
+Aktywne renderowanie runtime nadal przechodzi przez raylibowe `WorldRenderer`, `HudRenderer` i `DebugRenderer`.
+D3D11 nadal **nie jest zaimplementowany**.
+Przyszłe backendy renderera powinny implementować `IRenderer` i konsumować `RenderFrame`.
+
 ## 7) First safe implementation pass (pierwszy bezpieczny pass – rekomendacja)
 
 Następny pass w kodzie (nie w ramach tej dokumentacji) powinien być mały, odwracalny i nie zmieniać zachowania:
