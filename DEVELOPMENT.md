@@ -72,6 +72,18 @@ Without `-Build` the script expects an existing `blokowa_satyra.exe`.
 .\build\ci\Debug\bs3d_d3d11_renderer_smoke.exe --frames 3 --load-frame artifacts\shadow_frame.txt
 ```
 
+### RenderFrame capture/replay smoke script
+
+Scripted workflow that captures a live shadow `RenderFrame` from `blokowa_satyra` and replays it through `bs3d_d3d11_renderer_smoke` (both direct and factory paths). Does not activate `--renderer d3d11`.
+
+```powershell
+.\tools\renderframe_capture_replay.ps1 -Preset ci -Build
+```
+
+Without `-Build` the script expects both executables already built.
+
+Output: `artifacts\shadow_frame.txt` (dump file with `RenderFrameDump v1` header).
+
 ## Build folders
 
 Official preset build folders live under `build/`:

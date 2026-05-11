@@ -196,6 +196,7 @@ Pokrycie D3D11 jest raportowane tylko gdy sidecar jest zainicjalizowany; przy ni
 `--renderframe-shadow-dump <path>` w `GameApp` zapisuje pierwszy shadow frame do pliku.
 `--load-frame <path>` w `bs3d_d3d11_renderer_smoke` ładuje zrzuconą ramkę i renderuje ją przez D3D11.
 Capture/replay służy do debugowania renderera; nie zmienia runtime renderingu.
+`tools/renderframe_capture_replay.ps1` automatyzuje ścieżkę capture/replay: GameApp shadow dump -> D3D11 smoke (direct + factory paths). Nie aktywuje `--renderer d3d11`.
 Na non-Windows flaga jest akceptowana ale sidecar zwraca błąd "Windows-only" i kontynuuje działanie gry.
 `--d3d11-shadow-diagnostics` rozszerza log o szczegółowe statystyki bucketa (opaque/vehicle/decal/glass/translucent/debug), status inicjalizacji sidecara, renderCalls i lastFrameValid.
 Diagnostics loguje PO sidecar.submit(), więc sidecarCalls/lastFrameValid odzwierciedlają właśnie wysłaną ramkę.
