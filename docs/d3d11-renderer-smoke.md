@@ -7,8 +7,10 @@ Status: standalone Windows-only smoke executable for the production-facing `D3D1
 - **Creates a Win32 window**: opens a small 640x360 window titled `Blok 13 D3D11Renderer Smoke`.
 - **Initializes `D3D11Renderer`**: passes the window handle and dimensions through `D3D11RendererConfig`.
 - **Clears and presents**: by default builds an empty `RenderFrame`, calls `renderFrame()` for a fixed frame count, clears the render target, presents, and exits cleanly.
-- **Optionally draws one Box**: with `--box`, builds a minimal `RenderFrame` containing one opaque `RenderPrimitiveKind::Box` command and submits it through `D3D11Renderer`.
-- **Exercises tiny Box subset**: `D3D11Renderer` can draw Box primitives for the Opaque, Vehicle, and Debug buckets with a private in-memory shader, cube vertex/index buffers, and a dynamic constant buffer.
+- **Uses a private depth path**: creates a depth texture, depth-stencil view, and depth-stencil state for initialized smoke rendering.
+- **Optionally draws one Box**: with `--box`, builds a minimal `RenderFrame` containing one opaque `RenderPrimitiveKind::Box` command and submits it through depth-tested `D3D11Renderer` rendering.
+- **Optionally draws two Boxes**: with `--two-boxes`, submits two overlapping tinted Box commands for manual depth verification.
+- **Exercises tiny Box subset**: `D3D11Renderer` can draw Box primitives for the Opaque, Vehicle, and Debug buckets with a private in-memory shader, cube vertex/index buffers, dynamic constant buffer, and depth-stencil state.
 - **Exercises shutdown**: calls `D3D11Renderer::shutdown()` before closing the window.
 
 ## What it does not do
@@ -32,6 +34,7 @@ cmake --build --preset ci --target bs3d_d3d11_renderer_smoke
 ```powershell
 .\build\ci\Debug\bs3d_d3d11_renderer_smoke.exe --frames 3
 .\build\ci\Debug\bs3d_d3d11_renderer_smoke.exe --frames 3 --box
+.\build\ci\Debug\bs3d_d3d11_renderer_smoke.exe --frames 3 --two-boxes
 ```
 
 For single-config generators the executable may be directly under `build\ci`.

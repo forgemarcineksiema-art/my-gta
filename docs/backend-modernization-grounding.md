@@ -42,7 +42,7 @@ Etykiety statusu używane w tym repo:
 
 Poniższe są **Partial** albo **Aspirational** — nie ma dowodu w aktualnym CMake, testach i runtime, że istnieją jako kompletne systemy produkcyjne:
 
-- **Partial**: produkcyjnie nazwany renderer **DirectX 11** (`D3D11Renderer`) ma prywatną ścieżkę inicjalizacji urządzenia/swapchain/RTV oraz standalone smoke, który potrafi opcjonalnie narysować minimalny `RenderFrame` Box, ale pełny backend rysujący komendy `RenderFrame` nadal nie jest zaimplementowany.
+- **Partial**: produkcyjnie nazwany renderer **DirectX 11** (`D3D11Renderer`) ma prywatną ścieżkę inicjalizacji urządzenia/swapchain/RTV/depth oraz standalone smoke, który potrafi opcjonalnie narysować minimalny depth-tested `RenderFrame` Box, ale pełny backend rysujący komendy `RenderFrame` nadal nie jest zaimplementowany.
 - **Aspirational**: backend fizyki **PhysX**.
 - **Aspirational**: backend fizyki **Jolt**.
 - **Aspirational**: render backend **DX12/Vulkan**.
@@ -84,7 +84,7 @@ Kierunek modernizacji ma umożliwić w przyszłości wybór backendów, ale **dz
   - renderer: `raylib`
   - fizyka: `custom` (`WorldCollision`)
 - **Partial/Aspirational (Planned runtime values; NOT active)**:
-  - renderer: `d3d11` (`D3D11Renderer` private init path plus tiny standalone-smoke Box drawing subset; runtime selection/full primitive drawing not implemented)
+  - renderer: `d3d11` (`D3D11Renderer` private init/depth path plus tiny standalone-smoke Box drawing subset; runtime selection/full primitive drawing not implemented)
   - fizyka: `physx`
 - **Implemented (Current CLI surface)**:
   - `--renderer <raylib>` (planned value `d3d11` fails with a clear error)
@@ -127,13 +127,13 @@ Aktywne renderowanie runtime nadal jest raylibowe.
 
 Backend prep status update: istnieje teraz Windows-only, produkcyjnie nazwany `D3D11Renderer` (`src/render_d3d11/D3D11Renderer.h/.cpp`) z pierwszą prywatną ścieżką inicjalizacji D3D11.
 `D3D11Renderer` implementuje `IRenderer`, zwraca nazwę backendu `d3d11`, waliduje i podsumowuje przekazany `RenderFrame`, oraz zapisuje ostatnie statystyki/wynik walidacji do inspekcji testowej.
-Może teraz prywatnie utworzyć `ID3D11Device`, `ID3D11DeviceContext`, `IDXGISwapChain`, `ID3D11RenderTargetView` oraz minimalne zasoby pipeline'u Box: in-memory shader, input layout, vertex/index buffer i dynamic constant buffer.
-Po inicjalizacji `renderFrame()` czyści render target, rysuje wspierane komendy `RenderPrimitiveKind::Box` z bucketów Opaque/Vehicle/Debug, a następnie presentuje swapchain.
-Ten path jest weryfikowany tylko przez standalone `bs3d_d3d11_renderer_smoke --box`; nie konsumuje realnych danych runtime i nie ma mesh/textures/shader-file/material pipeline.
+Może teraz prywatnie utworzyć `ID3D11Device`, `ID3D11DeviceContext`, `IDXGISwapChain`, `ID3D11RenderTargetView`, depth texture, `ID3D11DepthStencilView`, `ID3D11DepthStencilState` oraz minimalne zasoby pipeline'u Box: in-memory shader, input layout, vertex/index buffer i dynamic constant buffer.
+Po inicjalizacji `renderFrame()` czyści render target i depth buffer, rysuje depth-tested wspierane komendy `RenderPrimitiveKind::Box` z bucketów Opaque/Vehicle/Debug, a następnie presentuje swapchain.
+Ten path jest weryfikowany tylko przez standalone `bs3d_d3d11_renderer_smoke --box` / `--two-boxes`; nie konsumuje realnych danych runtime i nie ma mesh/textures/shader-file/material pipeline.
 Nie jest podłączony do `GameApp`, `RendererFactory` ani CLI wyboru backendu.
 Aktywne renderowanie runtime nadal jest raylibowe.
 Standalone `bs3d_d3d11_boot` pozostaje osobną ścieżką hardcoded cube spike.
-Standalone `bs3d_d3d11_renderer_smoke` istnieje jako smoke init/clear/present oraz opcjonalny minimalny Box smoke dla `D3D11Renderer`.
+Standalone `bs3d_d3d11_renderer_smoke` istnieje jako smoke init/clear/depth/present oraz opcjonalny minimalny Box smoke dla `D3D11Renderer`.
 
 Backend prep status update: istnieje teraz backend-neutralny interfejs `IRenderer`, który konsumuje `RenderFrame`.
 Testowy `RecordingRenderer` istnieje tylko w testach i zapisuje wyłącznie liczniki komend.
@@ -222,7 +222,7 @@ A first backend-prep code pass is successful only if:
 | Renderer | Physics | Status |
 |---|---|---|
 | raylib | custom WorldCollision | Implemented / current baseline |
-| d3d11 | custom WorldCollision | Standalone boot spike draws; production `D3D11Renderer` can init/clear/present and draw a tiny Box subset in smoke while recording `RenderFrame` stats/validation; runtime renderer NOT implemented |
+| d3d11 | custom WorldCollision | Standalone boot spike draws; production `D3D11Renderer` can init/clear/depth/present and draw a tiny depth-tested Box subset in smoke while recording `RenderFrame` stats/validation; runtime renderer NOT implemented |
 | raylib | physx | Aspirational / planned (NOT implemented) |
 | d3d11 | physx | Aspirational / long-term target (NOT implemented) |
 

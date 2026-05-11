@@ -19,6 +19,7 @@ namespace {
 struct SmokeOptions {
     int frames = 120;
     bool drawBox = false;
+    bool drawTwoBoxes = false;
 };
 
 LRESULT CALLBACK smokeWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam) {
@@ -70,8 +71,11 @@ SmokeOptions parseOptions(int argc, char** argv) {
             options.frames = parseNonNegativeInt(requireValue(index, argc, argv, arg), arg);
         } else if (arg == "--box") {
             options.drawBox = true;
+        } else if (arg == "--two-boxes") {
+            options.drawBox = true;
+            options.drawTwoBoxes = true;
         } else if (arg == "--help") {
-            std::cout << "Usage: bs3d_d3d11_renderer_smoke [--frames <count>] [--box]\n";
+            std::cout << "Usage: bs3d_d3d11_renderer_smoke [--frames <count>] [--box] [--two-boxes]\n";
             std::exit(0);
         } else {
             throw std::runtime_error("unknown option: " + arg);
@@ -140,6 +144,15 @@ bs3d::RenderFrame makeSmokeFrame(const SmokeOptions& options, int frameIndex) {
     box.tint = {255, 180, 60, 255};
     box.sourceId = "d3d11_renderer_smoke_box";
     frame.primitives.push_back(box);
+    if (options.drawTwoBoxes) {
+        bs3d::RenderPrimitiveCommand secondBox = box;
+        secondBox.transform.position = {0.35f, 0.0f, -0.35f};
+        secondBox.transform.yawRadians = -static_cast<float>(frameIndex) * 0.05f;
+        secondBox.size = {1.2f, 1.2f, 1.2f};
+        secondBox.tint = {80, 170, 255, 255};
+        secondBox.sourceId = "d3d11_renderer_smoke_depth_box";
+        frame.primitives.push_back(secondBox);
+    }
     return frame;
 }
 

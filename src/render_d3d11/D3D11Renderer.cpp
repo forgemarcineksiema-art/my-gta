@@ -403,6 +403,44 @@ bool D3D11Renderer::initialize(const D3D11RendererConfig& config, std::string* e
         return false;
     }
 
+    D3D11_TEXTURE2D_DESC depthDesc{};
+    depthDesc.Width = static_cast<UINT>(config.width);
+    depthDesc.Height = static_cast<UINT>(config.height);
+    depthDesc.MipLevels = 1;
+    depthDesc.ArraySize = 1;
+    depthDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+    depthDesc.SampleDesc.Count = 1;
+    depthDesc.Usage = D3D11_USAGE_DEFAULT;
+    depthDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+
+    hr = device_->CreateTexture2D(&depthDesc, nullptr, &depthStencilTexture_);
+    if (FAILED(hr)) {
+        shutdown();
+        assignError(error, "ID3D11Device::CreateTexture2D failed for depth stencil with HRESULT " +
+                               formatHresult(hr));
+        return false;
+    }
+
+    hr = device_->CreateDepthStencilView(depthStencilTexture_, nullptr, &depthStencilView_);
+    if (FAILED(hr)) {
+        shutdown();
+        assignError(error, "ID3D11Device::CreateDepthStencilView failed with HRESULT " + formatHresult(hr));
+        return false;
+    }
+
+    D3D11_DEPTH_STENCIL_DESC depthStencilDesc{};
+    depthStencilDesc.DepthEnable = TRUE;
+    depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+    depthStencilDesc.DepthFunc = D3D11_COMPARISON_LESS;
+    depthStencilDesc.StencilEnable = FALSE;
+
+    hr = device_->CreateDepthStencilState(&depthStencilDesc, &depthStencilState_);
+    if (FAILED(hr)) {
+        shutdown();
+        assignError(error, "ID3D11Device::CreateDepthStencilState failed with HRESULT " + formatHresult(hr));
+        return false;
+    }
+
     if (!createPrimitivePipeline(device_,
                                  &vertexShader_,
                                  &pixelShader_,
@@ -426,6 +464,7 @@ bool D3D11Renderer::initialize(const D3D11RendererConfig& config, std::string* e
 
 bool D3D11Renderer::isInitialized() const {
     return device_ != nullptr && context_ != nullptr && swapChain_ != nullptr && renderTargetView_ != nullptr &&
+           depthStencilTexture_ != nullptr && depthStencilView_ != nullptr && depthStencilState_ != nullptr &&
            vertexShader_ != nullptr && pixelShader_ != nullptr && inputLayout_ != nullptr &&
            vertexBuffer_ != nullptr && indexBuffer_ != nullptr && constantBuffer_ != nullptr;
 }
@@ -437,6 +476,9 @@ void D3D11Renderer::shutdown() {
     releaseAndNull(inputLayout_);
     releaseAndNull(pixelShader_);
     releaseAndNull(vertexShader_);
+    releaseAndNull(depthStencilState_);
+    releaseAndNull(depthStencilView_);
+    releaseAndNull(depthStencilTexture_);
     releaseAndNull(renderTargetView_);
     releaseAndNull(swapChain_);
     releaseAndNull(context_);
@@ -456,8 +498,10 @@ void D3D11Renderer::renderFrame(const RenderFrame& frame) {
 
     const float clearColor[] = {0.05f, 0.08f, 0.16f, 1.0f};
     ID3D11RenderTargetView* renderTargetView = renderTargetView_;
-    context_->OMSetRenderTargets(1, &renderTargetView, nullptr);
+    context_->OMSetRenderTargets(1, &renderTargetView, depthStencilView_);
     context_->ClearRenderTargetView(renderTargetView_, clearColor);
+    context_->ClearDepthStencilView(depthStencilView_, D3D11_CLEAR_DEPTH, 1.0f, 0);
+    context_->OMSetDepthStencilState(depthStencilState_, 0);
 
     D3D11_VIEWPORT viewport{};
     viewport.Width = static_cast<float>(width_);
