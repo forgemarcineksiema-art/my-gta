@@ -1,3 +1,4 @@
+#include "RenderExtraction.h"
 #include "bs3d/game/GameApp.h"
 
 #include "GameRenderers.h"
@@ -56,6 +57,10 @@
 #include "bs3d/core/WorldRewirPressure.h"
 #include "bs3d/core/WorldServiceState.h"
 #include "bs3d/core/WorldCollision.h"
+
+#include "bs3d/render/NullRenderer.h"
+#include "bs3d/render/RenderFrameBuilder.h"
+#include "bs3d/render/RenderFrameValidation.h"
 
 #include "raylib.h"
 #include <algorithm>
@@ -2543,6 +2548,47 @@ void GameApp::run(const GameRunOptions& options) {
             platform.endFrame();
 
             ++renderedFrames;
+
+            if (options.renderFrameShadow && (renderedFrames == 1 || renderedFrames % 120 == 0)) {
+                const RuntimeRenderSnapshot& renderSnapshot = runtime.currentRenderSnapshot;
+                const Vec3 cameraPos{renderSnapshot.camera.position.x,
+                                     renderSnapshot.camera.position.y,
+                                     renderSnapshot.camera.position.z};
+
+                WorldRenderList renderList = runtime.renderCoordinator.buildWorldRenderList(
+                    renderSnapshot.worldObjects,
+                    runtime.assetRegistry,
+                    cameraPos,
+                    WorldRenderIsolationMode::Full);
+
+                RenderFrameBuilder builder;
+                builder.setCamera(toRenderCamera(renderSnapshot.camera));
+
+                addWorldRenderListFallbackBoxes(builder, renderList, runtime.assetRegistry.definitions());
+
+                builder.addDebugLine({0.0f, 0.0f, 0.0f}, {3.0f, 0.0f, 0.0f}, renderColor(255, 0, 0));
+                builder.addDebugLine({0.0f, 0.0f, 0.0f}, {0.0f, 3.0f, 0.0f}, renderColor(0, 255, 0));
+                builder.addDebugLine({cameraPos.x, cameraPos.y, cameraPos.z},
+                                     {renderSnapshot.camera.target.x,
+                                      renderSnapshot.camera.target.y,
+                                      renderSnapshot.camera.target.z},
+                                     renderColor(128, 128, 255));
+
+                RenderFrame shadowFrame = builder.build();
+                RenderFrameValidationResult validation = validateRenderFrame(shadowFrame);
+                RenderFrameStats stats = summarizeRenderFrame(shadowFrame);
+
+                NullRenderer nullRenderer;
+                nullRenderer.renderFrame(shadowFrame);
+
+                TraceLog(LOG_INFO,
+                         "RenderFrame shadow: primitives=%d debugLines=%d valid=%s nullCalls=%d",
+                         stats.totalPrimitives,
+                         stats.debugLines,
+                         validation.valid ? "true" : "false",
+                         nullRenderer.renderCalls());
+            }
+
             if (options.smokeFrames > 0 && renderedFrames >= options.smokeFrames) {
                 break;
             }

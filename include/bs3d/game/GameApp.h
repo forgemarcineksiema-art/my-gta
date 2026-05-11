@@ -10,6 +10,7 @@ struct GameRunOptions {
     bool loadSaveOnStart = true;
     bool writeSave = true;
     bool enableAudio = true;
+    bool renderFrameShadow = false;
     std::string dataRoot = "data";
     std::string savePath = "artifacts/savegame_intro.sav";
     std::string executablePath;

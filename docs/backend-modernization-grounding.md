@@ -174,6 +174,14 @@ Brak systemu materiałów, sortowania przezroczystych, wsparcia tekstur.
 Runtime renderer nadal jest raylibowy.
 `GameApp` nadal nie jest podłączony do D3D11.
 
+Backend prep status update: `GameApp` ma teraz tryb `--renderframe-shadow` (dev/test-only).
+Po włączeniu, co klatkę (lub co 120 klatek) `GameApp` buduje shadow `RenderFrame` z `WorldRenderList` przez `RenderFrameBuilder` + `RenderExtraction`, waliduje go przez `validateRenderFrame()`, podsumowuje przez `summarizeRenderFrame()`, i podaje do `NullRenderer`.
+Nie używa D3D11Renderer, nie zmienia wizualnego wyjścia, nie modyfikuje zachowania gameplay.
+Shadow frame zawiera tylko fallback boxy z live `WorldRenderList`; pomija HUD, cząstki, pojazdy i postacie.
+Runtime renderer nadal jest raylibowy.
+`--renderer d3d11` nadal **nie jest aktywny** w grze.
+`RendererFactory`/`BackendKinds` pozostają w ścieżce testowej/narzędziowej.
+
 Backend prep status update: `D3D11Renderer` smoke może teraz konsumować `RenderFrame` zbudowany przez `WorldRenderList`-style extraction (`--extraction-frame`).
 Smoke tworzy lokalne `WorldObject`/`WorldAssetDefinition`, konstruuje `WorldRenderList`, przepuszcza dane przez `RenderExtraction::addWorldRenderListFallbackBoxes(RenderFrameBuilder&)` do `RenderFrameBuilder`, a następnie do `D3D11Renderer`.
 Ścieżka: WorldRenderList-style data → RenderExtraction → RenderFrameBuilder → RenderFrame → D3D11Renderer smoke.
