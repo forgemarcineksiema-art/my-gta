@@ -189,6 +189,8 @@ Sidecar renderuje tylko wspierany podzbiór `RenderFrame` (Box + debug lines) z 
 `D3D11ShadowSidecar` jest prywatnym helperem w `src/game/`; nie wystawia typów D3D11/Win32 w publicznych nagłówkach.
 Na non-Windows flaga jest akceptowana ale sidecar zwraca błąd "Windows-only" i kontynuuje działanie gry.
 `--d3d11-shadow-diagnostics` rozszerza log o szczegółowe statystyki bucketa (opaque/vehicle/decal/glass/translucent/debug), status inicjalizacji sidecara, renderCalls i lastFrameValid.
+Diagnostics loguje PO sidecar.submit(), więc sidecarCalls/lastFrameValid odzwierciedlają właśnie wysłaną ramkę.
+Log zawiera też liczniki built/submitted shadow frames.
 Runtime renderer nadal jest raylibowy.
 `--renderer d3d11` nadal **nie jest aktywny** w grze.
 

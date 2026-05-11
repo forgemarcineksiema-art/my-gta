@@ -2530,6 +2530,8 @@ void GameApp::run(const GameRunOptions& options) {
         runtimeReady = true;
         FixedStepClock simulationClock({1.0f / 60.0f, 0.10f, 5});
         int renderedFrames = 0;
+        int shadowFramesBuilt = 0;
+        int shadowFramesSubmitted = 0;
 
         D3D11ShadowSidecar sidecar;
         if (options.d3d11ShadowWindow) {
@@ -2591,6 +2593,8 @@ void GameApp::run(const GameRunOptions& options) {
                 NullRenderer nullRenderer;
                 nullRenderer.renderFrame(shadowFrame);
 
+                ++shadowFramesBuilt;
+
                 TraceLog(LOG_INFO,
                          "RenderFrame shadow: primitives=%d debugLines=%d valid=%s nullCalls=%d",
                          stats.totalPrimitives,
@@ -2598,10 +2602,21 @@ void GameApp::run(const GameRunOptions& options) {
                          validation.valid ? "true" : "false",
                          nullRenderer.renderCalls());
 
+                if (sidecar.isInitialized()) {
+                    sidecar.submit(shadowFrame);
+                    ++shadowFramesSubmitted;
+                }
+
                 if (options.d3d11ShadowDiagnostics) {
                     TraceLog(LOG_INFO,
-                             "RenderFrame shadow diag: opaque=%d vehicle=%d decal=%d glass=%d translucent=%d debug=%d "
+                             "RenderFrame shadow diag: built=%d submitted=%d prims=%d lines=%d valid=%d "
+                             "opaque=%d vehicle=%d decal=%d glass=%d transl=%d debug=%d "
                              "sidecarInit=%d sidecarCalls=%d sidecarValid=%d",
+                             shadowFramesBuilt,
+                             shadowFramesSubmitted,
+                             stats.totalPrimitives,
+                             stats.debugLines,
+                             validation.valid ? 1 : 0,
                              stats.opaque,
                              stats.vehicle,
                              stats.decal,
@@ -2614,10 +2629,6 @@ void GameApp::run(const GameRunOptions& options) {
                     if (!sidecar.isInitialized() && options.d3d11ShadowWindow) {
                         TraceLog(LOG_WARNING, "RenderFrame shadow diag: sidecar error: %s", sidecar.lastError());
                     }
-                }
-
-                if (sidecar.isInitialized()) {
-                    sidecar.submit(shadowFrame);
                 }
             }
 
