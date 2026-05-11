@@ -40,6 +40,10 @@ __pycache__/
 *.log
 *.tmp
 
+# .NET build artifacts
+**/bin/
+**/obj/
+
 # Local presets and env
 /CMakeUserPresets.json
 .env
