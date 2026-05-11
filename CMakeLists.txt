@@ -272,7 +272,7 @@ if(BS3D_BUILD_GAME)
     )
 
     target_link_libraries(blokowa_satyra PRIVATE bs3d_core bs3d_game_support raylib)
-    target_include_directories(blokowa_satyra PRIVATE include)
+    target_include_directories(blokowa_satyra PRIVATE include src/render)
 
     if(WIN32)
         target_sources(blokowa_satyra PRIVATE
@@ -280,7 +280,7 @@ if(BS3D_BUILD_GAME)
             src/render/RendererFactory.cpp
         )
         target_link_libraries(blokowa_satyra PRIVATE bs3d_renderer_d3d11)
-        target_include_directories(blokowa_satyra PRIVATE src/render_d3d11 src/render)
+        target_include_directories(blokowa_satyra PRIVATE src/render_d3d11)
     endif()
 
     target_compile_definitions(blokowa_satyra PRIVATE BS3D_ENABLE_DEV_TOOLS=$<BOOL:${BS3D_ENABLE_DEV_TOOLS}>)

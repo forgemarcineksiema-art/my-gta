@@ -959,6 +959,14 @@ void dumpWriteAndReadRoundTrip() {
     std::remove(dumpPath.c_str());
 }
 
+void dumpReadMissingFileReturnsError() {
+    bs3d::RenderFrame frame;
+    std::string error;
+    expect(!bs3d::readRenderFrameDump("nonexistent_path_xyz.dump", frame, &error),
+           "readRenderFrameDump returns false for missing file");
+    expect(!error.empty(), "readRenderFrameDump returns non-empty error for missing file");
+}
+
 // ---------- NullRenderer tests ----------
 
 void nullRendererConsumesEmptyRenderFrame() {
@@ -1405,6 +1413,7 @@ int main() {
     builderExtractionSkipsDebugOnly();
     builderExtractionSupportsDecalGlassTranslucentBuckets();
     dumpWriteAndReadRoundTrip();
+    dumpReadMissingFileReturnsError();
     nullRendererConsumesEmptyRenderFrame();
     nullRendererConsumesBuilderOutput();
     nullRendererRecordsRenderFrameStats();
