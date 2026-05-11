@@ -1,5 +1,7 @@
 #pragma once
 
+#include "bs3d/render/RenderFrameValidation.h"
+
 #include <memory>
 #include <string>
 
@@ -24,6 +26,10 @@ public:
     bool isInitialized() const;
     void submit(const RenderFrame& frame);
     const char* lastError() const;
+
+    int renderCalls() const;
+    RenderFrameStats lastStats() const;
+    bool lastFrameValid() const;
 
     void pumpMessages();
 

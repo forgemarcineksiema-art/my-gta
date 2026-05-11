@@ -196,6 +196,27 @@ void D3D11ShadowSidecar::pumpMessages() {
     }
 }
 
+int D3D11ShadowSidecar::renderCalls() const {
+    if (!impl_->initialized || impl_->renderer == nullptr) {
+        return 0;
+    }
+    return impl_->renderer->renderCalls();
+}
+
+RenderFrameStats D3D11ShadowSidecar::lastStats() const {
+    if (!impl_->initialized || impl_->renderer == nullptr) {
+        return {};
+    }
+    return impl_->renderer->lastStats();
+}
+
+bool D3D11ShadowSidecar::lastFrameValid() const {
+    if (!impl_->initialized || impl_->renderer == nullptr) {
+        return true;
+    }
+    return impl_->renderer->lastFrameValid();
+}
+
 } // namespace bs3d
 
 #else // _WIN32
@@ -218,6 +239,10 @@ bool D3D11ShadowSidecar::isInitialized() const { return false; }
 void D3D11ShadowSidecar::submit(const RenderFrame&) {}
 const char* D3D11ShadowSidecar::lastError() const { return impl_->error.c_str(); }
 void D3D11ShadowSidecar::pumpMessages() {}
+
+int D3D11ShadowSidecar::renderCalls() const { return 0; }
+RenderFrameStats D3D11ShadowSidecar::lastStats() const { return {}; }
+bool D3D11ShadowSidecar::lastFrameValid() const { return true; }
 
 } // namespace bs3d
 

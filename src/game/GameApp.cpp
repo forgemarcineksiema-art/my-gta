@@ -2598,6 +2598,24 @@ void GameApp::run(const GameRunOptions& options) {
                          validation.valid ? "true" : "false",
                          nullRenderer.renderCalls());
 
+                if (options.d3d11ShadowDiagnostics) {
+                    TraceLog(LOG_INFO,
+                             "RenderFrame shadow diag: opaque=%d vehicle=%d decal=%d glass=%d translucent=%d debug=%d "
+                             "sidecarInit=%d sidecarCalls=%d sidecarValid=%d",
+                             stats.opaque,
+                             stats.vehicle,
+                             stats.decal,
+                             stats.glass,
+                             stats.translucent,
+                             stats.debug,
+                             sidecar.isInitialized() ? 1 : 0,
+                             sidecar.isInitialized() ? sidecar.renderCalls() : 0,
+                             sidecar.isInitialized() ? (sidecar.lastFrameValid() ? 1 : 0) : 1);
+                    if (!sidecar.isInitialized() && options.d3d11ShadowWindow) {
+                        TraceLog(LOG_WARNING, "RenderFrame shadow diag: sidecar error: %s", sidecar.lastError());
+                    }
+                }
+
                 if (sidecar.isInitialized()) {
                     sidecar.submit(shadowFrame);
                 }
