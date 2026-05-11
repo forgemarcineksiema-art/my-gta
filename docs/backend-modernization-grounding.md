@@ -101,6 +101,11 @@ Obecny renderer runtime nadal jest raylibowy i nadal używa istniejących klas `
 D3D11 nadal **nie jest zaimplementowany**.
 Przyszłe prace nad rendererem powinny konsumować `RenderFrame`, zamiast kopiować raylibowe natychmiastowe wywołania typu `DrawCubeV`, `DrawSphere`, `DrawModelEx` albo stos `rlPushMatrix`.
 
+Backend prep status update: istnieje teraz częściowa ścieżka ekstrakcji `WorldRenderList` -> `RenderFrame` używana tylko w testach.
+To nadal jest eksperymentalna/data-only ścieżka graniczna; aktywny renderer runtime pozostaje raylibowy.
+D3D11 nadal **nie jest zaimplementowany**.
+Ta ekstrakcja jest krokiem pośrednim pod przyszły backend renderera, nie zamianą obecnego renderowania.
+
 ## 7) First safe implementation pass (pierwszy bezpieczny pass – rekomendacja)
 
 Następny pass w kodzie (nie w ramach tej dokumentacji) powinien być mały, odwracalny i nie zmieniać zachowania:

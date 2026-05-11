@@ -1,4 +1,5 @@
 #include "RenderExtraction.h"
+#include "GameRenderers.h"
 
 #include "bs3d/render/RenderFrame.h"
 #include "bs3d/render/RenderTypes.h"
@@ -6,6 +7,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <string>
+#include <vector>
 
 namespace {
 
@@ -108,6 +110,129 @@ void bucketAndKindValuesAreStable() {
            "RenderPrimitiveKind helper returns stable CylinderX name");
 }
 
+bs3d::WorldObject worldObject(const std::string& id, const std::string& assetId) {
+    bs3d::WorldObject object;
+    object.id = id;
+    object.assetId = assetId;
+    return object;
+}
+
+bs3d::WorldAssetDefinition assetDefinition(const std::string& id, const std::string& renderBucket) {
+    bs3d::WorldAssetDefinition definition;
+    definition.id = id;
+    definition.renderBucket = renderBucket;
+    return definition;
+}
+
+void emptyWorldRenderListExtractionProducesNoCommands() {
+    bs3d::RenderFrame frame;
+    bs3d::WorldRenderList renderList;
+    const std::vector<bs3d::WorldAssetDefinition> definitions;
+
+    const bs3d::WorldRenderExtractionStats stats =
+        bs3d::addWorldRenderListFallbackBoxes(frame, renderList, definitions);
+
+    expect(frame.primitives.empty(), "empty world render list extracts no primitive commands");
+    expect(stats.totalCommands == 0, "empty world render list extracts zero total commands");
+    expect(stats.skippedMissingDefinition == 0, "empty world render list skips no missing definitions");
+}
+
+void worldRenderListExtractionCountsBuckets() {
+    bs3d::WorldObject opaque = worldObject("opaque_object", "opaque_asset");
+    bs3d::WorldObject decal = worldObject("decal_object", "decal_asset");
+    bs3d::WorldObject glass = worldObject("glass_object", "glass_asset");
+    bs3d::WorldObject translucent = worldObject("translucent_object", "translucent_asset");
+    bs3d::WorldRenderList renderList;
+    renderList.opaque.push_back(&opaque);
+    renderList.translucent.push_back(&decal);
+    renderList.glass.push_back(&glass);
+    renderList.transparent.push_back(&decal);
+    renderList.transparent.push_back(&glass);
+    renderList.transparent.push_back(&translucent);
+    const std::vector<bs3d::WorldAssetDefinition> definitions{
+        assetDefinition("opaque_asset", "Opaque"),
+        assetDefinition("decal_asset", "Decal"),
+        assetDefinition("glass_asset", "Glass"),
+        assetDefinition("translucent_asset", "Translucent"),
+    };
+
+    bs3d::RenderFrame frame;
+    const bs3d::WorldRenderExtractionStats stats =
+        bs3d::addWorldRenderListFallbackBoxes(frame, renderList, definitions);
+
+    expect(stats.opaqueCommands == 1, "world render extraction counts opaque commands");
+    expect(stats.decalCommands == 1, "world render extraction counts decal commands");
+    expect(stats.glassCommands == 1, "world render extraction counts glass commands");
+    expect(stats.translucentCommands == 1, "world render extraction counts translucent commands");
+    expect(stats.totalCommands == 4, "world render extraction counts total commands");
+    expect(frame.primitives.size() == 4, "world render extraction emits one command per unique object");
+}
+
+void worldRenderListExtractionOrdersBuckets() {
+    bs3d::WorldObject translucent = worldObject("translucent_object", "translucent_asset");
+    bs3d::WorldObject glass = worldObject("glass_object", "glass_asset");
+    bs3d::WorldObject decal = worldObject("decal_object", "decal_asset");
+    bs3d::WorldObject opaque = worldObject("opaque_object", "opaque_asset");
+    bs3d::WorldRenderList renderList;
+    renderList.transparent.push_back(&translucent);
+    renderList.transparent.push_back(&glass);
+    renderList.transparent.push_back(&decal);
+    renderList.opaque.push_back(&opaque);
+    const std::vector<bs3d::WorldAssetDefinition> definitions{
+        assetDefinition("translucent_asset", "Translucent"),
+        assetDefinition("glass_asset", "Glass"),
+        assetDefinition("decal_asset", "Decal"),
+        assetDefinition("opaque_asset", "Opaque"),
+    };
+
+    bs3d::RenderFrame frame;
+    bs3d::addWorldRenderListFallbackBoxes(frame, renderList, definitions);
+
+    expect(frame.primitives.size() == 4, "world render extraction emits ordered command list");
+    expect(frame.primitives[0].bucket == bs3d::RenderBucket::Opaque, "opaque commands are extracted first");
+    expect(frame.primitives[1].bucket == bs3d::RenderBucket::Decal, "decal commands are extracted after opaque");
+    expect(frame.primitives[2].bucket == bs3d::RenderBucket::Glass, "glass commands are extracted after decals");
+    expect(frame.primitives[3].bucket == bs3d::RenderBucket::Translucent,
+           "translucent commands are extracted after glass");
+}
+
+void missingDefinitionsAreSkippedAndCounted() {
+    bs3d::WorldObject present = worldObject("present_object", "present_asset");
+    bs3d::WorldObject missing = worldObject("missing_object", "missing_asset");
+    bs3d::WorldRenderList renderList;
+    renderList.opaque.push_back(&present);
+    renderList.opaque.push_back(&missing);
+    const std::vector<bs3d::WorldAssetDefinition> definitions{
+        assetDefinition("present_asset", "Opaque"),
+    };
+
+    bs3d::RenderFrame frame;
+    const bs3d::WorldRenderExtractionStats stats =
+        bs3d::addWorldRenderListFallbackBoxes(frame, renderList, definitions);
+
+    expect(stats.totalCommands == 1, "missing definition extraction keeps present asset command");
+    expect(stats.skippedMissingDefinition == 1, "missing definition extraction counts skipped missing asset");
+    expect(frame.primitives.size() == 1, "missing definition extraction skips missing asset command");
+    expect(frame.primitives.front().sourceId == "present_object", "missing definition extraction keeps present object");
+}
+
+void debugOnlyDefinitionsAreSkippedAndCounted() {
+    bs3d::WorldObject debug = worldObject("debug_object", "debug_asset");
+    bs3d::WorldRenderList renderList;
+    renderList.opaque.push_back(&debug);
+    const std::vector<bs3d::WorldAssetDefinition> definitions{
+        assetDefinition("debug_asset", "DebugOnly"),
+    };
+
+    bs3d::RenderFrame frame;
+    const bs3d::WorldRenderExtractionStats stats =
+        bs3d::addWorldRenderListFallbackBoxes(frame, renderList, definitions);
+
+    expect(frame.primitives.empty(), "debug-only extraction emits no gameplay primitive commands");
+    expect(stats.skippedDebugOnly == 1, "debug-only extraction counts skipped debug-only asset");
+    expect(stats.totalCommands == 0, "debug-only extraction counts zero emitted commands");
+}
+
 } // namespace
 
 int main() {
@@ -116,6 +241,11 @@ int main() {
     fallbackBoxUsesTintOverride();
     debugLineAddsOneLineCommand();
     bucketAndKindValuesAreStable();
+    emptyWorldRenderListExtractionProducesNoCommands();
+    worldRenderListExtractionCountsBuckets();
+    worldRenderListExtractionOrdersBuckets();
+    missingDefinitionsAreSkippedAndCounted();
+    debugOnlyDefinitionsAreSkippedAndCounted();
     std::cout << "render frame tests passed\n";
     return 0;
 }
