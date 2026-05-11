@@ -283,12 +283,6 @@ struct DebugSnapshot {
     int visualBaselineCount = 0;
     std::string renderModeLabel;
     std::string activeShopAssetId;
-    std::string nearestObjectId;
-    std::string nearestObjectAssetId;
-    std::string nearestObjectZone;
-    std::string nearestObjectCollision;
-    std::string nearestObjectTags;
-    float nearestObjectDistance = 0.0f;
     int opaqueAssetCount = 0;
     int decalAssetCount = 0;
     int glassAssetCount = 0;

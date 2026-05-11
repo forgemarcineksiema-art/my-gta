@@ -484,17 +484,6 @@ void DebugRenderer::drawPanel(const DebugSnapshot& snapshot) {
              164,
              18,
              color(170, 225, 170));
-    drawUiText(TextFormat("Near: %s/%s %.1fm %s",
-                        snapshot.nearestObjectId.c_str(),
-                        snapshot.nearestObjectAssetId.c_str(),
-                        snapshot.nearestObjectDistance,
-                        snapshot.nearestObjectZone.c_str()),
-             300,
-             188,
-             18,
-             color(238, 211, 79));
-    drawUiText("Near col: " + snapshot.nearestObjectCollision, 300, 212, 18, color(170, 225, 170));
-    drawUiText("Near tags: " + snapshot.nearestObjectTags, 300, 236, 18, color(170, 225, 170));
     drawUiText(TextFormat("Speed: %s  XZ %.2f  Vy %.2f",
                         speedStateName(snapshot.speedState),
                         snapshot.playerXzSpeed,

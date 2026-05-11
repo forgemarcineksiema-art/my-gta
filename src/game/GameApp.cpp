@@ -176,90 +176,6 @@ bool pointInsideObjectXZ(const WorldObject& object, Vec3 position, float padding
            std::fabs(localZ) <= object.scale.z * 0.5f + padding;
 }
 
-const char* worldLocationTagName(WorldLocationTag tag) {
-    switch (tag) {
-    case WorldLocationTag::Unknown:
-        return "Unknown";
-    case WorldLocationTag::Block:
-        return "Block";
-    case WorldLocationTag::Shop:
-        return "Shop";
-    case WorldLocationTag::Parking:
-        return "Parking";
-    case WorldLocationTag::Garage:
-        return "Garage";
-    case WorldLocationTag::Trash:
-        return "Trash";
-    case WorldLocationTag::RoadLoop:
-        return "RoadLoop";
-    }
-    return "Unknown";
-}
-
-const char* collisionShapeKindName(WorldCollisionShapeKind kind) {
-    switch (kind) {
-    case WorldCollisionShapeKind::Unspecified:
-        return "Unspecified";
-    case WorldCollisionShapeKind::None:
-        return "None";
-    case WorldCollisionShapeKind::Box:
-        return "Box";
-    case WorldCollisionShapeKind::GroundBox:
-        return "GroundBox";
-    case WorldCollisionShapeKind::RampZ:
-        return "RampZ";
-    case WorldCollisionShapeKind::OrientedBox:
-        return "OrientedBox";
-    case WorldCollisionShapeKind::TriggerSphere:
-        return "TriggerSphere";
-    case WorldCollisionShapeKind::TriggerBox:
-        return "TriggerBox";
-    }
-    return "Unspecified";
-}
-
-const char* collisionResponseKindName(CollisionResponseKind kind) {
-    switch (kind) {
-    case CollisionResponseKind::Unspecified:
-        return "Unspecified";
-    case CollisionResponseKind::None:
-        return "None";
-    case CollisionResponseKind::StaticSolid:
-        return "StaticSolid";
-    case CollisionResponseKind::Walkable:
-        return "Walkable";
-    case CollisionResponseKind::TriggerOnly:
-        return "TriggerOnly";
-    case CollisionResponseKind::PropStatic:
-        return "PropStatic";
-    case CollisionResponseKind::PropFakeDynamic:
-        return "PropFakeDynamic";
-    case CollisionResponseKind::PropDynamicLite:
-        return "PropDynamicLite";
-    case CollisionResponseKind::BreakableLite:
-        return "BreakableLite";
-    }
-    return "Unspecified";
-}
-
-std::string objectTagSummary(const WorldObject& object) {
-    if (object.gameplayTags.empty()) {
-        return "-";
-    }
-    std::ostringstream stream;
-    const std::size_t count = std::min<std::size_t>(object.gameplayTags.size(), 4);
-    for (std::size_t index = 0; index < count; ++index) {
-        if (index > 0) {
-            stream << ",";
-        }
-        stream << object.gameplayTags[index];
-    }
-    if (object.gameplayTags.size() > count) {
-        stream << ",+" << object.gameplayTags.size() - count;
-    }
-    return stream.str();
-}
-
 float przypalDifficultyFactor(PrzypalBand band) {
     switch (band) {
     case PrzypalBand::Calm:
@@ -880,31 +796,6 @@ struct Runtime {
                 ++snapshot.opaqueAssetCount;
             }
         }
-    }
-
-    void populateNearestObjectDebug(DebugSnapshot& snapshot, Vec3 actorPosition) const {
-        const WorldObject* nearest = nullptr;
-        float nearestDistance = 0.0f;
-        for (const WorldObject& object : level.objects) {
-            const float distance = distanceXZ(actorPosition, object.position);
-            if (nearest == nullptr || distance < nearestDistance) {
-                nearest = &object;
-                nearestDistance = distance;
-            }
-        }
-        if (nearest == nullptr) {
-            return;
-        }
-        std::ostringstream collisionSummary;
-        collisionSummary << collisionShapeKindName(nearest->collision.kind)
-                         << "/" << collisionResponseKindName(nearest->collisionProfile.responseKind)
-                         << " cam=" << (nearest->collisionProfile.blocksCamera ? "yes" : "no");
-        snapshot.nearestObjectId = nearest->id;
-        snapshot.nearestObjectAssetId = nearest->assetId;
-        snapshot.nearestObjectZone = worldLocationTagName(nearest->zoneTag);
-        snapshot.nearestObjectCollision = collisionSummary.str();
-        snapshot.nearestObjectTags = objectTagSummary(*nearest);
-        snapshot.nearestObjectDistance = nearestDistance;
     }
 
     void handleFrameInput(RawInputState& rawInput) {
@@ -2468,7 +2359,6 @@ struct Runtime {
         snapshot.deltaMs = lastDeltaSeconds * 1000.0f;
         snapshot.renderModeLabel = worldRenderIsolationModeName(renderIsolationMode);
         populateAssetRuntimeStats(snapshot);
-        populateNearestObjectDebug(snapshot, interactionActorPosition());
         snapshot.buildStamp = buildStampText() + " | " + devToolsStatusText();
         snapshot.dataRoot = resolvedPathText(dataRoot);
         snapshot.executablePath = resolvedPathText(executablePath);
