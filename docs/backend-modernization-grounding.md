@@ -161,11 +161,18 @@ Nagłówek `RendererFactory.h` pozostaje backend-neutralny — nie inkluduje D3D
 Runtime renderer nadal jest raylibowy.
 `GameApp` nadal nie jest podłączony do D3D11.
 
-Backend prep status update: `bs3d_d3d11_renderer_smoke --factory` ćwiczy teraz ścieżkę `RendererFactory` → `D3D11Renderer.
+Backend prep status update: `bs3d_d3d11_renderer_smoke --factory` ćwiczy teraz ścieżkę `RendererFactory` → `D3D11Renderer`.
 Smoke z `--factory` tworzy renderer przez `createRenderer(D3D11 + allowExperimentalD3D11Renderer)`, weryfikuje `result.ok()`, `backendName()`, `dynamic_cast` do `D3D11Renderer*`, a następnie inicjalizuje i renderuje ramki.
 Bez `--factory` smoke konstruuje `D3D11Renderer` bezpośrednio na stosie — obie ścieżki są zachowane.
 `--renderer d3d11` nadal **nie jest aktywny** w grze.
 Runtime renderer nadal jest raylibowy.
+
+Backend prep status update: `D3D11Renderer` smoke wspiera teraz szerszy zestaw bucketów Box: Opaque, Vehicle, Decal, Glass, Translucent, Debug.
+Bucket'y Glass i Translucent używają minimalnego alpha blendingu przez osobny `ID3D11BlendState`; pozostałe bucket'y renderują jako opaque.
+Nadal pomijane: Sky, Ground, Hud, oraz nieobsługiwane typy prymitywów (Mesh, Sphere, CylinderX, QuadPanel).
+Brak systemu materiałów, sortowania przezroczystych, wsparcia tekstur.
+Runtime renderer nadal jest raylibowy.
+`GameApp` nadal nie jest podłączony do D3D11.
 
 Backend prep status update: `D3D11Renderer` smoke może teraz konsumować `RenderFrame` zbudowany przez `WorldRenderList`-style extraction (`--extraction-frame`).
 Smoke tworzy lokalne `WorldObject`/`WorldAssetDefinition`, konstruuje `WorldRenderList`, przepuszcza dane przez `RenderExtraction::addWorldRenderListFallbackBoxes(RenderFrameBuilder&)` do `RenderFrameBuilder`, a następnie do `D3D11Renderer`.

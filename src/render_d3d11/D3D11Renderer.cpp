@@ -223,7 +223,13 @@ void computeViewProjection(const RenderCamera& camera, int width, int height,
 }
 
 bool isSupportedBoxBucket(RenderBucket bucket) {
-    return bucket == RenderBucket::Opaque || bucket == RenderBucket::Vehicle || bucket == RenderBucket::Debug;
+    return bucket == RenderBucket::Opaque || bucket == RenderBucket::Vehicle ||
+           bucket == RenderBucket::Decal || bucket == RenderBucket::Glass ||
+           bucket == RenderBucket::Translucent || bucket == RenderBucket::Debug;
+}
+
+bool isAlphaBlendBucket(RenderBucket bucket) {
+    return bucket == RenderBucket::Glass || bucket == RenderBucket::Translucent;
 }
 
 float colorChannel(std::uint8_t value) {
@@ -648,6 +654,36 @@ bool D3D11Renderer::initialize(const D3D11RendererConfig& config, std::string* e
         return false;
     }
 
+    D3D11_BLEND_DESC opaqueBlendDesc{};
+    opaqueBlendDesc.RenderTarget[0].BlendEnable = FALSE;
+    opaqueBlendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+
+    hr = device_->CreateBlendState(&opaqueBlendDesc, &opaqueBlendState_);
+    if (FAILED(hr)) {
+        shutdown();
+        assignError(error, "ID3D11Device::CreateBlendState failed for opaque blend with HRESULT " +
+                               formatHresult(hr));
+        return false;
+    }
+
+    D3D11_BLEND_DESC alphaBlendDesc{};
+    alphaBlendDesc.RenderTarget[0].BlendEnable = TRUE;
+    alphaBlendDesc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+    alphaBlendDesc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+    alphaBlendDesc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+    alphaBlendDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+    alphaBlendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_INV_SRC_ALPHA;
+    alphaBlendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+    alphaBlendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+
+    hr = device_->CreateBlendState(&alphaBlendDesc, &alphaBlendState_);
+    if (FAILED(hr)) {
+        shutdown();
+        assignError(error, "ID3D11Device::CreateBlendState failed for alpha blend with HRESULT " +
+                               formatHresult(hr));
+        return false;
+    }
+
     if (!createPrimitivePipeline(device_,
                                  &vertexShader_,
                                  &pixelShader_,
@@ -682,6 +718,7 @@ bool D3D11Renderer::initialize(const D3D11RendererConfig& config, std::string* e
 bool D3D11Renderer::isInitialized() const {
     return device_ != nullptr && context_ != nullptr && swapChain_ != nullptr && renderTargetView_ != nullptr &&
            depthStencilTexture_ != nullptr && depthStencilView_ != nullptr && depthStencilState_ != nullptr &&
+           opaqueBlendState_ != nullptr && alphaBlendState_ != nullptr &&
            vertexShader_ != nullptr && pixelShader_ != nullptr && inputLayout_ != nullptr &&
            vertexBuffer_ != nullptr && indexBuffer_ != nullptr && constantBuffer_ != nullptr &&
            lineVertexShader_ != nullptr && linePixelShader_ != nullptr && lineInputLayout_ != nullptr &&
@@ -699,6 +736,8 @@ void D3D11Renderer::shutdown() {
     releaseAndNull(inputLayout_);
     releaseAndNull(pixelShader_);
     releaseAndNull(vertexShader_);
+    releaseAndNull(alphaBlendState_);
+    releaseAndNull(opaqueBlendState_);
     releaseAndNull(depthStencilState_);
     releaseAndNull(depthStencilView_);
     releaseAndNull(depthStencilTexture_);
@@ -750,9 +789,24 @@ void D3D11Renderer::renderFrame(const RenderFrame& frame) {
     Matrix4 projection;
     computeViewProjection(frame.camera, width_, height_, view, projection);
 
+    bool usingAlphaBlend = false;
+    context_->OMSetBlendState(opaqueBlendState_, nullptr, 0xFFFFFFFF);
+
     for (const RenderPrimitiveCommand& command : frame.primitives) {
         if (command.kind != RenderPrimitiveKind::Box || !isSupportedBoxBucket(command.bucket)) {
             continue;
+        }
+
+        if (isAlphaBlendBucket(command.bucket)) {
+            if (!usingAlphaBlend) {
+                context_->OMSetBlendState(alphaBlendState_, nullptr, 0xFFFFFFFF);
+                usingAlphaBlend = true;
+            }
+        } else {
+            if (usingAlphaBlend) {
+                context_->OMSetBlendState(opaqueBlendState_, nullptr, 0xFFFFFFFF);
+                usingAlphaBlend = false;
+            }
         }
 
         PrimitiveConstants constants{};
@@ -779,6 +833,10 @@ void D3D11Renderer::renderFrame(const RenderFrame& frame) {
         std::memcpy(mapped.pData, &constants, sizeof(constants));
         context_->Unmap(constantBuffer_, 0);
         context_->DrawIndexed(36, 0, 0);
+    }
+
+    if (usingAlphaBlend) {
+        context_->OMSetBlendState(opaqueBlendState_, nullptr, 0xFFFFFFFF);
     }
 
     if (!frame.debugLines.empty()) {

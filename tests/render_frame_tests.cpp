@@ -829,6 +829,66 @@ void builderExtractionSkipsDebugOnly() {
            "builder extraction frame has 1 primitive (DebugOnly skipped)");
 }
 
+void builderExtractionSupportsDecalGlassTranslucentBuckets() {
+    bs3d::WorldObject objOpaque;
+    objOpaque.id = "test_opaque";
+    objOpaque.assetId = "opaque_1";
+    objOpaque.position = {0.0f, 0.0f, 0.0f};
+
+    bs3d::WorldObject objDecal;
+    objDecal.id = "test_decal";
+    objDecal.assetId = "decal_1";
+    objDecal.position = {1.0f, 0.0f, 0.0f};
+
+    bs3d::WorldObject objGlass;
+    objGlass.id = "test_glass";
+    objGlass.assetId = "glass_1";
+    objGlass.position = {2.0f, 0.0f, 0.0f};
+
+    bs3d::WorldObject objTranslucent;
+    objTranslucent.id = "test_translucent";
+    objTranslucent.assetId = "translucent_1";
+    objTranslucent.position = {3.0f, 0.0f, 0.0f};
+
+    bs3d::WorldAssetDefinition opaqueDef;
+    opaqueDef.id = "opaque_1";
+    opaqueDef.renderBucket = "Opaque";
+
+    bs3d::WorldAssetDefinition decalDef;
+    decalDef.id = "decal_1";
+    decalDef.renderBucket = "Decal";
+
+    bs3d::WorldAssetDefinition glassDef;
+    glassDef.id = "glass_1";
+    glassDef.renderBucket = "Glass";
+
+    bs3d::WorldAssetDefinition translucentDef;
+    translucentDef.id = "translucent_1";
+    translucentDef.renderBucket = "Translucent";
+
+    std::vector<bs3d::WorldAssetDefinition> definitions = {opaqueDef, decalDef, glassDef, translucentDef};
+
+    bs3d::WorldRenderList renderList;
+    renderList.transparent = {&objOpaque, &objDecal, &objGlass, &objTranslucent};
+
+    bs3d::RenderFrameBuilder builder;
+    const auto stats = bs3d::addWorldRenderListFallbackBoxes(builder, renderList, definitions);
+
+    expect(stats.totalCommands == 4, "builder extraction counts all 4 buckets");
+    expect(stats.opaqueCommands == 1, "builder extraction counts opaque");
+    expect(stats.decalCommands == 1, "builder extraction counts decal");
+    expect(stats.glassCommands == 1, "builder extraction counts glass");
+    expect(stats.translucentCommands == 1, "builder extraction counts translucent");
+
+    const bs3d::RenderFrame frame = builder.build();
+    expect(frame.primitives.size() == 4, "builder extraction frame has 4 primitives");
+    expect(frame.primitives[0].bucket == bs3d::RenderBucket::Opaque, "production order: Opaque first");
+    expect(frame.primitives[1].bucket == bs3d::RenderBucket::Decal, "production order: Decal second");
+    expect(frame.primitives[2].bucket == bs3d::RenderBucket::Glass, "production order: Glass third");
+    expect(frame.primitives[3].bucket == bs3d::RenderBucket::Translucent, "production order: Translucent fourth");
+    expect(bs3d::isRenderFrameBucketOrderValid(frame), "multi-bucket extraction has valid order");
+}
+
 // ---------- NullRenderer tests ----------
 
 void nullRendererConsumesEmptyRenderFrame() {
@@ -1103,6 +1163,32 @@ void d3d11RendererRecordsExpectedStatsForExtractionFrameWhenUninitialized() {
     expect(renderer.lastFrameValid(),
            "D3D11Renderer validates extraction frame as valid");
 }
+
+void d3d11RendererRecordsStatsForDecalGlassTranslucentWhenUninitialized() {
+    bs3d::RenderFrame frame;
+    frame.primitives.push_back({bs3d::RenderPrimitiveKind::Box, bs3d::RenderBucket::Opaque});
+    frame.primitives.push_back({bs3d::RenderPrimitiveKind::Box, bs3d::RenderBucket::Decal});
+    frame.primitives.push_back({bs3d::RenderPrimitiveKind::Box, bs3d::RenderBucket::Glass});
+    frame.primitives.push_back({bs3d::RenderPrimitiveKind::Box, bs3d::RenderBucket::Translucent});
+
+    bs3d::D3D11Renderer renderer;
+    renderer.renderFrame(frame);
+
+    expect(!renderer.isInitialized(), "D3D11Renderer remains uninitialized for new buckets test");
+    expect(renderer.renderCalls() == 1, "D3D11Renderer records render call");
+    expect(renderer.lastStats().totalPrimitives == 4,
+           "D3D11Renderer records all 4 primitives (Opaque, Decal, Glass, Translucent)");
+    expect(renderer.lastStats().opaque == 1,
+           "D3D11Renderer records opaque bucket");
+    expect(renderer.lastStats().decal == 1,
+           "D3D11Renderer records decal bucket");
+    expect(renderer.lastStats().glass == 1,
+           "D3D11Renderer records glass bucket");
+    expect(renderer.lastStats().translucent == 1,
+           "D3D11Renderer records translucent bucket");
+    expect(renderer.lastFrameValid(),
+           "D3D11Renderer validates multi-bucket frame as valid");
+}
 #endif
 
 // ---------- RendererFactory tests ----------
@@ -1226,6 +1312,7 @@ int main() {
     builderExtractionPreservesBucketOrder();
     builderExtractionCountsMissingDefinitions();
     builderExtractionSkipsDebugOnly();
+    builderExtractionSupportsDecalGlassTranslucentBuckets();
     nullRendererConsumesEmptyRenderFrame();
     nullRendererConsumesBuilderOutput();
     nullRendererRecordsRenderFrameStats();
@@ -1241,6 +1328,7 @@ int main() {
     d3d11RendererRecordsStatsWithNonDefaultCameraWhenUninitialized();
     d3d11RendererRecordsExpectedStatsForBuilderFrameWhenUninitialized();
     d3d11RendererRecordsExpectedStatsForExtractionFrameWhenUninitialized();
+    d3d11RendererRecordsStatsForDecalGlassTranslucentWhenUninitialized();
 #endif
     factoryCreatesNullRenderer();
     factoryReturnsErrorForRaylibBackend();

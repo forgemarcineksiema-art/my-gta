@@ -16,6 +16,7 @@
 
 struct ID3D11Device;
 struct ID3D11DeviceContext;
+struct ID3D11BlendState;
 struct ID3D11Buffer;
 struct ID3D11DepthStencilState;
 struct ID3D11DepthStencilView;
@@ -69,6 +70,8 @@ private:
     ID3D11Texture2D* depthStencilTexture_ = nullptr;
     ID3D11DepthStencilView* depthStencilView_ = nullptr;
     ID3D11DepthStencilState* depthStencilState_ = nullptr;
+    ID3D11BlendState* opaqueBlendState_ = nullptr;
+    ID3D11BlendState* alphaBlendState_ = nullptr;
     ID3D11VertexShader* vertexShader_ = nullptr;
     ID3D11PixelShader* pixelShader_ = nullptr;
     ID3D11InputLayout* inputLayout_ = nullptr;
