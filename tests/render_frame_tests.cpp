@@ -627,6 +627,45 @@ void builderDebugLinesDoNotAffectPrimitiveOrdering() {
            "frame with interleaved debug lines has valid bucket order");
 }
 
+void builderFrameWithMultipleBoxesAndDebugLinesValidates() {
+    bs3d::RenderFrameBuilder builder;
+
+    {
+        bs3d::RenderPrimitiveCommand opaqueBox = makePrimitive(bs3d::RenderBucket::Opaque, "smoke_opaque");
+        opaqueBox.kind = bs3d::RenderPrimitiveKind::Box;
+        opaqueBox.transform.position = {0.0f, 0.0f, 0.0f};
+        opaqueBox.size = {1.4f, 1.4f, 1.4f};
+        opaqueBox.tint = {255, 180, 60, 255};
+        builder.addPrimitive(opaqueBox);
+    }
+
+    {
+        bs3d::RenderPrimitiveCommand vehicleBox = makePrimitive(bs3d::RenderBucket::Vehicle, "smoke_vehicle");
+        vehicleBox.kind = bs3d::RenderPrimitiveKind::Box;
+        vehicleBox.transform.position = {0.35f, 0.0f, -0.35f};
+        vehicleBox.size = {1.2f, 1.2f, 1.2f};
+        vehicleBox.tint = {80, 170, 255, 255};
+        builder.addPrimitive(vehicleBox);
+    }
+
+    builder.addDebugLine({-2.0f, 0.0f, 0.0f}, {2.0f, 0.0f, 0.0f}, {255, 40, 40, 255});
+    builder.addDebugLine({0.0f, -2.0f, 0.0f}, {0.0f, 2.0f, 0.0f}, {40, 255, 80, 255});
+    builder.addDebugLine({0.0f, 0.0f, -2.0f}, {0.0f, 0.0f, 2.0f}, {80, 140, 255, 255});
+
+    const bs3d::RenderFrame frame = builder.build();
+
+    expect(frame.primitives.size() == 2, "builder smoke frame has 2 primitives");
+    expect(frame.primitives[0].bucket == bs3d::RenderBucket::Opaque, "builder smoke frame first is Opaque");
+    expect(frame.primitives[1].bucket == bs3d::RenderBucket::Vehicle, "builder smoke frame second is Vehicle");
+    expect(frame.debugLines.size() == 3, "builder smoke frame has 3 debug lines");
+
+    const auto result = builder.validate();
+    expect(result.valid, "builder smoke frame validates successfully");
+    expect(result.message.empty(), "builder smoke frame validation has no error message");
+
+    expect(bs3d::isRenderFrameBucketOrderValid(frame), "builder smoke frame has valid bucket order");
+}
+
 // ---------- NullRenderer tests ----------
 
 void nullRendererConsumesEmptyRenderFrame() {
@@ -816,6 +855,43 @@ void d3d11RendererRecordsStatsWithNonDefaultCameraWhenUninitialized() {
            "D3D11Renderer records opaque bucket with non-default camera");
     expect(renderer.lastFrameValid(), "D3D11Renderer validates frame with non-default camera as valid");
 }
+
+void d3d11RendererRecordsExpectedStatsForBuilderFrameWhenUninitialized() {
+    bs3d::RenderFrameBuilder builder;
+
+    {
+        bs3d::RenderPrimitiveCommand opaqueBox = makePrimitive(bs3d::RenderBucket::Opaque, "smoke_opaque");
+        opaqueBox.kind = bs3d::RenderPrimitiveKind::Box;
+        opaqueBox.size = {1.4f, 1.4f, 1.4f};
+        builder.addPrimitive(opaqueBox);
+    }
+    {
+        bs3d::RenderPrimitiveCommand vehicleBox = makePrimitive(bs3d::RenderBucket::Vehicle, "smoke_vehicle");
+        vehicleBox.kind = bs3d::RenderPrimitiveKind::Box;
+        vehicleBox.size = {1.2f, 1.2f, 1.2f};
+        builder.addPrimitive(vehicleBox);
+    }
+
+    builder.addDebugLine({-2.0f, 0.0f, 0.0f}, {2.0f, 0.0f, 0.0f}, {255, 40, 40, 255});
+    builder.addDebugLine({0.0f, -2.0f, 0.0f}, {0.0f, 2.0f, 0.0f}, {40, 255, 80, 255});
+    builder.addDebugLine({0.0f, 0.0f, -2.0f}, {0.0f, 0.0f, 2.0f}, {80, 140, 255, 255});
+
+    bs3d::D3D11Renderer renderer;
+    renderer.renderFrame(builder.build());
+
+    expect(!renderer.isInitialized(), "D3D11Renderer remains uninitialized for builder frame stats test");
+    expect(renderer.renderCalls() == 1, "D3D11Renderer records render call for builder frame");
+    expect(renderer.lastStats().totalPrimitives == 2,
+           "D3D11Renderer records 2 primitives for builder frame");
+    expect(renderer.lastStats().debugLines == 3,
+           "D3D11Renderer records 3 debug lines for builder frame");
+    expect(renderer.lastStats().opaque == 1,
+           "D3D11Renderer records opaque bucket from builder frame");
+    expect(renderer.lastStats().vehicle == 1,
+           "D3D11Renderer records vehicle bucket from builder frame");
+    expect(renderer.lastFrameValid(),
+           "D3D11Renderer validates builder smoke frame as valid");
+}
 #endif
 
 // ---------- RendererFactory tests ----------
@@ -890,6 +966,7 @@ int main() {
     builderValidateSucceedsForBuilderOutput();
     builderDoesNotRequireBackendTypes();
     builderDebugLinesDoNotAffectPrimitiveOrdering();
+    builderFrameWithMultipleBoxesAndDebugLinesValidates();
     nullRendererConsumesEmptyRenderFrame();
     nullRendererConsumesBuilderOutput();
     nullRendererRecordsRenderFrameStats();
@@ -903,6 +980,7 @@ int main() {
     d3d11RendererRecordsValidationFailureForInvalidBucketOrder();
     d3d11RendererRejectsInvalidInitConfigWithoutGpu();
     d3d11RendererRecordsStatsWithNonDefaultCameraWhenUninitialized();
+    d3d11RendererRecordsExpectedStatsForBuilderFrameWhenUninitialized();
 #endif
     factoryCreatesNullRenderer();
     factoryReturnsErrorForRaylibBackend();

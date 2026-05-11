@@ -1,5 +1,7 @@
 #include "D3D11Renderer.h"
 
+#include "bs3d/render/RenderFrameBuilder.h"
+
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
@@ -22,6 +24,7 @@ struct SmokeOptions {
     bool drawTwoBoxes = false;
     bool drawDebugLines = false;
     bool useCamera = false;
+    bool useBuilderFrame = false;
 };
 
 LRESULT CALLBACK smokeWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam) {
@@ -80,8 +83,10 @@ SmokeOptions parseOptions(int argc, char** argv) {
             options.drawDebugLines = true;
         } else if (arg == "--camera") {
             options.useCamera = true;
+        } else if (arg == "--builder-frame") {
+            options.useBuilderFrame = true;
         } else if (arg == "--help") {
-            std::cout << "Usage: bs3d_d3d11_renderer_smoke [--frames <count>] [--box] [--two-boxes] [--debug-lines] [--camera]\n";
+            std::cout << "Usage: bs3d_d3d11_renderer_smoke [--frames <count>] [--box] [--two-boxes] [--debug-lines] [--camera] [--builder-frame]\n";
             std::exit(0);
         } else {
             throw std::runtime_error("unknown option: " + arg);
@@ -135,6 +140,56 @@ HWND createSmokeWindow(HINSTANCE instance, int width, int height) {
 }
 
 bs3d::RenderFrame makeSmokeFrame(const SmokeOptions& options, int frameIndex) {
+    if (options.useBuilderFrame) {
+        bs3d::RenderFrameBuilder builder;
+
+        if (options.useCamera) {
+            bs3d::RenderCamera camera;
+            camera.position = {0.0f, 2.0f, -5.0f};
+            camera.target = {0.0f, 0.0f, 0.0f};
+            camera.up = {0.0f, 1.0f, 0.0f};
+            camera.fovy = 60.0f;
+            builder.setCamera(camera);
+        }
+
+        {
+            bs3d::RenderPrimitiveCommand box;
+            box.kind = bs3d::RenderPrimitiveKind::Box;
+            box.bucket = bs3d::RenderBucket::Opaque;
+            box.transform.position = {0.0f, 0.0f, 0.0f};
+            box.transform.scale = {1.0f, 1.0f, 1.0f};
+            box.transform.yawRadians = static_cast<float>(frameIndex) * 0.08f;
+            box.size = {1.4f, 1.4f, 1.4f};
+            box.tint = {255, 180, 60, 255};
+            box.sourceId = "builder_smoke_opaque_box";
+            builder.addPrimitive(box);
+        }
+
+        {
+            bs3d::RenderPrimitiveCommand box;
+            box.kind = bs3d::RenderPrimitiveKind::Box;
+            box.bucket = bs3d::RenderBucket::Vehicle;
+            box.transform.position = {0.35f, 0.0f, -0.35f};
+            box.transform.scale = {1.0f, 1.0f, 1.0f};
+            box.transform.yawRadians = -static_cast<float>(frameIndex) * 0.05f;
+            box.size = {1.2f, 1.2f, 1.2f};
+            box.tint = {80, 170, 255, 255};
+            box.sourceId = "builder_smoke_vehicle_box";
+            builder.addPrimitive(box);
+        }
+
+        builder.addDebugLine({-2.0f, 0.0f, 0.0f}, {2.0f, 0.0f, 0.0f}, {255, 40, 40, 255});
+        builder.addDebugLine({0.0f, -2.0f, 0.0f}, {0.0f, 2.0f, 0.0f}, {40, 255, 80, 255});
+        builder.addDebugLine({0.0f, 0.0f, -2.0f}, {0.0f, 0.0f, 2.0f}, {80, 140, 255, 255});
+
+        const auto validationResult = builder.validate();
+        if (!validationResult.valid) {
+            std::cerr << "RenderFrameBuilder smoke frame validation failed: " << validationResult.message << '\n';
+        }
+
+        return builder.build();
+    }
+
     bs3d::RenderFrame frame;
 
     if (options.useCamera) {

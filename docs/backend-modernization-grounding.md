@@ -142,6 +142,13 @@ Nie jest to pełny system kamery, integracja runtime, ani podłączenie do `Game
 Runtime renderer nadal jest raylibowy.
 Runtime D3D11 nadal **nie jest zaimplementowany**.
 
+Backend prep status update: `D3D11Renderer` smoke może teraz konsumować `RenderFrame` zbudowany przez `RenderFrameBuilder` (`--builder-frame`).
+Builder tworzy ramkę z co najmniej 2 Box primitives w obsługiwanych bucketach (Opaque, Vehicle), co najmniej 3 debug lines i waliduje ramkę przed wysłaniem.
+To ćwiczy ścieżkę kontraktu renderu: `RenderFrameBuilder` → `RenderFrame` → `D3D11Renderer` smoke, bez ręcznego konstruowania `RenderFrame`.
+Runtime renderer nadal jest raylibowy.
+`GameApp` nadal nie jest podłączony do D3D11.
+`RendererFactory` nie jest podłączony do D3D11.
+
 Backend prep status update: istnieje teraz backend-neutralny interfejs `IRenderer`, który konsumuje `RenderFrame`.
 Testowy `RecordingRenderer` istnieje tylko w testach i zapisuje wyłącznie liczniki komend.
 Aktywne renderowanie runtime nadal przechodzi przez raylibowe `WorldRenderer`, `HudRenderer` i `DebugRenderer`.
