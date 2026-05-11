@@ -13,6 +13,7 @@
 #define BS3D_D3D11_BOOT_HAS_WRL 0
 #endif
 
+#include <cstdint>
 #include <cstdlib>
 #include <cmath>
 #include <cstring>
@@ -84,15 +85,19 @@ struct D3D11State {
     ComPtr<ID3D11DeviceContext> context;
     ComPtr<IDXGISwapChain> swapChain;
     ComPtr<ID3D11RenderTargetView> renderTargetView;
+    ComPtr<ID3D11Texture2D> depthStencilTexture;
+    ComPtr<ID3D11DepthStencilView> depthStencilView;
+    ComPtr<ID3D11DepthStencilState> depthStencilState;
     ComPtr<ID3D11VertexShader> vertexShader;
     ComPtr<ID3D11PixelShader> pixelShader;
     ComPtr<ID3D11InputLayout> inputLayout;
     ComPtr<ID3D11Buffer> vertexBuffer;
+    ComPtr<ID3D11Buffer> indexBuffer;
     ComPtr<ID3D11Buffer> constantBuffer;
     D3D11_VIEWPORT viewport{};
 };
 
-struct TriangleVertex {
+struct Vertex {
     float position[3];
     float color[4];
 };
@@ -101,12 +106,12 @@ struct Matrix4 {
     float values[16];
 };
 
-struct alignas(16) TriangleConstants {
+struct alignas(16) TransformConstants {
     // CPU matrices are row-major and consumed by HLSL as mul(row_vector, row_major_matrix).
     float mvp[16];
 };
 
-static_assert(sizeof(TriangleConstants) % 16 == 0, "D3D11 constant buffers must be 16-byte aligned");
+static_assert(sizeof(TransformConstants) % 16 == 0, "D3D11 constant buffers must be 16-byte aligned");
 
 Matrix4 identityMatrix() {
     return Matrix4{{1.0f, 0.0f, 0.0f, 0.0f,
@@ -352,10 +357,45 @@ D3D11State createD3D11State(HWND window, int width, int height) {
     state.viewport.MinDepth = 0.0f;
     state.viewport.MaxDepth = 1.0f;
 
+    D3D11_TEXTURE2D_DESC depthDesc{};
+    depthDesc.Width = static_cast<UINT>(width);
+    depthDesc.Height = static_cast<UINT>(height);
+    depthDesc.MipLevels = 1;
+    depthDesc.ArraySize = 1;
+    depthDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+    depthDesc.SampleDesc.Count = 1;
+    depthDesc.Usage = D3D11_USAGE_DEFAULT;
+    depthDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+
+    hr = state.device->CreateTexture2D(&depthDesc, nullptr, state.depthStencilTexture.GetAddressOf());
+    if (FAILED(hr)) {
+        throw std::runtime_error("ID3D11Device::CreateTexture2D failed for depth stencil with HRESULT " +
+                                 formatHresult(hr));
+    }
+
+    hr = state.device->CreateDepthStencilView(state.depthStencilTexture.Get(), nullptr,
+                                              state.depthStencilView.GetAddressOf());
+    if (FAILED(hr)) {
+        throw std::runtime_error("ID3D11Device::CreateDepthStencilView failed with HRESULT " + formatHresult(hr));
+    }
+
+    D3D11_DEPTH_STENCIL_DESC depthStencilDesc{};
+    depthStencilDesc.DepthEnable = TRUE;
+    depthStencilDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
+    depthStencilDesc.DepthFunc = D3D11_COMPARISON_LESS;
+    depthStencilDesc.StencilEnable = FALSE;
+
+    hr = state.device->CreateDepthStencilState(&depthStencilDesc, state.depthStencilState.GetAddressOf());
+    if (FAILED(hr)) {
+        throw std::runtime_error("ID3D11Device::CreateDepthStencilState failed with HRESULT " + formatHresult(hr));
+    }
+
+    std::cout << "depth buffer created\n";
+
     return state;
 }
 
-void createTrianglePipeline(D3D11State& state) {
+void createQuadPipeline(D3D11State& state) {
     const char* shaderSource = R"(
 struct VSInput {
     float3 position : POSITION;
@@ -415,10 +455,11 @@ float4 PSMain(PSInput input) : SV_Target {
         throw std::runtime_error("ID3D11Device::CreateInputLayout failed with HRESULT " + formatHresult(hr));
     }
 
-    const TriangleVertex vertices[] = {
-        {{0.0f, 0.65f, 0.0f}, {1.0f, 0.18f, 0.12f, 1.0f}},
-        {{0.65f, -0.55f, 0.0f}, {0.12f, 0.85f, 0.22f, 1.0f}},
-        {{-0.65f, -0.55f, 0.0f}, {0.16f, 0.45f, 1.0f, 1.0f}},
+    const Vertex vertices[] = {
+        {{-0.55f,  0.55f, 0.0f}, {1.0f, 0.18f, 0.12f, 1.0f}},
+        {{ 0.55f,  0.55f, 0.0f}, {0.12f, 0.85f, 0.22f, 1.0f}},
+        {{ 0.55f, -0.55f, 0.0f}, {0.16f, 0.45f, 1.0f, 1.0f}},
+        {{-0.55f, -0.55f, 0.0f}, {0.88f, 0.72f, 0.12f, 1.0f}},
     };
 
     D3D11_BUFFER_DESC vertexBufferDesc{};
@@ -431,35 +472,51 @@ float4 PSMain(PSInput input) : SV_Target {
 
     hr = state.device->CreateBuffer(&vertexBufferDesc, &vertexData, state.vertexBuffer.GetAddressOf());
     if (FAILED(hr)) {
-        throw std::runtime_error("ID3D11Device::CreateBuffer failed for triangle vertex buffer with HRESULT " +
+        throw std::runtime_error("ID3D11Device::CreateBuffer failed for quad vertex buffer with HRESULT " +
+                                 formatHresult(hr));
+    }
+
+    const uint16_t indices[] = {0, 1, 2, 0, 2, 3};
+
+    D3D11_BUFFER_DESC indexBufferDesc{};
+    indexBufferDesc.ByteWidth = static_cast<UINT>(sizeof(indices));
+    indexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
+    indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+
+    D3D11_SUBRESOURCE_DATA indexData{};
+    indexData.pSysMem = indices;
+
+    hr = state.device->CreateBuffer(&indexBufferDesc, &indexData, state.indexBuffer.GetAddressOf());
+    if (FAILED(hr)) {
+        throw std::runtime_error("ID3D11Device::CreateBuffer failed for quad index buffer with HRESULT " +
                                  formatHresult(hr));
     }
 
     D3D11_BUFFER_DESC constantBufferDesc{};
-    constantBufferDesc.ByteWidth = static_cast<UINT>(sizeof(TriangleConstants));
+    constantBufferDesc.ByteWidth = static_cast<UINT>(sizeof(TransformConstants));
     constantBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
     constantBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
     constantBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
     hr = state.device->CreateBuffer(&constantBufferDesc, nullptr, state.constantBuffer.GetAddressOf());
     if (FAILED(hr)) {
-        throw std::runtime_error("ID3D11Device::CreateBuffer failed for triangle constant buffer with HRESULT " +
+        throw std::runtime_error("ID3D11Device::CreateBuffer failed for constant buffer with HRESULT " +
                                  formatHresult(hr));
     }
 
-    std::cout << "triangle pipeline created\n";
+    std::cout << "indexed quad pipeline created\n";
     std::cout << "constant buffer created\n";
 }
 
-void updateTriangleConstants(D3D11State& state, int frameIndex) {
-    TriangleConstants constants{};
+void updateTransformConstants(D3D11State& state, int frameIndex) {
+    TransformConstants constants{};
     const Matrix4 mvp = zRotationMatrix(static_cast<float>(frameIndex) * 0.08f);
     std::memcpy(constants.mvp, mvp.values, sizeof(constants.mvp));
 
     D3D11_MAPPED_SUBRESOURCE mapped{};
     const HRESULT hr = state.context->Map(state.constantBuffer.Get(), 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
     if (FAILED(hr)) {
-        throw std::runtime_error("ID3D11DeviceContext::Map failed for triangle constant buffer with HRESULT " +
+        throw std::runtime_error("ID3D11DeviceContext::Map failed for constant buffer with HRESULT " +
                                  formatHresult(hr));
     }
 
@@ -474,7 +531,7 @@ int runBootSpike(const BootOptions& options) {
     HINSTANCE instance = GetModuleHandleW(nullptr);
     HWND window = createBootWindow(instance, width, height);
     D3D11State d3d11 = createD3D11State(window, width, height);
-    createTrianglePipeline(d3d11);
+    createQuadPipeline(d3d11);
 
     int renderedFrames = 0;
     bool running = true;
@@ -501,22 +558,26 @@ int runBootSpike(const BootOptions& options) {
 
         const float clearColor[] = {0.06f, 0.16f, 0.42f, 1.0f};
         ID3D11RenderTargetView* renderTargetView = d3d11.renderTargetView.Get();
-        d3d11.context->OMSetRenderTargets(1, &renderTargetView, nullptr);
+        ID3D11DepthStencilView* depthStencilView = d3d11.depthStencilView.Get();
+        d3d11.context->OMSetRenderTargets(1, &renderTargetView, depthStencilView);
         d3d11.context->ClearRenderTargetView(d3d11.renderTargetView.Get(), clearColor);
+        d3d11.context->ClearDepthStencilView(d3d11.depthStencilView.Get(), D3D11_CLEAR_DEPTH, 1.0f, 0);
+        d3d11.context->OMSetDepthStencilState(d3d11.depthStencilState.Get(), 0);
         d3d11.context->RSSetViewports(1, &d3d11.viewport);
-        updateTriangleConstants(d3d11, renderedFrames);
+        updateTransformConstants(d3d11, renderedFrames);
 
         ID3D11Buffer* vertexBuffers[] = {d3d11.vertexBuffer.Get()};
-        const UINT strides[] = {sizeof(TriangleVertex)};
+        const UINT strides[] = {sizeof(Vertex)};
         const UINT offsets[] = {0};
         ID3D11Buffer* constantBuffers[] = {d3d11.constantBuffer.Get()};
         d3d11.context->IASetInputLayout(d3d11.inputLayout.Get());
         d3d11.context->IASetVertexBuffers(0, 1, vertexBuffers, strides, offsets);
+        d3d11.context->IASetIndexBuffer(d3d11.indexBuffer.Get(), DXGI_FORMAT_R16_UINT, 0);
         d3d11.context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
         d3d11.context->VSSetShader(d3d11.vertexShader.Get(), nullptr, 0);
         d3d11.context->VSSetConstantBuffers(0, 1, constantBuffers);
         d3d11.context->PSSetShader(d3d11.pixelShader.Get(), nullptr, 0);
-        d3d11.context->Draw(3, 0);
+        d3d11.context->DrawIndexed(6, 0, 0);
 
         const HRESULT hr = d3d11.swapChain->Present(1, 0);
         if (FAILED(hr)) {
