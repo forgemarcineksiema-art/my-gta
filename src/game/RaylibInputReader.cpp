@@ -4,7 +4,7 @@
 
 namespace bs3d {
 
-RawInputState readRaylibRawInput(bool mouseCaptured) {
+RawInputState RaylibInputReader::read(bool mouseCaptured) const {
     RawInputState raw;
     raw.moveForwardDown = IsKeyDown(KEY_W);
     raw.moveBackwardDown = IsKeyDown(KEY_S);
@@ -49,6 +49,10 @@ RawInputState readRaylibRawInput(bool mouseCaptured) {
     raw.mouseDeltaX = mouseCaptured ? mouseDelta.x : 0.0f;
     raw.mouseDeltaY = mouseCaptured ? mouseDelta.y : 0.0f;
     return raw;
+}
+
+RawInputState readRaylibRawInput(bool mouseCaptured) {
+    return RaylibInputReader{}.read(mouseCaptured);
 }
 
 } // namespace bs3d

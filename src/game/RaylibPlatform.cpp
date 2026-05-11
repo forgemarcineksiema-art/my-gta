@@ -12,7 +12,7 @@ void RaylibPlatform::configureWindowFlags() const {
     SetConfigFlags(FLAG_WINDOW_RESIZABLE | FLAG_MSAA_4X_HINT | FLAG_VSYNC_HINT);
 }
 
-void RaylibPlatform::openWindow(const RaylibWindowConfig& config) const {
+void RaylibPlatform::openWindow(const PlatformWindowConfig& config) const {
     InitWindow(config.width, config.height, config.title.c_str());
     if (config.disableExitKey) {
         SetExitKey(KEY_NULL);

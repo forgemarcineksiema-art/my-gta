@@ -366,7 +366,8 @@ struct Runtime {
     WorldReactionRuntime worldReactionRuntime;
     InputRouter inputRouter;
     RenderCoordinator renderCoordinator;
-    RaylibPlatform& platform;
+    IPlatform& platform;
+    IInputReader& inputReader;
 
     DialogueSystem& dialogue;
     MissionController& mission;
@@ -442,8 +443,9 @@ struct Runtime {
     bool writeSave = true;
     std::vector<std::string> completedLocalRewirFavorIds;
 
-    explicit Runtime(GameRunOptions options, RaylibPlatform& platform)
+    explicit Runtime(GameRunOptions options, IPlatform& platform, IInputReader& inputReader)
         : platform(platform),
+          inputReader(inputReader),
           dialogue(missionRuntime.dialogue),
           mission(missionRuntime.mission),
           paragonMission(missionRuntime.paragonMission),
@@ -725,7 +727,7 @@ struct Runtime {
     }
 
     RawInputState readRawInput() const {
-        return readRaylibRawInput(mouseCaptured);
+        return inputReader.read(mouseCaptured);
     }
 
     int assetPreviewCount() const {
@@ -2499,12 +2501,13 @@ void GameApp::run() {
 
 void GameApp::run(const GameRunOptions& options) {
     RaylibPlatform platform;
+    RaylibInputReader inputReader;
     bool windowReady = false;
     bool runtimeReady = false;
 #if defined(BS3D_ENABLE_DEV_TOOLS) && BS3D_ENABLE_DEV_TOOLS
     bool imguiReady = false;
 #endif
-    Runtime runtime(options, platform);
+    Runtime runtime(options, platform, inputReader);
     platform.configureWindowFlags();
     try {
         platform.openWindow({ScreenWidth, ScreenHeight, runtimeWindowTitle(options), 60, true, true});

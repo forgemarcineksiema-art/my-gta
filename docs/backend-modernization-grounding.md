@@ -92,6 +92,10 @@ Kierunek modernizacji ma umożliwić w przyszłości wybór backendów, ale **dz
 
 Uwaga (explicit): **CLI flags do not mean d3d11/physx are implemented**. To jest tylko plumbing pod przyszłe prace.
 
+Backend prep status update: istnieją teraz backend-neutralne interfejsy `IPlatform` i `IInputReader`.
+Obecnie jedynymi implementacjami runtime są `RaylibPlatform` i `RaylibInputReader`.
+To nadal **nie oznacza**, że D3D11 ani PhysX są zaimplementowane.
+
 ## 7) First safe implementation pass (pierwszy bezpieczny pass – rekomendacja)
 
 Następny pass w kodzie (nie w ramach tej dokumentacji) powinien być mały, odwracalny i nie zmieniać zachowania:
