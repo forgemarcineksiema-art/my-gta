@@ -182,6 +182,15 @@ Runtime renderer nadal jest raylibowy.
 `--renderer d3d11` nadal **nie jest aktywny** w grze.
 `RendererFactory`/`BackendKinds` pozostają w ścieżce testowej/narzędziowej.
 
+Backend prep status update: istnieje teraz `--d3d11-shadow-window` (dev-only, Windows-only).
+Po włączeniu, `GameApp` otwiera osobne okno Win32 (640x360, "Blok 13 D3D11 Shadow"), inicjalizuje `D3D11Renderer` przez `RendererFactory`, i renderuje shadow `RenderFrame` w tym bocznym oknie.
+Główne renderowanie raylib pozostaje bez zmian; D3D11 nie zastępuje `GameApp` renderingu.
+Sidecar renderuje tylko wspierany podzbiór `RenderFrame` (Box + debug lines) z danych `WorldRenderList`.
+`D3D11ShadowSidecar` jest prywatnym helperem w `src/game/`; nie wystawia typów D3D11/Win32 w publicznych nagłówkach.
+Na non-Windows flaga jest akceptowana ale sidecar zwraca błąd "Windows-only" i kontynuuje działanie gry.
+Runtime renderer nadal jest raylibowy.
+`--renderer d3d11` nadal **nie jest aktywny** w grze.
+
 Backend prep status update: `D3D11Renderer` smoke może teraz konsumować `RenderFrame` zbudowany przez `WorldRenderList`-style extraction (`--extraction-frame`).
 Smoke tworzy lokalne `WorldObject`/`WorldAssetDefinition`, konstruuje `WorldRenderList`, przepuszcza dane przez `RenderExtraction::addWorldRenderListFallbackBoxes(RenderFrameBuilder&)` do `RenderFrameBuilder`, a następnie do `D3D11Renderer`.
 Ścieżka: WorldRenderList-style data → RenderExtraction → RenderFrameBuilder → RenderFrame → D3D11Renderer smoke.

@@ -5,6 +5,7 @@
 #include "ChaseAiRuntime.h"
 #include "ChaseVehicleRuntime.h"
 #include "CharacterPosePreview.h"
+#include "D3D11ShadowSidecar.h"
 #include "DevTools.h"
 #include "IntroLevelBuilder.h"
 #include "IntroLevelPresentation.h"
@@ -2530,6 +2531,15 @@ void GameApp::run(const GameRunOptions& options) {
         FixedStepClock simulationClock({1.0f / 60.0f, 0.10f, 5});
         int renderedFrames = 0;
 
+        D3D11ShadowSidecar sidecar;
+        if (options.d3d11ShadowWindow) {
+            if (sidecar.initialize()) {
+                TraceLog(LOG_INFO, "D3D11 shadow sidecar initialized");
+            } else {
+                TraceLog(LOG_WARNING, "D3D11 shadow sidecar init failed: %s", sidecar.lastError());
+            }
+        }
+
         while (!platform.shouldClose()) {
             RawInputState frameRawInput = runtime.readRawInput();
             runtime.handleFrameInput(frameRawInput);
@@ -2587,6 +2597,14 @@ void GameApp::run(const GameRunOptions& options) {
                          stats.debugLines,
                          validation.valid ? "true" : "false",
                          nullRenderer.renderCalls());
+
+                if (sidecar.isInitialized()) {
+                    sidecar.submit(shadowFrame);
+                }
+            }
+
+            if (sidecar.isInitialized()) {
+                sidecar.pumpMessages();
             }
 
             if (options.smokeFrames > 0 && renderedFrames >= options.smokeFrames) {
@@ -2594,6 +2612,7 @@ void GameApp::run(const GameRunOptions& options) {
             }
         }
 
+        sidecar.shutdown();
         runtime.shutdown();
 #if defined(BS3D_ENABLE_DEV_TOOLS) && BS3D_ENABLE_DEV_TOOLS
         if (imguiReady) {

@@ -37,6 +37,7 @@ void printHelp(std::ostream& out) {
         << "  --physics <custom>       Physics backend (planned: physx, not implemented)\n"
         << "  --smoke-frames <count>   Exit after count rendered frames\n"
         << "  --renderframe-shadow     Build/validate a shadow RenderFrame from world data each frame (dev/tool)\n"
+        << "  --d3d11-shadow-window    Open a sidecar D3D11 window rendering the shadow RenderFrame (dev only)\n"
         << "  --no-load-save           Skip loading save at startup\n"
         << "  --no-save                Disable save writes\n"
         << "  --no-audio               Disable audio setup\n"
@@ -89,6 +90,9 @@ int main(int argc, char** argv) {
                 options.smokeFrames = parseNonNegativeInt(requireValue(index, argc, argv, arg), arg);
             } else if (arg == "--renderframe-shadow") {
                 options.renderFrameShadow = true;
+            } else if (arg == "--d3d11-shadow-window") {
+                options.renderFrameShadow = true;
+                options.d3d11ShadowWindow = true;
             } else {
                 throw std::runtime_error("unknown option: " + arg);
             }
