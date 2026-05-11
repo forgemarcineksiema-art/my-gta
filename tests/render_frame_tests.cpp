@@ -1345,7 +1345,113 @@ void d3d11RendererDrawCoverageIsZeroWhenUninitialized() {
     expect(d3d11Stats.skippedPrimitives == 0,
            "uninitialized D3D11Renderer skips counting when not initialized");
 }
+
+void d3d11RendererFrameStatsCountUnsupportedKinds() {
+    bs3d::RenderFrame frame;
+    frame.primitives.push_back({bs3d::RenderPrimitiveKind::Box, bs3d::RenderBucket::Opaque});
+    frame.primitives.push_back({bs3d::RenderPrimitiveKind::Sphere, bs3d::RenderBucket::Opaque});
+    frame.primitives.push_back({bs3d::RenderPrimitiveKind::Mesh, bs3d::RenderBucket::Vehicle});
+    frame.debugLines.push_back({{0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {255, 0, 0, 255}});
+
+    bs3d::D3D11Renderer renderer;
+    renderer.renderFrame(frame);
+
+    expect(!renderer.isInitialized(), "D3D11Renderer uninitialized for unsupported-kinds stats test");
+    expect(renderer.renderCalls() == 1, "D3D11Renderer records render call");
+    // Frame-level stats count all primitives regardless of GPU support.
+    expect(renderer.lastStats().totalPrimitives == 3,
+           "frame stats count all 3 primitives (Box, Sphere, Mesh)");
+    expect(renderer.lastStats().opaque == 2,
+           "frame stats count 2 opaque primitives (Box, Sphere)");
+    expect(renderer.lastStats().vehicle == 1,
+           "frame stats count 1 vehicle primitive (Mesh)");
+    expect(renderer.lastStats().debugLines == 1,
+           "frame stats count debug line");
+    // D3D11 draw coverage is zero because uninitialized.
+    const auto& d3d11 = renderer.lastD3D11Stats();
+    expect(d3d11.drawnBoxes == 0, "uninitialized D3D11 draws 0 boxes");
+    expect(d3d11.skippedUnsupportedKinds == 0,
+           "uninitialized D3D11 counts 0 skip-kinds");
+}
 #endif
+
+// ---------- RenderFrameDump v1 unsupported-kind tests ----------
+
+void dumpSkipsNonBoxPrimitivesOnWrite() {
+    bs3d::RenderFrame original;
+    original.camera.position = {0.0f, 0.0f, 0.0f};
+    original.camera.target = {1.0f, 0.0f, 0.0f};
+    original.camera.up = {0.0f, 1.0f, 0.0f};
+    original.camera.fovy = 60.0f;
+
+    original.primitives.push_back({bs3d::RenderPrimitiveKind::Box, bs3d::RenderBucket::Opaque});
+    original.primitives.push_back({bs3d::RenderPrimitiveKind::Sphere, bs3d::RenderBucket::Opaque});
+    original.primitives.push_back({bs3d::RenderPrimitiveKind::Mesh, bs3d::RenderBucket::Vehicle});
+    original.primitives.push_back({bs3d::RenderPrimitiveKind::CylinderX, bs3d::RenderBucket::Decal});
+    original.primitives.push_back({bs3d::RenderPrimitiveKind::QuadPanel, bs3d::RenderBucket::Glass});
+    original.primitives.back().sourceId = "quad_panel_test";
+    original.debugLines.push_back({{0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {255, 0, 0, 255}});
+    original.debugLines.push_back({{0.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0, 255, 0, 255}});
+
+    const std::string dumpPath = "artifacts/test_dump_non_box_skip.txt";
+    std::string error;
+    expect(bs3d::writeRenderFrameDump(original, dumpPath, &error),
+           "dump write succeeds for frame with non-Box primitives");
+    expect(error.empty(), "dump write has no error for non-Box primitives");
+
+    bs3d::RenderFrame loaded;
+    expect(bs3d::readRenderFrameDump(dumpPath, loaded, &error),
+           "dump read succeeds after non-Box primitive write");
+    expect(error.empty(), "dump read has no error");
+
+    // v1 dump only serializes Box primitives; non-Box kinds are silently skipped.
+    expect(loaded.primitives.size() == 1,
+           "v1 dump preserves only the Box primitive (1), skipped Sphere/Mesh/CylinderX/QuadPanel (4)");
+    expect(loaded.primitives[0].kind == bs3d::RenderPrimitiveKind::Box,
+           "preserved primitive is Box");
+    expect(loaded.primitives[0].bucket == bs3d::RenderBucket::Opaque,
+           "preserved Box bucket is Opaque");
+    expect(loaded.debugLines.size() == 2,
+           "v1 dump preserves both debug lines");
+
+    expect(loaded.camera.fovy > 0.0f, "v1 dump preserves camera");
+
+    const auto validation = bs3d::validateRenderFrame(loaded);
+    expect(validation.valid, "loaded frame after non-Box skip validates");
+
+    std::remove(dumpPath.c_str());
+}
+
+void dumpRoundTripWithBoxAndNonBoxValidatesOnlyBoxSurvives() {
+    bs3d::RenderFrame original;
+    original.camera.fovy = 45.0f;
+    original.primitives.push_back({bs3d::RenderPrimitiveKind::Box, bs3d::RenderBucket::Vehicle});
+    original.primitives.push_back({bs3d::RenderPrimitiveKind::Sphere, bs3d::RenderBucket::Opaque});
+    original.primitives.push_back({bs3d::RenderPrimitiveKind::Box, bs3d::RenderBucket::Decal});
+
+    const std::string dumpPath = "artifacts/test_dump_box_sphere_mix.txt";
+    expect(bs3d::writeRenderFrameDump(original, dumpPath), "dump write succeeds (Box+Sphere mix)");
+
+    bs3d::RenderFrame loaded;
+    std::string error;
+    expect(bs3d::readRenderFrameDump(dumpPath, loaded, &error), "dump read succeeds (Box+Sphere mix)");
+
+    expect(loaded.primitives.size() == 2,
+           "v1 dump preserves 2 Box primitives, skips 1 Sphere");
+    for (const auto& prim : loaded.primitives) {
+        expect(prim.kind == bs3d::RenderPrimitiveKind::Box,
+               "v1 dump loaded primitive is always Box kind");
+    }
+    expect(loaded.primitives[0].bucket == bs3d::RenderBucket::Vehicle,
+           "first preserved Box bucket is Vehicle");
+    expect(loaded.primitives[1].bucket == bs3d::RenderBucket::Decal,
+           "second preserved Box bucket is Decal");
+
+    const auto validation = bs3d::validateRenderFrame(loaded);
+    expect(validation.valid, "loaded Box-only frame from mixed write validates");
+
+    std::remove(dumpPath.c_str());
+}
 
 // ---------- RendererFactory tests ----------
 
@@ -1474,6 +1580,8 @@ int main() {
     dumpReadMissingHeaderFails();
     dumpReadUnknownBucketFails();
     dumpReadUnknownPrimitiveKindFails();
+    dumpSkipsNonBoxPrimitivesOnWrite();
+    dumpRoundTripWithBoxAndNonBoxValidatesOnlyBoxSurvives();
     nullRendererConsumesEmptyRenderFrame();
     nullRendererConsumesBuilderOutput();
     nullRendererRecordsRenderFrameStats();
@@ -1491,6 +1599,7 @@ int main() {
     d3d11RendererRecordsExpectedStatsForExtractionFrameWhenUninitialized();
     d3d11RendererRecordsStatsForDecalGlassTranslucentWhenUninitialized();
     d3d11RendererDrawCoverageIsZeroWhenUninitialized();
+    d3d11RendererFrameStatsCountUnsupportedKinds();
 #endif
     factoryCreatesNullRenderer();
     factoryReturnsErrorForRaylibBackend();
