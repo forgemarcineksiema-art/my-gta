@@ -1,5 +1,6 @@
 #include "RenderExtraction.h"
 #include "bs3d/render/IRenderer.h"
+#include "bs3d/render/RenderFrameValidation.h"
 #include "bs3d/render/WorldRenderList.h"
 
 #include "bs3d/render/RenderFrame.h"
@@ -304,6 +305,96 @@ void debugOnlyDefinitionsAreSkippedAndCounted() {
     expect(stats.totalCommands == 0, "debug-only extraction counts zero emitted commands");
 }
 
+void summarizeRenderFrameCountsEmptyFrame() {
+    const bs3d::RenderFrame frame;
+
+    const bs3d::RenderFrameStats stats = bs3d::summarizeRenderFrame(frame);
+
+    expect(stats.totalPrimitives == 0, "render frame stats counts zero primitives for empty frame");
+    expect(stats.debugLines == 0, "render frame stats counts zero debug lines for empty frame");
+    expect(stats.sky == 0, "render frame stats counts zero sky primitives for empty frame");
+    expect(stats.hud == 0, "render frame stats counts zero hud primitives for empty frame");
+}
+
+void summarizeRenderFrameCountsBucketsAndDebugLines() {
+    bs3d::RenderFrame frame;
+    frame.primitives.push_back({bs3d::RenderPrimitiveKind::Box, bs3d::RenderBucket::Sky});
+    frame.primitives.push_back({bs3d::RenderPrimitiveKind::Box, bs3d::RenderBucket::Ground});
+    frame.primitives.push_back({bs3d::RenderPrimitiveKind::Box, bs3d::RenderBucket::Opaque});
+    frame.primitives.push_back({bs3d::RenderPrimitiveKind::Box, bs3d::RenderBucket::Vehicle});
+    frame.primitives.push_back({bs3d::RenderPrimitiveKind::Box, bs3d::RenderBucket::Decal});
+    frame.primitives.push_back({bs3d::RenderPrimitiveKind::Box, bs3d::RenderBucket::Glass});
+    frame.primitives.push_back({bs3d::RenderPrimitiveKind::Box, bs3d::RenderBucket::Translucent});
+    frame.primitives.push_back({bs3d::RenderPrimitiveKind::Box, bs3d::RenderBucket::Debug});
+    frame.primitives.push_back({bs3d::RenderPrimitiveKind::Box, bs3d::RenderBucket::Hud});
+    bs3d::addDebugLine(frame, {0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {255, 255, 255, 255});
+    bs3d::addDebugLine(frame, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f, 0.0f}, {255, 255, 255, 255});
+
+    const bs3d::RenderFrameStats stats = bs3d::summarizeRenderFrame(frame);
+
+    expect(stats.totalPrimitives == 9, "render frame stats counts total primitives");
+    expect(stats.debugLines == 2, "render frame stats counts debug lines");
+    expect(stats.sky == 1, "render frame stats counts sky bucket");
+    expect(stats.ground == 1, "render frame stats counts ground bucket");
+    expect(stats.opaque == 1, "render frame stats counts opaque bucket");
+    expect(stats.vehicle == 1, "render frame stats counts vehicle bucket");
+    expect(stats.decal == 1, "render frame stats counts decal bucket");
+    expect(stats.glass == 1, "render frame stats counts glass bucket");
+    expect(stats.translucent == 1, "render frame stats counts translucent bucket");
+    expect(stats.debug == 1, "render frame stats counts debug bucket");
+    expect(stats.hud == 1, "render frame stats counts hud bucket");
+}
+
+void extractedWorldRenderListFrameHasValidBucketOrder() {
+    bs3d::WorldObject translucent = worldObject("translucent_object", "translucent_asset");
+    bs3d::WorldObject glass = worldObject("glass_object", "glass_asset");
+    bs3d::WorldObject decal = worldObject("decal_object", "decal_asset");
+    bs3d::WorldObject opaque = worldObject("opaque_object", "opaque_asset");
+    bs3d::WorldRenderList renderList;
+    renderList.transparent.push_back(&translucent);
+    renderList.transparent.push_back(&glass);
+    renderList.transparent.push_back(&decal);
+    renderList.opaque.push_back(&opaque);
+    const std::vector<bs3d::WorldAssetDefinition> definitions{
+        assetDefinition("translucent_asset", "Translucent"),
+        assetDefinition("glass_asset", "Glass"),
+        assetDefinition("decal_asset", "Decal"),
+        assetDefinition("opaque_asset", "Opaque"),
+    };
+
+    bs3d::RenderFrame frame;
+    bs3d::addWorldRenderListFallbackBoxes(frame, renderList, definitions);
+    bs3d::addDebugLine(frame, {0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, {255, 255, 255, 255});
+
+    expect(bs3d::isRenderFrameBucketOrderValid(frame), "extracted world render list frame has valid bucket order");
+    const bs3d::RenderFrameValidationResult result = bs3d::validateRenderFrame(frame);
+    expect(result.valid, "validate render frame accepts extracted world render list frame");
+}
+
+void invalidBucketOrderIsRejected() {
+    bs3d::RenderFrame frame;
+    frame.primitives.push_back({bs3d::RenderPrimitiveKind::Box, bs3d::RenderBucket::Glass});
+    frame.primitives.push_back({bs3d::RenderPrimitiveKind::Box, bs3d::RenderBucket::Opaque});
+    bs3d::addDebugLine(frame, {0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, {255, 255, 255, 255});
+
+    const bs3d::RenderFrameValidationResult result = bs3d::validateRenderFrame(frame);
+
+    expect(!bs3d::isRenderFrameBucketOrderValid(frame), "invalid bucket order is rejected");
+    expect(!result.valid, "validate render frame reports invalid bucket order");
+    expect(result.message.find("Opaque") != std::string::npos, "invalid bucket order message names current bucket");
+    expect(result.message.find("Glass") != std::string::npos, "invalid bucket order message names previous bucket");
+}
+
+void emptyRenderFrameValidationSucceeds() {
+    const bs3d::RenderFrame frame;
+
+    const bs3d::RenderFrameValidationResult result = bs3d::validateRenderFrame(frame);
+
+    expect(bs3d::isRenderFrameBucketOrderValid(frame), "empty frame has valid bucket order");
+    expect(result.valid, "validate render frame accepts empty frame");
+    expect(result.message.empty(), "valid empty frame has no validation message");
+}
+
 void recordingRendererConsumesEmptyRenderFrame() {
     RecordingRenderer recordingRenderer;
     bs3d::IRenderer* renderer = &recordingRenderer;
@@ -374,6 +465,11 @@ int main() {
     worldRenderListExtractionOrdersBuckets();
     missingDefinitionsAreSkippedAndCounted();
     debugOnlyDefinitionsAreSkippedAndCounted();
+    summarizeRenderFrameCountsEmptyFrame();
+    summarizeRenderFrameCountsBucketsAndDebugLines();
+    extractedWorldRenderListFrameHasValidBucketOrder();
+    invalidBucketOrderIsRejected();
+    emptyRenderFrameValidationSucceeds();
     recordingRendererConsumesEmptyRenderFrame();
     recordingRendererConsumesExtractedWorldRenderListFrame();
     std::cout << "render frame tests passed\n";

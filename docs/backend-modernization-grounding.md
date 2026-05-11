@@ -117,6 +117,12 @@ Aktywne renderowanie runtime nadal przechodzi przez raylibowe `WorldRenderer`, `
 D3D11 nadal **nie jest zaimplementowany**.
 Przyszłe backendy renderera powinny implementować `IRenderer` i konsumować `RenderFrame`.
 
+Backend prep status update: istnieją teraz backend-neutralne helpery statystyk i walidacji `RenderFrame`.
+Są używane w testach do sprawdzania liczby komend i kolejności bucketów bez GPU ani runtime renderera.
+Aktywne renderowanie runtime nadal jest raylibowe.
+D3D11 nadal **nie jest zaimplementowany**.
+Przyszłe backendy renderera powinny walidować i podsumowywać `RenderFrame` przed rysowaniem.
+
 ## 7) First safe implementation pass (pierwszy bezpieczny pass – rekomendacja)
 
 Następny pass w kodzie (nie w ramach tej dokumentacji) powinien być mały, odwracalny i nie zmieniać zachowania:
