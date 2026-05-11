@@ -10,26 +10,26 @@ namespace bs3d {
 
 namespace {
 
-RenderBucket parseRenderBucket(const std::string& name) {
-    if (name == "Sky") return RenderBucket::Sky;
-    if (name == "Ground") return RenderBucket::Ground;
-    if (name == "Opaque") return RenderBucket::Opaque;
-    if (name == "Vehicle") return RenderBucket::Vehicle;
-    if (name == "Decal") return RenderBucket::Decal;
-    if (name == "Glass") return RenderBucket::Glass;
-    if (name == "Translucent") return RenderBucket::Translucent;
-    if (name == "Debug") return RenderBucket::Debug;
-    if (name == "Hud") return RenderBucket::Hud;
-    return RenderBucket::Opaque;
+bool parseRenderBucket(const std::string& name, RenderBucket& out) {
+    if (name == "Sky") { out = RenderBucket::Sky; return true; }
+    if (name == "Ground") { out = RenderBucket::Ground; return true; }
+    if (name == "Opaque") { out = RenderBucket::Opaque; return true; }
+    if (name == "Vehicle") { out = RenderBucket::Vehicle; return true; }
+    if (name == "Decal") { out = RenderBucket::Decal; return true; }
+    if (name == "Glass") { out = RenderBucket::Glass; return true; }
+    if (name == "Translucent") { out = RenderBucket::Translucent; return true; }
+    if (name == "Debug") { out = RenderBucket::Debug; return true; }
+    if (name == "Hud") { out = RenderBucket::Hud; return true; }
+    return false;
 }
 
-RenderPrimitiveKind parseRenderPrimitiveKind(const std::string& name) {
-    if (name == "Box") return RenderPrimitiveKind::Box;
-    if (name == "Sphere") return RenderPrimitiveKind::Sphere;
-    if (name == "CylinderX") return RenderPrimitiveKind::CylinderX;
-    if (name == "QuadPanel") return RenderPrimitiveKind::QuadPanel;
-    if (name == "Mesh") return RenderPrimitiveKind::Mesh;
-    return RenderPrimitiveKind::Box;
+bool parseRenderPrimitiveKind(const std::string& name, RenderPrimitiveKind& out) {
+    if (name == "Box") { out = RenderPrimitiveKind::Box; return true; }
+    if (name == "Sphere") { out = RenderPrimitiveKind::Sphere; return true; }
+    if (name == "CylinderX") { out = RenderPrimitiveKind::CylinderX; return true; }
+    if (name == "QuadPanel") { out = RenderPrimitiveKind::QuadPanel; return true; }
+    if (name == "Mesh") { out = RenderPrimitiveKind::Mesh; return true; }
+    return false;
 }
 
 void writeCamera(std::ostream& out, const RenderCamera& camera) {
@@ -71,17 +71,27 @@ bool readCamera(std::istringstream& stream, RenderCamera& camera) {
     return true;
 }
 
-bool readPrimitive(std::istringstream& stream, RenderPrimitiveCommand& command) {
+bool readPrimitive(std::istringstream& stream, int lineNumber, RenderPrimitiveCommand& command, std::string* error) {
     std::string token;
     if (!(stream >> token) || token != "kind") return false;
     std::string kindName;
     if (!(stream >> kindName)) return false;
-    command.kind = parseRenderPrimitiveKind(kindName);
+    if (!parseRenderPrimitiveKind(kindName, command.kind)) {
+        if (error) {
+            *error = "unknown primitive kind '" + kindName + "' on line " + std::to_string(lineNumber);
+        }
+        return false;
+    }
 
     if (!(stream >> token) || token != "bucket") return false;
     std::string bucketName;
     if (!(stream >> bucketName)) return false;
-    command.bucket = parseRenderBucket(bucketName);
+    if (!parseRenderBucket(bucketName, command.bucket)) {
+        if (error) {
+            *error = "unknown bucket '" + bucketName + "' on line " + std::to_string(lineNumber);
+        }
+        return false;
+    }
 
     if (!(stream >> token) || token != "pos") return false;
     if (!(stream >> command.transform.position.x >> command.transform.position.y >> command.transform.position.z)) return false;
@@ -136,6 +146,8 @@ bool writeRenderFrameDump(const RenderFrame& frame, const std::string& path, std
         return false;
     }
 
+    file << "RenderFrameDump v1\n";
+
     writeCamera(file, frame.camera);
 
     for (const RenderPrimitiveCommand& command : frame.primitives) {
@@ -157,6 +169,32 @@ bool readRenderFrameDump(const std::string& path, RenderFrame& frame, std::strin
     if (!file.is_open()) {
         if (error) *error = "failed to open file for reading: " + path;
         return false;
+    }
+
+    std::string headerLine;
+    if (!std::getline(file, headerLine)) {
+        if (error) *error = "missing RenderFrameDump header in: " + path;
+        return false;
+    }
+
+    {
+        std::istringstream headerStream(headerLine);
+        std::string keyword;
+        std::string version;
+        if (!(headerStream >> keyword) || keyword != "RenderFrameDump") {
+            if (error) *error = "missing or invalid RenderFrameDump header in: " + path;
+            return false;
+        }
+        if (!(headerStream >> version) || version != "v1") {
+            if (error) {
+                if (version.empty()) {
+                    *error = "missing RenderFrameDump version in header in: " + path;
+                } else {
+                    *error = "unsupported RenderFrameDump version '" + version + "' in: " + path;
+                }
+            }
+            return false;
+        }
     }
 
     frame = {};
@@ -184,8 +222,8 @@ bool readRenderFrameDump(const std::string& path, RenderFrame& frame, std::strin
             }
         } else if (type == "primitive") {
             RenderPrimitiveCommand command;
-            if (!readPrimitive(stream, command)) {
-                if (error) {
+            if (!readPrimitive(stream, lineNumber, command, error)) {
+                if (error && error->empty()) {
                     *error = "failed to parse primitive on line " + std::to_string(lineNumber);
                 }
                 return false;

@@ -11,6 +11,7 @@
 #include "bs3d/render/RenderTypes.h"
 
 #include <cstdlib>
+#include <fstream>
 #include <iostream>
 #include <string>
 #include <type_traits>
@@ -967,6 +968,62 @@ void dumpReadMissingFileReturnsError() {
     expect(!error.empty(), "readRenderFrameDump returns non-empty error for missing file");
 }
 
+void dumpReadMissingHeaderFails() {
+    const std::string dumpPath = "artifacts/test_missing_header.txt";
+    {
+        std::ofstream file(dumpPath);
+        file << "camera pos 1 2 3 target 4 5 6 up 0 1 0 fovy 55\n";
+    }
+
+    bs3d::RenderFrame frame;
+    std::string error;
+    expect(!bs3d::readRenderFrameDump(dumpPath, frame, &error),
+           "readRenderFrameDump fails for missing header");
+    expect(error.find("RenderFrameDump") != std::string::npos || error.find("header") != std::string::npos,
+           "error message mentions missing or invalid header");
+    std::remove(dumpPath.c_str());
+}
+
+void dumpReadUnknownBucketFails() {
+    const std::string dumpPath = "artifacts/test_unknown_bucket.txt";
+    {
+        std::ofstream file(dumpPath);
+        file << "RenderFrameDump v1\n";
+        file << "camera pos 1 2 3 target 4 5 6 up 0 1 0 fovy 55\n";
+        file << "primitive kind Box bucket UnknownBucket pos 0 0 0 scale 1 1 1 yaw 0 size 1 1 1 tint 255 255 255 255 sourceId test\n";
+    }
+
+    bs3d::RenderFrame frame;
+    std::string error;
+    expect(!bs3d::readRenderFrameDump(dumpPath, frame, &error),
+           "readRenderFrameDump fails for unknown bucket");
+    expect(error.find("UnknownBucket") != std::string::npos,
+           "error message names the unknown bucket");
+    expect(error.find("line") != std::string::npos,
+           "error message mentions line number");
+    std::remove(dumpPath.c_str());
+}
+
+void dumpReadUnknownPrimitiveKindFails() {
+    const std::string dumpPath = "artifacts/test_unknown_kind.txt";
+    {
+        std::ofstream file(dumpPath);
+        file << "RenderFrameDump v1\n";
+        file << "camera pos 1 2 3 target 4 5 6 up 0 1 0 fovy 55\n";
+        file << "primitive kind UnknownKind bucket Opaque pos 0 0 0 scale 1 1 1 yaw 0 size 1 1 1 tint 255 255 255 255 sourceId test\n";
+    }
+
+    bs3d::RenderFrame frame;
+    std::string error;
+    expect(!bs3d::readRenderFrameDump(dumpPath, frame, &error),
+           "readRenderFrameDump fails for unknown primitive kind");
+    expect(error.find("UnknownKind") != std::string::npos,
+           "error message names the unknown kind");
+    expect(error.find("line") != std::string::npos,
+           "error message mentions line number");
+    std::remove(dumpPath.c_str());
+}
+
 // ---------- NullRenderer tests ----------
 
 void nullRendererConsumesEmptyRenderFrame() {
@@ -1414,6 +1471,9 @@ int main() {
     builderExtractionSupportsDecalGlassTranslucentBuckets();
     dumpWriteAndReadRoundTrip();
     dumpReadMissingFileReturnsError();
+    dumpReadMissingHeaderFails();
+    dumpReadUnknownBucketFails();
+    dumpReadUnknownPrimitiveKindFails();
     nullRendererConsumesEmptyRenderFrame();
     nullRendererConsumesBuilderOutput();
     nullRendererRecordsRenderFrameStats();
