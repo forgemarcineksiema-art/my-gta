@@ -20,6 +20,7 @@ struct SmokeOptions {
     int frames = 120;
     bool drawBox = false;
     bool drawTwoBoxes = false;
+    bool drawDebugLines = false;
 };
 
 LRESULT CALLBACK smokeWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam) {
@@ -74,8 +75,10 @@ SmokeOptions parseOptions(int argc, char** argv) {
         } else if (arg == "--two-boxes") {
             options.drawBox = true;
             options.drawTwoBoxes = true;
+        } else if (arg == "--debug-lines") {
+            options.drawDebugLines = true;
         } else if (arg == "--help") {
-            std::cout << "Usage: bs3d_d3d11_renderer_smoke [--frames <count>] [--box] [--two-boxes]\n";
+            std::cout << "Usage: bs3d_d3d11_renderer_smoke [--frames <count>] [--box] [--two-boxes] [--debug-lines]\n";
             std::exit(0);
         } else {
             throw std::runtime_error("unknown option: " + arg);
@@ -130,28 +133,35 @@ HWND createSmokeWindow(HINSTANCE instance, int width, int height) {
 
 bs3d::RenderFrame makeSmokeFrame(const SmokeOptions& options, int frameIndex) {
     bs3d::RenderFrame frame;
-    if (!options.drawBox) {
-        return frame;
+
+    if (options.drawBox) {
+        bs3d::RenderPrimitiveCommand box;
+        box.kind = bs3d::RenderPrimitiveKind::Box;
+        box.bucket = bs3d::RenderBucket::Opaque;
+        box.transform.position = {0.0f, 0.0f, 0.0f};
+        box.transform.scale = {1.0f, 1.0f, 1.0f};
+        box.transform.yawRadians = static_cast<float>(frameIndex) * 0.08f;
+        box.size = {1.4f, 1.4f, 1.4f};
+        box.tint = {255, 180, 60, 255};
+        box.sourceId = "d3d11_renderer_smoke_box";
+        frame.primitives.push_back(box);
+        if (options.drawTwoBoxes) {
+            bs3d::RenderPrimitiveCommand secondBox = box;
+            secondBox.transform.position = {0.35f, 0.0f, -0.35f};
+            secondBox.transform.yawRadians = -static_cast<float>(frameIndex) * 0.05f;
+            secondBox.size = {1.2f, 1.2f, 1.2f};
+            secondBox.tint = {80, 170, 255, 255};
+            secondBox.sourceId = "d3d11_renderer_smoke_depth_box";
+            frame.primitives.push_back(secondBox);
+        }
     }
 
-    bs3d::RenderPrimitiveCommand box;
-    box.kind = bs3d::RenderPrimitiveKind::Box;
-    box.bucket = bs3d::RenderBucket::Opaque;
-    box.transform.position = {0.0f, 0.0f, 0.0f};
-    box.transform.scale = {1.0f, 1.0f, 1.0f};
-    box.transform.yawRadians = static_cast<float>(frameIndex) * 0.08f;
-    box.size = {1.4f, 1.4f, 1.4f};
-    box.tint = {255, 180, 60, 255};
-    box.sourceId = "d3d11_renderer_smoke_box";
-    frame.primitives.push_back(box);
-    if (options.drawTwoBoxes) {
-        bs3d::RenderPrimitiveCommand secondBox = box;
-        secondBox.transform.position = {0.35f, 0.0f, -0.35f};
-        secondBox.transform.yawRadians = -static_cast<float>(frameIndex) * 0.05f;
-        secondBox.size = {1.2f, 1.2f, 1.2f};
-        secondBox.tint = {80, 170, 255, 255};
-        secondBox.sourceId = "d3d11_renderer_smoke_depth_box";
-        frame.primitives.push_back(secondBox);
+    if (options.drawDebugLines) {
+        frame.debugLines.push_back({{-2.0f, 0.0f, 0.0f}, {2.0f, 0.0f, 0.0f}, {255, 40, 40, 255}});
+        frame.debugLines.push_back({{0.0f, -2.0f, 0.0f}, {0.0f, 2.0f, 0.0f}, {40, 255, 80, 255}});
+        frame.debugLines.push_back({{0.0f, 0.0f, -2.0f}, {0.0f, 0.0f, 2.0f}, {80, 140, 255, 255}});
+        frame.debugLines.push_back({{-1.0f, 0.0f, -1.0f}, {1.0f, 0.0f, 1.0f}, {255, 255, 255, 255}});
+        frame.debugLines.push_back({{-1.0f, 0.0f, 1.0f}, {1.0f, 0.0f, -1.0f}, {255, 255, 255, 255}});
     }
     return frame;
 }

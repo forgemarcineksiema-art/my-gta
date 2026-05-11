@@ -75,6 +75,10 @@ private:
     ID3D11Buffer* vertexBuffer_ = nullptr;
     ID3D11Buffer* indexBuffer_ = nullptr;
     ID3D11Buffer* constantBuffer_ = nullptr;
+    ID3D11VertexShader* lineVertexShader_ = nullptr;
+    ID3D11PixelShader* linePixelShader_ = nullptr;
+    ID3D11InputLayout* lineInputLayout_ = nullptr;
+    ID3D11Buffer* lineVertexBuffer_ = nullptr;
 };
 
 } // namespace bs3d

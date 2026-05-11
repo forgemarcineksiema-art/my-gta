@@ -748,6 +748,21 @@ void d3d11RendererConsumesBuilderOutput() {
     expect(renderer.lastFrameValid(), "D3D11Renderer validates builder output as valid");
 }
 
+void d3d11RendererRecordsDebugLinesWhenUninitialized() {
+    bs3d::RenderFrame frame;
+    frame.debugLines.push_back({{0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {255, 0, 0, 255}});
+    frame.debugLines.push_back({{0.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0, 255, 0, 255}});
+
+    bs3d::D3D11Renderer renderer;
+    renderer.renderFrame(frame);
+
+    expect(!renderer.isInitialized(), "D3D11Renderer remains uninitialized for debug line stats test");
+    expect(renderer.renderCalls() == 1, "D3D11Renderer records debug line frame render call");
+    expect(renderer.lastStats().totalPrimitives == 0, "D3D11Renderer records zero primitives for debug line frame");
+    expect(renderer.lastStats().debugLines == 2, "D3D11Renderer records debug line count while uninitialized");
+    expect(renderer.lastFrameValid(), "D3D11Renderer validates debug-line-only frame as valid");
+}
+
 void d3d11RendererRecordsValidationFailureForInvalidBucketOrder() {
     bs3d::RenderFrame frame;
     frame.primitives.push_back({bs3d::RenderPrimitiveKind::Box, bs3d::RenderBucket::Hud});
@@ -861,6 +876,7 @@ int main() {
     d3d11RendererImplementsIRenderer();
     d3d11RendererConsumesEmptyRenderFrame();
     d3d11RendererConsumesBuilderOutput();
+    d3d11RendererRecordsDebugLinesWhenUninitialized();
     d3d11RendererRecordsValidationFailureForInvalidBucketOrder();
     d3d11RendererRejectsInvalidInitConfigWithoutGpu();
 #endif

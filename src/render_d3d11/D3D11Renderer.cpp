@@ -10,6 +10,7 @@
 #include <iomanip>
 #include <iterator>
 #include <sstream>
+#include <vector>
 
 namespace bs3d {
 
@@ -44,10 +45,17 @@ struct Vertex {
     float position[3];
 };
 
+struct LineVertex {
+    float position[3];
+    float color[4];
+};
+
 struct alignas(16) PrimitiveConstants {
     float mvp[16];
     float color[4];
 };
+
+constexpr UINT DebugLineVertexCapacity = 4096;
 
 static_assert(sizeof(PrimitiveConstants) % 16 == 0, "D3D11 constant buffers must be 16-byte aligned");
 
@@ -308,6 +316,106 @@ float4 PSMain(PSInput input) : SV_Target {
     return true;
 }
 
+bool createDebugLinePipeline(ID3D11Device* device,
+                             ID3D11VertexShader** vertexShader,
+                             ID3D11PixelShader** pixelShader,
+                             ID3D11InputLayout** inputLayout,
+                             ID3D11Buffer** vertexBuffer,
+                             std::string* error) {
+    const char* shaderSource = R"(
+struct VSInput {
+    float3 position : POSITION;
+    float4 color : COLOR;
+};
+
+struct PSInput {
+    float4 position : SV_Position;
+    float4 color : COLOR;
+};
+
+cbuffer LineConstants : register(b0) {
+    row_major float4x4 mvp;
+};
+
+PSInput VSMain(VSInput input) {
+    PSInput output;
+    output.position = mul(float4(input.position, 1.0f), mvp);
+    output.color = input.color;
+    return output;
+}
+
+float4 PSMain(PSInput input) : SV_Target {
+    return input.color;
+}
+)";
+
+    ID3DBlob* vertexShaderBlob = nullptr;
+    ID3DBlob* pixelShaderBlob = nullptr;
+    if (!compileShader(shaderSource, "VSMain", "vs_5_0", &vertexShaderBlob, error)) {
+        return false;
+    }
+    if (!compileShader(shaderSource, "PSMain", "ps_5_0", &pixelShaderBlob, error)) {
+        releaseAndNull(vertexShaderBlob);
+        return false;
+    }
+
+    HRESULT hr = device->CreateVertexShader(vertexShaderBlob->GetBufferPointer(),
+                                            vertexShaderBlob->GetBufferSize(),
+                                            nullptr,
+                                            vertexShader);
+    if (FAILED(hr)) {
+        releaseAndNull(pixelShaderBlob);
+        releaseAndNull(vertexShaderBlob);
+        assignError(error, "ID3D11Device::CreateVertexShader failed for debug lines with HRESULT " +
+                               formatHresult(hr));
+        return false;
+    }
+
+    hr = device->CreatePixelShader(pixelShaderBlob->GetBufferPointer(),
+                                   pixelShaderBlob->GetBufferSize(),
+                                   nullptr,
+                                   pixelShader);
+    if (FAILED(hr)) {
+        releaseAndNull(pixelShaderBlob);
+        releaseAndNull(vertexShaderBlob);
+        assignError(error, "ID3D11Device::CreatePixelShader failed for debug lines with HRESULT " +
+                               formatHresult(hr));
+        return false;
+    }
+
+    const D3D11_INPUT_ELEMENT_DESC inputElements[] = {
+        {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0},
+        {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0},
+    };
+    hr = device->CreateInputLayout(inputElements,
+                                   static_cast<UINT>(std::size(inputElements)),
+                                   vertexShaderBlob->GetBufferPointer(),
+                                   vertexShaderBlob->GetBufferSize(),
+                                   inputLayout);
+    releaseAndNull(pixelShaderBlob);
+    releaseAndNull(vertexShaderBlob);
+    if (FAILED(hr)) {
+        assignError(error, "ID3D11Device::CreateInputLayout failed for debug lines with HRESULT " +
+                               formatHresult(hr));
+        return false;
+    }
+
+    D3D11_BUFFER_DESC vertexBufferDesc{};
+    vertexBufferDesc.ByteWidth = static_cast<UINT>(sizeof(LineVertex) * DebugLineVertexCapacity);
+    vertexBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+    vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+    vertexBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+
+    hr = device->CreateBuffer(&vertexBufferDesc, nullptr, vertexBuffer);
+    if (FAILED(hr)) {
+        assignError(error, "ID3D11Device::CreateBuffer failed for debug line vertex buffer with HRESULT " +
+                               formatHresult(hr));
+        return false;
+    }
+
+    return true;
+}
+
 } // namespace
 
 D3D11Renderer::~D3D11Renderer() {
@@ -453,6 +561,16 @@ bool D3D11Renderer::initialize(const D3D11RendererConfig& config, std::string* e
         return false;
     }
 
+    if (!createDebugLinePipeline(device_,
+                                 &lineVertexShader_,
+                                 &linePixelShader_,
+                                 &lineInputLayout_,
+                                 &lineVertexBuffer_,
+                                 error)) {
+        shutdown();
+        return false;
+    }
+
     width_ = config.width;
     height_ = config.height;
 
@@ -466,10 +584,16 @@ bool D3D11Renderer::isInitialized() const {
     return device_ != nullptr && context_ != nullptr && swapChain_ != nullptr && renderTargetView_ != nullptr &&
            depthStencilTexture_ != nullptr && depthStencilView_ != nullptr && depthStencilState_ != nullptr &&
            vertexShader_ != nullptr && pixelShader_ != nullptr && inputLayout_ != nullptr &&
-           vertexBuffer_ != nullptr && indexBuffer_ != nullptr && constantBuffer_ != nullptr;
+           vertexBuffer_ != nullptr && indexBuffer_ != nullptr && constantBuffer_ != nullptr &&
+           lineVertexShader_ != nullptr && linePixelShader_ != nullptr && lineInputLayout_ != nullptr &&
+           lineVertexBuffer_ != nullptr;
 }
 
 void D3D11Renderer::shutdown() {
+    releaseAndNull(lineVertexBuffer_);
+    releaseAndNull(lineInputLayout_);
+    releaseAndNull(linePixelShader_);
+    releaseAndNull(lineVertexShader_);
     releaseAndNull(constantBuffer_);
     releaseAndNull(indexBuffer_);
     releaseAndNull(vertexBuffer_);
@@ -556,6 +680,56 @@ void D3D11Renderer::renderFrame(const RenderFrame& frame) {
         std::memcpy(mapped.pData, &constants, sizeof(constants));
         context_->Unmap(constantBuffer_, 0);
         context_->DrawIndexed(36, 0, 0);
+    }
+
+    if (!frame.debugLines.empty()) {
+        const UINT requestedLineCount = static_cast<UINT>(frame.debugLines.size());
+        const UINT drawableLineCount = requestedLineCount > DebugLineVertexCapacity / 2
+                                           ? DebugLineVertexCapacity / 2
+                                           : requestedLineCount;
+        if (drawableLineCount > 0) {
+            D3D11_MAPPED_SUBRESOURCE mappedLines{};
+            const HRESULT lineMapHr = context_->Map(lineVertexBuffer_, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedLines);
+            if (SUCCEEDED(lineMapHr)) {
+                LineVertex* vertices = static_cast<LineVertex*>(mappedLines.pData);
+                for (UINT index = 0; index < drawableLineCount; ++index) {
+                    const RenderLineCommand& line = frame.debugLines[index];
+                    const float r = colorChannel(line.tint.r);
+                    const float g = colorChannel(line.tint.g);
+                    const float b = colorChannel(line.tint.b);
+                    const float a = colorChannel(line.tint.a);
+
+                    vertices[index * 2] = {{line.start.x, line.start.y, line.start.z}, {r, g, b, a}};
+                    vertices[index * 2 + 1] = {{line.end.x, line.end.y, line.end.z}, {r, g, b, a}};
+                }
+                context_->Unmap(lineVertexBuffer_, 0);
+
+                PrimitiveConstants lineConstants{};
+                const Matrix4 lineMvp = multiplyMatrix(view, projection);
+                std::memcpy(lineConstants.mvp, lineMvp.values, sizeof(lineConstants.mvp));
+
+                D3D11_MAPPED_SUBRESOURCE mappedConstants{};
+                const HRESULT constantMapHr =
+                    context_->Map(constantBuffer_, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedConstants);
+                if (SUCCEEDED(constantMapHr)) {
+                    std::memcpy(mappedConstants.pData, &lineConstants, sizeof(lineConstants));
+                    context_->Unmap(constantBuffer_, 0);
+
+                    const UINT lineStride = sizeof(LineVertex);
+                    const UINT lineOffset = 0;
+                    ID3D11Buffer* lineVertexBuffer = lineVertexBuffer_;
+                    context_->IASetInputLayout(lineInputLayout_);
+                    context_->IASetVertexBuffers(0, 1, &lineVertexBuffer, &lineStride, &lineOffset);
+                    context_->IASetIndexBuffer(nullptr, DXGI_FORMAT_UNKNOWN, 0);
+                    context_->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_LINELIST);
+                    context_->VSSetShader(lineVertexShader_, nullptr, 0);
+                    context_->PSSetShader(linePixelShader_, nullptr, 0);
+                    ID3D11Buffer* constantBuffer = constantBuffer_;
+                    context_->VSSetConstantBuffers(0, 1, &constantBuffer);
+                    context_->Draw(drawableLineCount * 2, 0);
+                }
+            }
+        }
     }
 
     swapChain_->Present(1, 0);
