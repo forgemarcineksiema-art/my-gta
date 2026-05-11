@@ -1148,6 +1148,50 @@ void factoryDoesNotPretendRaylibAdapterExists() {
     expect(!result.ok(), "factory does not pretend Raylib IRenderer adapter is available");
 }
 
+void factoryRejectsD3D11WithoutOptIn() {
+    bs3d::RendererFactoryRequest request;
+    request.backend = bs3d::RendererBackendKind::D3D11;
+    request.useNullRenderer = false;
+    request.allowExperimentalD3D11Renderer = false;
+
+    bs3d::RendererFactoryResult result = bs3d::createRenderer(request);
+
+    expect(!result.ok(), "factory returns not-ok for D3D11 without opt-in");
+    expect(result.renderer == nullptr, "factory returns null renderer for D3D11 without opt-in");
+    expect(!result.error.empty(), "factory returns error message for D3D11 without opt-in");
+    expect(result.error.find("experimental") != std::string::npos,
+           "factory error mentions 'experimental' for D3D11 without opt-in");
+}
+
+void factoryD3D11BackendNameIsCorrect() {
+    const std::string name(bs3d::rendererBackendName(bs3d::RendererBackendKind::D3D11));
+    expect(name == "d3d11", "rendererBackendName(D3D11) returns 'd3d11'");
+}
+
+#if defined(BS3D_HAS_D3D11_RENDERER)
+void factoryCreatesUninitializedD3D11RendererWithOptIn() {
+    bs3d::RendererFactoryRequest request;
+    request.backend = bs3d::RendererBackendKind::D3D11;
+    request.useNullRenderer = false;
+    request.allowExperimentalD3D11Renderer = true;
+
+    bs3d::RendererFactoryResult result = bs3d::createRenderer(request);
+
+    expect(result.ok(), "factory returns ok for D3D11 with opt-in on Windows");
+    expect(result.renderer != nullptr, "factory returns non-null renderer for D3D11 with opt-in");
+    expect(result.error.empty(), "factory returns no error for D3D11 with opt-in");
+    expect(std::string(result.renderer->backendName()) == "d3d11",
+           "factory-created D3D11 renderer has backend name 'd3d11'");
+
+    bs3d::RenderFrame frame;
+    frame.primitives.push_back({bs3d::RenderPrimitiveKind::Box, bs3d::RenderBucket::Opaque});
+    frame.debugLines.push_back({{0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {255, 0, 0, 255}});
+    result.renderer->renderFrame(frame);
+
+    expect(true, "factory-created D3D11 renderer renders frame without initialize (stats-only)");
+}
+#endif
+
 } // namespace
 
 int main() {
@@ -1201,6 +1245,11 @@ int main() {
     factoryCreatesNullRenderer();
     factoryReturnsErrorForRaylibBackend();
     factoryDoesNotPretendRaylibAdapterExists();
+    factoryRejectsD3D11WithoutOptIn();
+    factoryD3D11BackendNameIsCorrect();
+#if defined(BS3D_HAS_D3D11_RENDERER)
+    factoryCreatesUninitializedD3D11RendererWithOptIn();
+#endif
     std::cout << "render frame tests passed\n";
     return 0;
 }

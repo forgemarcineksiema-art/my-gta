@@ -120,7 +120,8 @@ Runtime D3D11 nadal **nie jest zaimplementowany**.
 Backend prep status update: istnieje teraz `NullRenderer` (`include/bs3d/render/NullRenderer.h`) jako backend-neutralny no-op/testowy renderer implementujący `IRenderer`.
 `NullRenderer` nie otwiera okna, nie używa GPU i zapisuje statystyki oraz wyniki walidacji każdego skonsumowanego `RenderFrame`.
 Istnieje szkielet `RendererFactory` (`include/bs3d/render/RendererFactory.h`) jako przyszły seam do tworzenia rendererów.
-Aktualnie jedyna działająca ścieżka fabryki to `NullRenderer` (przez `useNullRenderer = true`).
+Aktualnie działające ścieżki fabryki to `NullRenderer` (przez `useNullRenderer = true`) oraz eksperymentalna ścieżka `D3D11Renderer` (przez `allowExperimentalD3D11Renderer = true`, tylko dla testów/narzędzi, zwraca niezainicjalizowany renderer bez device/window/swapchain).
+Implementacja fabryki w `src/render/RendererFactory.cpp` (nie inline w nagłówku).
 Raylib `IRenderer` adapter **nie jest zaimplementowany** — legacy runtime nadal używa `WorldRenderer`/`HudRenderer`/`DebugRenderer`.
 Runtime D3D11 nadal **nie jest zaimplementowany**.
 Aktywne renderowanie runtime nadal jest raylibowe.
@@ -148,6 +149,17 @@ To ćwiczy ścieżkę kontraktu renderu: `RenderFrameBuilder` → `RenderFrame` 
 Runtime renderer nadal jest raylibowy.
 `GameApp` nadal nie jest podłączony do D3D11.
 `RendererFactory` nie jest podłączony do D3D11.
+
+Backend prep status update: `RendererBackendKind` wymienia teraz `D3D11` obok `Raylib`.
+`rendererBackendName(D3D11)` zwraca `"d3d11"`.
+`RendererFactory` ma teraz eksperymentalną ścieżkę D3D11 dla testów/narzędzi, aktywowaną przez `allowExperimentalD3D11Renderer = true`.
+Zwrócony `D3D11Renderer` jest niezainicjalizowany — fabryka nie tworzy device/window/swapchain.
+Bez jawnego opt-in (`allowExperimentalD3D11Renderer = false`) ścieżka D3D11 zwraca czytelny błąd "experimental and not active for runtime".
+Implementacja fabryki znajduje się w `src/render/RendererFactory.cpp` (nie jest już inline w nagłówku).
+Nagłówek `RendererFactory.h` pozostaje backend-neutralny — nie inkluduje D3D11Renderer.h, windows.h, d3d11.h, raylib.h.
+`--renderer d3d11` w `main.cpp` nadal **nie jest aktywny** — CLI gry nadal odrzuca backend `d3d11`.
+Runtime renderer nadal jest raylibowy.
+`GameApp` nadal nie jest podłączony do D3D11.
 
 Backend prep status update: `D3D11Renderer` smoke może teraz konsumować `RenderFrame` zbudowany przez `WorldRenderList`-style extraction (`--extraction-frame`).
 Smoke tworzy lokalne `WorldObject`/`WorldAssetDefinition`, konstruuje `WorldRenderList`, przepuszcza dane przez `RenderExtraction::addWorldRenderListFallbackBoxes(RenderFrameBuilder&)` do `RenderFrameBuilder`, a następnie do `D3D11Renderer`.

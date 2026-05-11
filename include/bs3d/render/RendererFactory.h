@@ -2,7 +2,6 @@
 
 #include "bs3d/backend/BackendKinds.h"
 #include "bs3d/render/IRenderer.h"
-#include "bs3d/render/NullRenderer.h"
 
 #include <memory>
 #include <string>
@@ -13,6 +12,7 @@ namespace bs3d {
 struct RendererFactoryRequest {
     RendererBackendKind backend = RendererBackendKind::Raylib;
     bool useNullRenderer = false;
+    bool allowExperimentalD3D11Renderer = false;
 };
 
 /// Result of createRenderer().
@@ -27,24 +27,9 @@ struct RendererFactoryResult {
 ///
 /// This is a future seam — it is not wired into the runtime yet.
 /// Currently only the NullRenderer path is functional.
-inline RendererFactoryResult createRenderer(const RendererFactoryRequest& request) {
-    if (request.useNullRenderer) {
-        RendererFactoryResult result;
-        result.renderer = std::make_unique<NullRenderer>();
-        return result;
-    }
-
-    if (request.backend == RendererBackendKind::Raylib) {
-        RendererFactoryResult result;
-        result.error =
-            "Raylib IRenderer adapter is not implemented yet; "
-            "legacy runtime still uses WorldRenderer/HudRenderer/DebugRenderer";
-        return result;
-    }
-
-    RendererFactoryResult result;
-    result.error = "Unknown renderer backend";
-    return result;
-}
+/// The D3D11 path is experimental — it requires explicit opt-in via
+/// allowExperimentalD3D11Renderer and returns an uninitialized D3D11Renderer
+/// for test/tool use only.  It does not create a device/window/swapchain.
+RendererFactoryResult createRenderer(const RendererFactoryRequest& request);
 
 } // namespace bs3d

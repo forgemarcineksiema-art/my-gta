@@ -78,10 +78,11 @@ add_test(NAME bs3d_core_tests COMMAND bs3d_tests)
 add_executable(bs3d_render_tests
     tests/render_frame_tests.cpp
     src/game/RenderExtraction.cpp
+    src/render/RendererFactory.cpp
 )
 
 target_link_libraries(bs3d_render_tests PRIVATE bs3d_core)
-target_include_directories(bs3d_render_tests PRIVATE include src/game)
+target_include_directories(bs3d_render_tests PRIVATE include src/game src/render)
 if(WIN32)
     target_link_libraries(bs3d_render_tests PRIVATE bs3d_renderer_d3d11)
     target_include_directories(bs3d_render_tests PRIVATE src/render_d3d11)
