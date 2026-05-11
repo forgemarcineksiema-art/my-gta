@@ -49,10 +49,15 @@ $BinaryDir = $ConfigurePreset.binaryDir.Replace('${sourceDir}', $SourceRoot)
 $BinaryDir = [System.IO.Path]::GetFullPath($BinaryDir)
 
 if ($Build) {
-    Write-Host "Building blokowa_satyra & bs3d_d3d11_renderer_smoke (preset $Preset)..."
-    cmake --build --preset $Preset --target blokowa_satyra --target bs3d_d3d11_renderer_smoke
+    Write-Host "Building blokowa_satyra (preset $Preset)..."
+    cmake --build --preset $Preset --target blokowa_satyra
     if ($LASTEXITCODE -ne 0) {
-        throw "Build failed with exit code $LASTEXITCODE"
+        throw "Build of blokowa_satyra failed with exit code $LASTEXITCODE"
+    }
+    Write-Host "Building bs3d_d3d11_renderer_smoke (preset $Preset)..."
+    cmake --build --preset $Preset --target bs3d_d3d11_renderer_smoke
+    if ($LASTEXITCODE -ne 0) {
+        throw "Build of bs3d_d3d11_renderer_smoke failed with exit code $LASTEXITCODE"
     }
     Write-Host "Build completed"
 }
