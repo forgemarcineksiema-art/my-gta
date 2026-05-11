@@ -2,6 +2,7 @@
 
 #include "RenderFrameDump.h"
 #include "bs3d/render/RenderFrame.h"
+#include "bs3d/render/RenderFrameValidation.h"
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
@@ -22,6 +23,7 @@ namespace {
 struct ShellOptions {
     std::string loadFramePath;
     int frames = 120;
+    bool diagnostics = false;
 };
 
 LRESULT CALLBACK shellWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam) {
@@ -73,14 +75,17 @@ ShellOptions parseOptions(int argc, char** argv) {
             options.frames = parseNonNegativeInt(requireValue(index, argc, argv, arg), arg);
         } else if (arg == "--load-frame") {
             options.loadFramePath = requireValue(index, argc, argv, arg);
+        } else if (arg == "--diagnostics") {
+            options.diagnostics = true;
         } else if (arg == "--help") {
-            std::cout << "Usage: bs3d_d3d11_game_shell --load-frame <path> [--frames <count>]\n"
+            std::cout << "Usage: bs3d_d3d11_game_shell --load-frame <path> [--frames <count>] [--diagnostics]\n"
                       << "\n"
                       << "Standalone D3D11 main-window shell that loads a RenderFrameDump v1 file\n"
                       << "and renders it through D3D11Renderer.\n"
                       << "\n"
                       << "  --load-frame <path>   required: path to RenderFrameDump v1 text file\n"
                       << "  --frames <count>      frame count before exit (default 120)\n"
+                      << "  --diagnostics         print frame stats and D3D11 draw coverage\n"
                       << "  --help                print this message\n";
             std::exit(0);
         } else {
@@ -172,7 +177,25 @@ int runShell(const ShellOptions& options) {
     bs3d::RenderFrame frame = loadFrame(options.loadFramePath);
     std::cout << "loaded frame from " << options.loadFramePath << '\n';
 
+    if (options.diagnostics) {
+        const auto stats = bs3d::summarizeRenderFrame(frame);
+        const auto validation = bs3d::validateRenderFrame(frame);
+        std::cout << "loaded frame: primitives=" << stats.totalPrimitives
+                  << " debugLines=" << stats.debugLines
+                  << " valid=" << (validation.valid ? "true" : "false");
+        if (!validation.valid) {
+            std::cout << " (" << validation.message << ")";
+        }
+        std::cout << " opaque=" << stats.opaque
+                  << " vehicle=" << stats.vehicle
+                  << " decal=" << stats.decal
+                  << " glass=" << stats.glass
+                  << " translucent=" << stats.translucent
+                  << " debug=" << stats.debug << '\n';
+    }
+
     int renderedFrames = 0;
+    bool diagnosticsCoveragePrinted = false;
     bool running = true;
     MSG message{};
     while (running && renderedFrames < options.frames) {
@@ -196,6 +219,18 @@ int runShell(const ShellOptions& options) {
         }
 
         renderer.renderFrame(frame);
+
+        if (options.diagnostics && !diagnosticsCoveragePrinted) {
+            diagnosticsCoveragePrinted = true;
+            const auto& d3d11 = renderer.lastD3D11Stats();
+            std::cout << "d3d11 coverage: drawnBoxes=" << d3d11.drawnBoxes
+                      << " skipKinds=" << d3d11.skippedUnsupportedKinds
+                      << " skipBuckets=" << d3d11.skippedUnsupportedBuckets
+                      << " skipPrims=" << d3d11.skippedPrimitives
+                      << " drawnLines=" << d3d11.drawnDebugLines
+                      << " skipLines=" << d3d11.skippedDebugLines << '\n';
+        }
+
         ++renderedFrames;
     }
 

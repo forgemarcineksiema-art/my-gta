@@ -92,6 +92,12 @@ Standalone D3D11 main-window shell that loads a `RenderFrameDump v1` file and re
 .\build\ci\Debug\bs3d_d3d11_game_shell.exe --frames 3 --load-frame artifacts\shadow_frame.txt
 ```
 
+Run with `--diagnostics` to print frame stats and D3D11 draw coverage:
+
+```powershell
+.\build\ci\Debug\bs3d_d3d11_game_shell.exe --frames 3 --load-frame artifacts\shadow_frame.txt --diagnostics
+```
+
 Or build and run through the capture/replay script:
 
 ```powershell

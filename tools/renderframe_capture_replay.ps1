@@ -141,7 +141,7 @@ if ($LASTEXITCODE -eq 0) {
 Write-Host ""
 Write-Host "--- REPLAY: D3D11 game shell ---"
 $ShellExe = Resolve-Executable -BinaryDir $BinaryDir -Configuration $Configuration -Name "bs3d_d3d11_game_shell.exe"
-& $ShellExe --frames 3 --load-frame $OutputFull
+& $ShellExe --frames 3 --load-frame $OutputFull --diagnostics
 if ($LASTEXITCODE -eq 0) {
     Write-Host "REPLAY (game shell) OK" -ForegroundColor Green
 } else {
