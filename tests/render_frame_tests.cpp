@@ -196,6 +196,50 @@ bs3d::WorldAssetDefinition assetDefinition(const std::string& id, const std::str
     return definition;
 }
 
+struct TestWorldRenderFixture {
+    bs3d::WorldObject opaque;
+    bs3d::WorldObject decal;
+    bs3d::WorldObject glass;
+    bs3d::WorldObject translucent;
+    std::vector<bs3d::WorldAssetDefinition> definitions;
+    bs3d::WorldRenderList renderList;
+
+    TestWorldRenderFixture() {
+        opaque = worldObject("opaque_object", "opaque_asset");
+        decal = worldObject("decal_object", "decal_asset");
+        glass = worldObject("glass_object", "glass_asset");
+        translucent = worldObject("translucent_object", "translucent_asset");
+
+        definitions = {
+            assetDefinition("opaque_asset", "Opaque"),
+            assetDefinition("decal_asset", "Decal"),
+            assetDefinition("glass_asset", "Glass"),
+            assetDefinition("translucent_asset", "Translucent"),
+        };
+
+        renderList.transparent.push_back(&translucent);
+        renderList.transparent.push_back(&glass);
+        renderList.transparent.push_back(&decal);
+        renderList.opaque.push_back(&opaque);
+    }
+};
+
+bs3d::RenderFrame makeExtractedTestFrame() {
+    TestWorldRenderFixture fixture;
+    bs3d::RenderFrame frame;
+    bs3d::addWorldRenderListFallbackBoxes(frame, fixture.renderList, fixture.definitions);
+    bs3d::addDebugLine(frame, {0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, {255, 255, 255, 255});
+    return frame;
+}
+
+bs3d::RenderFrame makeInvalidBucketOrderFrame() {
+    bs3d::RenderFrame frame;
+    frame.primitives.push_back({bs3d::RenderPrimitiveKind::Box, bs3d::RenderBucket::Glass});
+    frame.primitives.push_back({bs3d::RenderPrimitiveKind::Box, bs3d::RenderBucket::Opaque});
+    bs3d::addDebugLine(frame, {0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, {255, 255, 255, 255});
+    return frame;
+}
+
 void emptyWorldRenderListExtractionProducesNoCommands() {
     bs3d::RenderFrame frame;
     bs3d::WorldRenderList renderList;
@@ -241,24 +285,9 @@ void worldRenderListExtractionCountsBuckets() {
 }
 
 void worldRenderListExtractionOrdersBuckets() {
-    bs3d::WorldObject translucent = worldObject("translucent_object", "translucent_asset");
-    bs3d::WorldObject glass = worldObject("glass_object", "glass_asset");
-    bs3d::WorldObject decal = worldObject("decal_object", "decal_asset");
-    bs3d::WorldObject opaque = worldObject("opaque_object", "opaque_asset");
-    bs3d::WorldRenderList renderList;
-    renderList.transparent.push_back(&translucent);
-    renderList.transparent.push_back(&glass);
-    renderList.transparent.push_back(&decal);
-    renderList.opaque.push_back(&opaque);
-    const std::vector<bs3d::WorldAssetDefinition> definitions{
-        assetDefinition("translucent_asset", "Translucent"),
-        assetDefinition("glass_asset", "Glass"),
-        assetDefinition("decal_asset", "Decal"),
-        assetDefinition("opaque_asset", "Opaque"),
-    };
-
+    TestWorldRenderFixture fixture;
     bs3d::RenderFrame frame;
-    bs3d::addWorldRenderListFallbackBoxes(frame, renderList, definitions);
+    bs3d::addWorldRenderListFallbackBoxes(frame, fixture.renderList, fixture.definitions);
 
     expect(frame.primitives.size() == 4, "world render extraction emits ordered command list");
     expect(frame.primitives[0].bucket == bs3d::RenderBucket::Opaque, "opaque commands are extracted first");
@@ -346,25 +375,7 @@ void summarizeRenderFrameCountsBucketsAndDebugLines() {
 }
 
 void extractedWorldRenderListFrameHasValidBucketOrder() {
-    bs3d::WorldObject translucent = worldObject("translucent_object", "translucent_asset");
-    bs3d::WorldObject glass = worldObject("glass_object", "glass_asset");
-    bs3d::WorldObject decal = worldObject("decal_object", "decal_asset");
-    bs3d::WorldObject opaque = worldObject("opaque_object", "opaque_asset");
-    bs3d::WorldRenderList renderList;
-    renderList.transparent.push_back(&translucent);
-    renderList.transparent.push_back(&glass);
-    renderList.transparent.push_back(&decal);
-    renderList.opaque.push_back(&opaque);
-    const std::vector<bs3d::WorldAssetDefinition> definitions{
-        assetDefinition("translucent_asset", "Translucent"),
-        assetDefinition("glass_asset", "Glass"),
-        assetDefinition("decal_asset", "Decal"),
-        assetDefinition("opaque_asset", "Opaque"),
-    };
-
-    bs3d::RenderFrame frame;
-    bs3d::addWorldRenderListFallbackBoxes(frame, renderList, definitions);
-    bs3d::addDebugLine(frame, {0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, {255, 255, 255, 255});
+    const bs3d::RenderFrame frame = makeExtractedTestFrame();
 
     expect(bs3d::isRenderFrameBucketOrderValid(frame), "extracted world render list frame has valid bucket order");
     const bs3d::RenderFrameValidationResult result = bs3d::validateRenderFrame(frame);
@@ -372,10 +383,7 @@ void extractedWorldRenderListFrameHasValidBucketOrder() {
 }
 
 void invalidBucketOrderIsRejected() {
-    bs3d::RenderFrame frame;
-    frame.primitives.push_back({bs3d::RenderPrimitiveKind::Box, bs3d::RenderBucket::Glass});
-    frame.primitives.push_back({bs3d::RenderPrimitiveKind::Box, bs3d::RenderBucket::Opaque});
-    bs3d::addDebugLine(frame, {0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, {255, 255, 255, 255});
+    const bs3d::RenderFrame frame = makeInvalidBucketOrderFrame();
 
     const bs3d::RenderFrameValidationResult result = bs3d::validateRenderFrame(frame);
 
@@ -410,24 +418,9 @@ void recordingRendererConsumesEmptyRenderFrame() {
 }
 
 void recordingRendererConsumesExtractedWorldRenderListFrame() {
-    bs3d::WorldObject opaque = worldObject("opaque_object", "opaque_asset");
-    bs3d::WorldObject decal = worldObject("decal_object", "decal_asset");
-    bs3d::WorldObject glass = worldObject("glass_object", "glass_asset");
-    bs3d::WorldObject translucent = worldObject("translucent_object", "translucent_asset");
-    bs3d::WorldRenderList renderList;
-    renderList.transparent.push_back(&translucent);
-    renderList.transparent.push_back(&glass);
-    renderList.transparent.push_back(&decal);
-    renderList.opaque.push_back(&opaque);
-    const std::vector<bs3d::WorldAssetDefinition> definitions{
-        assetDefinition("translucent_asset", "Translucent"),
-        assetDefinition("glass_asset", "Glass"),
-        assetDefinition("decal_asset", "Decal"),
-        assetDefinition("opaque_asset", "Opaque"),
-    };
-
+    TestWorldRenderFixture fixture;
     bs3d::RenderFrame frame;
-    bs3d::addWorldRenderListFallbackBoxes(frame, renderList, definitions);
+    bs3d::addWorldRenderListFallbackBoxes(frame, fixture.renderList, fixture.definitions);
     bs3d::addDebugLine(frame, {0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, {255, 255, 255, 255});
 
     RecordingRenderer recordingRenderer;
