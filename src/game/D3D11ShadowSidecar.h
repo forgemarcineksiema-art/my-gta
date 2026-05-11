@@ -8,6 +8,18 @@
 namespace bs3d {
 
 struct RenderFrame;
+struct D3D11RendererFrameStats;
+
+/// D3D11 draw coverage stats reported by the shadow sidecar.
+/// Mirrors the struct in src/render_d3d11/D3D11Renderer.h.
+struct D3D11ShadowFrameStats {
+    int drawnBoxes = 0;
+    int skippedUnsupportedKinds = 0;
+    int skippedUnsupportedBuckets = 0;
+    int skippedPrimitives = 0;
+    int drawnDebugLines = 0;
+    int skippedDebugLines = 0;
+};
 
 /// Dev-only sidecar: opens a separate Win32 window and renders shadow
 /// RenderFrames through an experimental D3D11Renderer.
@@ -32,6 +44,7 @@ public:
     int renderCalls() const;
     RenderFrameStats lastStats() const;
     bool lastFrameValid() const;
+    D3D11ShadowFrameStats lastD3D11Stats() const;
 
     void pumpMessages();
 

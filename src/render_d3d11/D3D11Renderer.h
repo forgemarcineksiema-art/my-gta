@@ -29,6 +29,15 @@ struct IDXGISwapChain;
 
 namespace bs3d {
 
+struct D3D11RendererFrameStats {
+    int drawnBoxes = 0;
+    int skippedUnsupportedKinds = 0;
+    int skippedUnsupportedBuckets = 0;
+    int skippedPrimitives = 0;
+    int drawnDebugLines = 0;
+    int skippedDebugLines = 0;
+};
+
 struct D3D11RendererConfig {
     HWND window = nullptr;
     int width = 0;
@@ -56,10 +65,13 @@ public:
     const RenderFrameValidationResult& lastValidation() const { return lastValidation_; }
     bool lastFrameValid() const { return lastValidation_.valid; }
 
+    const D3D11RendererFrameStats& lastD3D11Stats() const { return lastD3D11Stats_; }
+
 private:
     int renderCalls_ = 0;
     RenderFrameStats lastStats_{};
     RenderFrameValidationResult lastValidation_{};
+    D3D11RendererFrameStats lastD3D11Stats_{};
     int width_ = 0;
     int height_ = 0;
 

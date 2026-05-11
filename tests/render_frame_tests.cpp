@@ -1189,6 +1189,27 @@ void d3d11RendererRecordsStatsForDecalGlassTranslucentWhenUninitialized() {
     expect(renderer.lastFrameValid(),
            "D3D11Renderer validates multi-bucket frame as valid");
 }
+
+void d3d11RendererDrawCoverageIsZeroWhenUninitialized() {
+    bs3d::RenderFrame frame;
+    frame.primitives.push_back({bs3d::RenderPrimitiveKind::Box, bs3d::RenderBucket::Opaque});
+    frame.primitives.push_back({bs3d::RenderPrimitiveKind::Box, bs3d::RenderBucket::Opaque});
+    frame.primitives.push_back({bs3d::RenderPrimitiveKind::Sphere, bs3d::RenderBucket::Opaque});
+    frame.primitives.push_back({bs3d::RenderPrimitiveKind::Box, bs3d::RenderBucket::Sky});
+    frame.debugLines.push_back({{0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {255, 0, 0, 255}});
+
+    bs3d::D3D11Renderer renderer;
+    renderer.renderFrame(frame);
+
+    expect(!renderer.isInitialized(), "D3D11Renderer remains uninitialized");
+    const auto& d3d11Stats = renderer.lastD3D11Stats();
+    expect(d3d11Stats.drawnBoxes == 0, "uninitialized D3D11Renderer draws 0 boxes");
+    expect(d3d11Stats.drawnDebugLines == 0, "uninitialized D3D11Renderer draws 0 debug lines");
+    expect(d3d11Stats.skippedUnsupportedKinds == 0,
+           "uninitialized D3D11Renderer does not iterate primitives for skip counting");
+    expect(d3d11Stats.skippedPrimitives == 0,
+           "uninitialized D3D11Renderer skips counting when not initialized");
+}
 #endif
 
 // ---------- RendererFactory tests ----------
@@ -1329,6 +1350,7 @@ int main() {
     d3d11RendererRecordsExpectedStatsForBuilderFrameWhenUninitialized();
     d3d11RendererRecordsExpectedStatsForExtractionFrameWhenUninitialized();
     d3d11RendererRecordsStatsForDecalGlassTranslucentWhenUninitialized();
+    d3d11RendererDrawCoverageIsZeroWhenUninitialized();
 #endif
     factoryCreatesNullRenderer();
     factoryReturnsErrorForRaylibBackend();

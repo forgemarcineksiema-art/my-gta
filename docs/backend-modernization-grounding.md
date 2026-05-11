@@ -189,6 +189,8 @@ Sidecar renderuje tylko wspierany podzbiór `RenderFrame` (Box + debug lines) z 
 `D3D11ShadowSidecar` jest prywatnym helperem w `src/game/`; nie wystawia typów D3D11/Win32 w publicznych nagłówkach.
 Zamknięcie okna sidecara (X) wyłącza sidecar bez zamykania głównego okna raylib — game kontynuuje normalne działanie.
 `isCloseRequested()` / `hasError()` umożliwiają inspekcję stanu sidecara.
+Diagnostyka D3D11 shadow zawiera teraz pokrycie rysowania D3D11: `drawnBoxes`, `skippedUnsupportedKinds`, `skippedUnsupportedBuckets`, `skippedPrimitives`, `drawnDebugLines`, `skippedDebugLines`.
+Pokrycie D3D11 jest raportowane tylko gdy sidecar jest zainicjalizowany; przy niezainicjalizowanym rendererze wszystkie liczniki są zero.
 Na non-Windows flaga jest akceptowana ale sidecar zwraca błąd "Windows-only" i kontynuuje działanie gry.
 `--d3d11-shadow-diagnostics` rozszerza log o szczegółowe statystyki bucketa (opaque/vehicle/decal/glass/translucent/debug), status inicjalizacji sidecara, renderCalls i lastFrameValid.
 Diagnostics loguje PO sidecar.submit(), więc sidecarCalls/lastFrameValid odzwierciedlają właśnie wysłaną ramkę.

@@ -231,6 +231,21 @@ bool D3D11ShadowSidecar::lastFrameValid() const {
     return impl_->renderer->lastFrameValid();
 }
 
+D3D11ShadowFrameStats D3D11ShadowSidecar::lastD3D11Stats() const {
+    if (!impl_->initialized || impl_->renderer == nullptr) {
+        return {};
+    }
+    const auto& d3d11Stats = impl_->renderer->lastD3D11Stats();
+    D3D11ShadowFrameStats result;
+    result.drawnBoxes = d3d11Stats.drawnBoxes;
+    result.skippedUnsupportedKinds = d3d11Stats.skippedUnsupportedKinds;
+    result.skippedUnsupportedBuckets = d3d11Stats.skippedUnsupportedBuckets;
+    result.skippedPrimitives = d3d11Stats.skippedPrimitives;
+    result.drawnDebugLines = d3d11Stats.drawnDebugLines;
+    result.skippedDebugLines = d3d11Stats.skippedDebugLines;
+    return result;
+}
+
 } // namespace bs3d
 
 #else // _WIN32
@@ -260,6 +275,7 @@ void D3D11ShadowSidecar::pumpMessages() {}
 int D3D11ShadowSidecar::renderCalls() const { return 0; }
 RenderFrameStats D3D11ShadowSidecar::lastStats() const { return {}; }
 bool D3D11ShadowSidecar::lastFrameValid() const { return true; }
+D3D11ShadowFrameStats D3D11ShadowSidecar::lastD3D11Stats() const { return {}; }
 
 } // namespace bs3d
 

@@ -753,6 +753,7 @@ void D3D11Renderer::renderFrame(const RenderFrame& frame) {
     ++renderCalls_;
     lastStats_ = summarizeRenderFrame(frame);
     lastValidation_ = validateRenderFrame(frame);
+    lastD3D11Stats_ = {};
 
     if (!isInitialized()) {
         return;
@@ -793,9 +794,18 @@ void D3D11Renderer::renderFrame(const RenderFrame& frame) {
     context_->OMSetBlendState(opaqueBlendState_, nullptr, 0xFFFFFFFF);
 
     for (const RenderPrimitiveCommand& command : frame.primitives) {
-        if (command.kind != RenderPrimitiveKind::Box || !isSupportedBoxBucket(command.bucket)) {
+        if (command.kind != RenderPrimitiveKind::Box) {
+            ++lastD3D11Stats_.skippedUnsupportedKinds;
+            ++lastD3D11Stats_.skippedPrimitives;
             continue;
         }
+        if (!isSupportedBoxBucket(command.bucket)) {
+            ++lastD3D11Stats_.skippedUnsupportedBuckets;
+            ++lastD3D11Stats_.skippedPrimitives;
+            continue;
+        }
+
+        ++lastD3D11Stats_.drawnBoxes;
 
         if (isAlphaBlendBucket(command.bucket)) {
             if (!usingAlphaBlend) {
@@ -844,6 +854,8 @@ void D3D11Renderer::renderFrame(const RenderFrame& frame) {
         const UINT drawableLineCount = requestedLineCount > DebugLineVertexCapacity / 2
                                            ? DebugLineVertexCapacity / 2
                                            : requestedLineCount;
+        lastD3D11Stats_.drawnDebugLines = static_cast<int>(drawableLineCount);
+        lastD3D11Stats_.skippedDebugLines = static_cast<int>(requestedLineCount - drawableLineCount);
         if (drawableLineCount > 0) {
             D3D11_MAPPED_SUBRESOURCE mappedLines{};
             const HRESULT lineMapHr = context_->Map(lineVertexBuffer_, 0, D3D11_MAP_WRITE_DISCARD, 0, &mappedLines);

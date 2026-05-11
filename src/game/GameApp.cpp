@@ -2612,7 +2612,8 @@ void GameApp::run(const GameRunOptions& options) {
                     TraceLog(LOG_INFO,
                              "RenderFrame shadow diag: built=%d submitted=%d prims=%d lines=%d valid=%d "
                              "opaque=%d vehicle=%d decal=%d glass=%d transl=%d debug=%d "
-                             "sidecarInit=%d sidecarCalls=%d sidecarValid=%d",
+                             "sidecarInit=%d sidecarCalls=%d sidecarValid=%d"
+                             "%s%s",
                              shadowFramesBuilt,
                              shadowFramesSubmitted,
                              stats.totalPrimitives,
@@ -2626,7 +2627,10 @@ void GameApp::run(const GameRunOptions& options) {
                              stats.debug,
                              sidecar.isInitialized() ? 1 : 0,
                              sidecar.isInitialized() ? sidecar.renderCalls() : 0,
-                             sidecar.isInitialized() ? (sidecar.lastFrameValid() ? 1 : 0) : 1);
+                             sidecar.isInitialized() ? (sidecar.lastFrameValid() ? 1 : 0) : 1,
+                             sidecar.isInitialized() ? " drawnBoxes=" : "",
+                             sidecar.isInitialized() ? std::to_string(sidecar.lastD3D11Stats().drawnBoxes).c_str()
+                                                      : "");
                     if (!sidecar.isInitialized() && options.d3d11ShadowWindow) {
                         TraceLog(LOG_WARNING, "RenderFrame shadow diag: sidecar error: %s", sidecar.lastError());
                     }
