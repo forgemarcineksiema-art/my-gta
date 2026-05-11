@@ -720,6 +720,7 @@ void d3d11RendererConsumesEmptyRenderFrame() {
 
     renderer.renderFrame(frame);
 
+    expect(!renderer.isInitialized(), "D3D11Renderer starts uninitialized in lightweight tests");
     expect(renderer.renderCalls() == 1, "D3D11Renderer records one render call");
     expect(renderer.lastStats().totalPrimitives == 0, "D3D11Renderer records zero primitives for empty frame");
     expect(renderer.lastStats().debugLines == 0, "D3D11Renderer records zero debug lines for empty frame");
@@ -761,6 +762,21 @@ void d3d11RendererRecordsValidationFailureForInvalidBucketOrder() {
     expect(!renderer.lastValidation().valid, "D3D11Renderer lastValidation reports invalid");
     expect(renderer.lastValidation().message.find("Sky") != std::string::npos,
            "D3D11Renderer validation message names the out-of-order bucket");
+}
+
+void d3d11RendererRejectsInvalidInitConfigWithoutGpu() {
+    bs3d::D3D11Renderer renderer;
+    bs3d::D3D11RendererConfig config;
+    config.width = 640;
+    config.height = 360;
+
+    std::string error;
+    expect(!renderer.initialize(config, &error), "D3D11Renderer rejects missing HWND");
+    expect(!renderer.isInitialized(), "D3D11Renderer remains uninitialized after invalid config");
+    expect(error.find("HWND") != std::string::npos, "D3D11Renderer invalid config reports HWND error");
+
+    renderer.shutdown();
+    expect(!renderer.isInitialized(), "D3D11Renderer shutdown is safe when uninitialized");
 }
 #endif
 
@@ -846,6 +862,7 @@ int main() {
     d3d11RendererConsumesEmptyRenderFrame();
     d3d11RendererConsumesBuilderOutput();
     d3d11RendererRecordsValidationFailureForInvalidBucketOrder();
+    d3d11RendererRejectsInvalidInitConfigWithoutGpu();
 #endif
     factoryCreatesNullRenderer();
     factoryReturnsErrorForRaylibBackend();

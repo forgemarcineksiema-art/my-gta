@@ -59,7 +59,7 @@ if(WIN32)
         src/render_d3d11/D3D11Renderer.cpp
     )
 
-    target_link_libraries(bs3d_renderer_d3d11 PUBLIC bs3d_core)
+    target_link_libraries(bs3d_renderer_d3d11 PUBLIC bs3d_core PRIVATE d3d11 dxgi)
     target_include_directories(bs3d_renderer_d3d11 PUBLIC include PRIVATE src/render_d3d11)
     bs3d_enable_warnings(bs3d_renderer_d3d11)
 endif()
@@ -100,6 +100,14 @@ if(WIN32)
 
     target_link_libraries(bs3d_d3d11_boot PRIVATE d3d11 dxgi d3dcompiler)
     bs3d_enable_warnings(bs3d_d3d11_boot)
+
+    add_executable(bs3d_d3d11_renderer_smoke
+        src/render_d3d11/D3D11RendererSmoke.cpp
+    )
+
+    target_link_libraries(bs3d_d3d11_renderer_smoke PRIVATE bs3d_renderer_d3d11)
+    target_include_directories(bs3d_d3d11_renderer_smoke PRIVATE include src/render_d3d11)
+    bs3d_enable_warnings(bs3d_d3d11_renderer_smoke)
 endif()
 
 find_package(Python3 COMPONENTS Interpreter QUIET)

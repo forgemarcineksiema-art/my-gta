@@ -3,11 +3,43 @@
 #include "bs3d/render/IRenderer.h"
 #include "bs3d/render/RenderFrameValidation.h"
 
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+
+#include <windows.h>
+
+#include <string>
+
+struct ID3D11Device;
+struct ID3D11DeviceContext;
+struct ID3D11RenderTargetView;
+struct IDXGISwapChain;
+
 namespace bs3d {
+
+struct D3D11RendererConfig {
+    HWND window = nullptr;
+    int width = 0;
+    int height = 0;
+    bool enableDebugLayer = false;
+};
 
 class D3D11Renderer final : public IRenderer {
 public:
+    D3D11Renderer() = default;
+    D3D11Renderer(const D3D11Renderer&) = delete;
+    D3D11Renderer& operator=(const D3D11Renderer&) = delete;
+    ~D3D11Renderer() override;
+
     const char* backendName() const override { return "d3d11"; }
+
+    bool initialize(const D3D11RendererConfig& config, std::string* error = nullptr);
+    bool isInitialized() const;
+    void shutdown();
 
     void renderFrame(const RenderFrame& frame) override;
 
@@ -20,6 +52,11 @@ private:
     int renderCalls_ = 0;
     RenderFrameStats lastStats_{};
     RenderFrameValidationResult lastValidation_{};
+
+    ID3D11Device* device_ = nullptr;
+    ID3D11DeviceContext* context_ = nullptr;
+    IDXGISwapChain* swapChain_ = nullptr;
+    ID3D11RenderTargetView* renderTargetView_ = nullptr;
 };
 
 } // namespace bs3d
