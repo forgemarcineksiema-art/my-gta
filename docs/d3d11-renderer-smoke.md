@@ -11,9 +11,21 @@ Status: standalone Windows-only smoke executable for the production-facing `D3D1
 - **Optionally draws one Box**: with `--box`, builds a minimal `RenderFrame` containing one opaque `RenderPrimitiveKind::Box` command and submits it through depth-tested `D3D11Renderer` rendering.
 - **Optionally draws two Boxes**: with `--two-boxes`, submits two overlapping tinted Box commands for manual depth verification.
 - **Optionally draws debug lines**: with `--debug-lines`, submits basic world-space `RenderFrame.debugLines` as one-pixel/default D3D11 `LINELIST` lines.
+- **Optionally uses RenderFrame.camera**: with `--camera`, builds a `RenderFrame` with a non-default `RenderCamera` (eye at `(0, 2, -5)`, target at origin, fovy 60°). This exercises the `D3D11Renderer` camera-based view/projection path instead of the fallback fixed camera.
 - **Exercises tiny Box subset**: `D3D11Renderer` can draw Box primitives for the Opaque, Vehicle, and Debug buckets with a private in-memory shader, cube vertex/index buffers, dynamic constant buffer, and depth-stencil state.
 - **Exercises tiny debug-line subset**: debug lines use a private in-memory shader, input layout, and dynamic vertex buffer, and are currently drawn after boxes through the same depth-tested path.
 - **Exercises shutdown**: calls `D3D11Renderer::shutdown()` before closing the window.
+
+## Camera behavior
+
+`D3D11Renderer` computes view/projection matrices from `RenderFrame.camera`:
+
+- **When camera is usable** (fovy > 0, forward vector has non-zero length, up vector has non-zero length): a look-at view matrix is built from `camera.position`, `camera.target`, `camera.up`, and a perspective projection uses `camera.fovy` (degrees).
+- **Fallback** (camera looks default/invalid — fovy ≤ 0, position equals target, or up is zero): the renderer uses a fixed camera with a Z-offset translation and 65° vertical FOV. This is the default behavior when `--camera` is not used.
+
+Both Box primitives and debug lines use the same view/projection derived from this logic.
+
+This is smoke-level camera support, not a full camera system. It is not wired into `GameApp` or runtime camera integration.
 
 ## What it does not do
 
@@ -23,6 +35,7 @@ Status: standalone Windows-only smoke executable for the production-facing `D3D1
 - **No material pipeline**: tint is passed directly as a constant color; there is no mesh/texture/material/shader-file pipeline.
 - **No raylib dependency**: the target does not link raylib or `bs3d_game_support`.
 - **No replacement for the boot spike**: `bs3d_d3d11_boot` remains as the standalone hardcoded cube spike.
+- **No full camera system**: camera support is minimal look-at/perspective with fallback; no resize handling, no input-driven camera, no runtime `CameraRig` integration.
 
 ## Build
 
@@ -40,6 +53,10 @@ cmake --build --preset ci --target bs3d_d3d11_renderer_smoke
 .\build\ci\Debug\bs3d_d3d11_renderer_smoke.exe --frames 3 --debug-lines
 .\build\ci\Debug\bs3d_d3d11_renderer_smoke.exe --frames 3 --box --debug-lines
 .\build\ci\Debug\bs3d_d3d11_renderer_smoke.exe --frames 3 --two-boxes --debug-lines
+.\build\ci\Debug\bs3d_d3d11_renderer_smoke.exe --frames 3 --box --camera
+.\build\ci\Debug\bs3d_d3d11_renderer_smoke.exe --frames 3 --two-boxes --camera
+.\build\ci\Debug\bs3d_d3d11_renderer_smoke.exe --frames 3 --debug-lines --camera
+.\build\ci\Debug\bs3d_d3d11_renderer_smoke.exe --frames 3 --two-boxes --debug-lines --camera
 ```
 
 For single-config generators the executable may be directly under `build\ci`.

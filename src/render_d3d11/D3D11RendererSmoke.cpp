@@ -21,6 +21,7 @@ struct SmokeOptions {
     bool drawBox = false;
     bool drawTwoBoxes = false;
     bool drawDebugLines = false;
+    bool useCamera = false;
 };
 
 LRESULT CALLBACK smokeWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam) {
@@ -77,8 +78,10 @@ SmokeOptions parseOptions(int argc, char** argv) {
             options.drawTwoBoxes = true;
         } else if (arg == "--debug-lines") {
             options.drawDebugLines = true;
+        } else if (arg == "--camera") {
+            options.useCamera = true;
         } else if (arg == "--help") {
-            std::cout << "Usage: bs3d_d3d11_renderer_smoke [--frames <count>] [--box] [--two-boxes] [--debug-lines]\n";
+            std::cout << "Usage: bs3d_d3d11_renderer_smoke [--frames <count>] [--box] [--two-boxes] [--debug-lines] [--camera]\n";
             std::exit(0);
         } else {
             throw std::runtime_error("unknown option: " + arg);
@@ -133,6 +136,13 @@ HWND createSmokeWindow(HINSTANCE instance, int width, int height) {
 
 bs3d::RenderFrame makeSmokeFrame(const SmokeOptions& options, int frameIndex) {
     bs3d::RenderFrame frame;
+
+    if (options.useCamera) {
+        frame.camera.position = {0.0f, 2.0f, -5.0f};
+        frame.camera.target = {0.0f, 0.0f, 0.0f};
+        frame.camera.up = {0.0f, 1.0f, 0.0f};
+        frame.camera.fovy = 60.0f;
+    }
 
     if (options.drawBox) {
         bs3d::RenderPrimitiveCommand box;

@@ -793,6 +793,29 @@ void d3d11RendererRejectsInvalidInitConfigWithoutGpu() {
     renderer.shutdown();
     expect(!renderer.isInitialized(), "D3D11Renderer shutdown is safe when uninitialized");
 }
+
+void d3d11RendererRecordsStatsWithNonDefaultCameraWhenUninitialized() {
+    bs3d::RenderFrame frame;
+    frame.camera.position = {0.0f, 2.0f, -5.0f};
+    frame.camera.target = {0.0f, 0.0f, 0.0f};
+    frame.camera.up = {0.0f, 1.0f, 0.0f};
+    frame.camera.fovy = 60.0f;
+    frame.primitives.push_back({bs3d::RenderPrimitiveKind::Box, bs3d::RenderBucket::Opaque});
+    frame.debugLines.push_back({{0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {255, 0, 0, 255}});
+
+    bs3d::D3D11Renderer renderer;
+    renderer.renderFrame(frame);
+
+    expect(!renderer.isInitialized(), "D3D11Renderer remains uninitialized for camera stats test");
+    expect(renderer.renderCalls() == 1, "D3D11Renderer records render call with non-default camera");
+    expect(renderer.lastStats().totalPrimitives == 1,
+           "D3D11Renderer records primitive count with non-default camera");
+    expect(renderer.lastStats().debugLines == 1,
+           "D3D11Renderer records debug line count with non-default camera");
+    expect(renderer.lastStats().opaque == 1,
+           "D3D11Renderer records opaque bucket with non-default camera");
+    expect(renderer.lastFrameValid(), "D3D11Renderer validates frame with non-default camera as valid");
+}
 #endif
 
 // ---------- RendererFactory tests ----------
@@ -879,6 +902,7 @@ int main() {
     d3d11RendererRecordsDebugLinesWhenUninitialized();
     d3d11RendererRecordsValidationFailureForInvalidBucketOrder();
     d3d11RendererRejectsInvalidInitConfigWithoutGpu();
+    d3d11RendererRecordsStatsWithNonDefaultCameraWhenUninitialized();
 #endif
     factoryCreatesNullRenderer();
     factoryReturnsErrorForRaylibBackend();

@@ -37,6 +37,10 @@ void releaseAndNull(T*& ptr) {
     }
 }
 
+struct Float3 {
+    float x, y, z;
+};
+
 struct Matrix4 {
     float values[16];
 };
@@ -58,6 +62,65 @@ struct alignas(16) PrimitiveConstants {
 constexpr UINT DebugLineVertexCapacity = 4096;
 
 static_assert(sizeof(PrimitiveConstants) % 16 == 0, "D3D11 constant buffers must be 16-byte aligned");
+
+float dot3(const Float3& a, const Float3& b) {
+    return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
+float length3(const Float3& v) {
+    return std::sqrt(dot3(v, v));
+}
+
+Float3 normalize3(const Float3& v) {
+    const float len = length3(v);
+    if (len <= 1e-7f) {
+        return {0.0f, 0.0f, 0.0f};
+    }
+    return {v.x / len, v.y / len, v.z / len};
+}
+
+Float3 cross3(const Float3& a, const Float3& b) {
+    return {a.y * b.z - a.z * b.y,
+            a.z * b.x - a.x * b.z,
+            a.x * b.y - a.y * b.x};
+}
+
+Float3 subtract3(const Float3& a, const Float3& b) {
+    return {a.x - b.x, a.y - b.y, a.z - b.z};
+}
+
+// Row-major look-at view matrix (row vectors, mul(row_vector, matrix) convention).
+// This is the transpose of the classic column-major lookAt.
+Matrix4 lookAtMatrix(const Float3& eye, const Float3& target, const Float3& up) {
+    const Float3 forward = normalize3(subtract3(target, eye));
+    const Float3 right = normalize3(cross3(up, forward));
+    const Float3 correctedUp = cross3(forward, right);
+
+    // Row-major: row 0 = right, row 1 = up, row 2 = forward, row 3 = translation.
+    Matrix4 matrix{};
+    matrix.values[0]  = right.x;
+    matrix.values[1]  = correctedUp.x;
+    matrix.values[2]  = forward.x;
+    matrix.values[3]  = 0.0f;
+
+    matrix.values[4]  = right.y;
+    matrix.values[5]  = correctedUp.y;
+    matrix.values[6]  = forward.y;
+    matrix.values[7]  = 0.0f;
+
+    matrix.values[8]  = right.z;
+    matrix.values[9]  = correctedUp.z;
+    matrix.values[10] = forward.z;
+    matrix.values[11] = 0.0f;
+
+    matrix.values[12] = -dot3(right, eye);
+    matrix.values[13] = -dot3(correctedUp, eye);
+    matrix.values[14] = -dot3(forward, eye);
+    matrix.values[15] = 1.0f;
+
+    return matrix;
+}
+
 
 Matrix4 identityMatrix() {
     return Matrix4{{1.0f, 0.0f, 0.0f, 0.0f,
@@ -121,6 +184,42 @@ Matrix4 perspectiveMatrix(float verticalFovRadians, float aspectRatio, float nea
     matrix.values[11] = 1.0f;
     matrix.values[14] = zOffset;
     return matrix;
+}
+
+bool isCameraUsable(const RenderCamera& camera) {
+    if (camera.fovy <= 0.0f) {
+        return false;
+    }
+
+    const Float3 forward = subtract3({camera.target.x, camera.target.y, camera.target.z},
+                                      {camera.position.x, camera.position.y, camera.position.z});
+    if (length3(forward) < 1e-5f) {
+        return false;
+    }
+
+    const Float3 up = {camera.up.x, camera.up.y, camera.up.z};
+    if (length3(up) < 1e-5f) {
+        return false;
+    }
+
+    return true;
+}
+
+void computeViewProjection(const RenderCamera& camera, int width, int height,
+                           Matrix4& outView, Matrix4& outProjection) {
+    const float aspectRatio = height > 0 ? static_cast<float>(width) / static_cast<float>(height) : 1.0f;
+
+    if (isCameraUsable(camera)) {
+        const Float3 eye = {camera.position.x, camera.position.y, camera.position.z};
+        const Float3 target = {camera.target.x, camera.target.y, camera.target.z};
+        const Float3 up = {camera.up.x, camera.up.y, camera.up.z};
+        outView = lookAtMatrix(eye, target, up);
+        outProjection = perspectiveMatrix(camera.fovy * Pi / 180.0f, aspectRatio, 0.1f, 100.0f);
+    } else {
+        // Fallback: fixed camera looking at origin from Z offset.
+        outView = translationMatrix(0.0f, 0.0f, 5.0f);
+        outProjection = perspectiveMatrix(65.0f * Pi / 180.0f, aspectRatio, 0.1f, 100.0f);
+    }
 }
 
 bool isSupportedBoxBucket(RenderBucket bucket) {
@@ -647,9 +746,9 @@ void D3D11Renderer::renderFrame(const RenderFrame& frame) {
     context_->VSSetConstantBuffers(0, 1, &constantBuffer);
     context_->PSSetConstantBuffers(0, 1, &constantBuffer);
 
-    const float aspectRatio = height_ > 0 ? static_cast<float>(width_) / static_cast<float>(height_) : 1.0f;
-    const Matrix4 view = translationMatrix(0.0f, 0.0f, 5.0f);
-    const Matrix4 projection = perspectiveMatrix(65.0f * Pi / 180.0f, aspectRatio, 0.1f, 100.0f);
+    Matrix4 view;
+    Matrix4 projection;
+    computeViewProjection(frame.camera, width_, height_, view, projection);
 
     for (const RenderPrimitiveCommand& command : frame.primitives) {
         if (command.kind != RenderPrimitiveKind::Box || !isSupportedBoxBucket(command.bucket)) {
