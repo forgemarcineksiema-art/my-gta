@@ -1,19 +1,22 @@
 # D3D11Renderer smoke
 
-Status: standalone Windows-only smoke executable for the production-facing `D3D11Renderer` initialization path.
+Status: standalone Windows-only smoke executable for the production-facing `D3D11Renderer` initialization and tiny `RenderFrame` Box drawing path.
 
 ## What it does
 
 - **Creates a Win32 window**: opens a small 640x360 window titled `Blok 13 D3D11Renderer Smoke`.
 - **Initializes `D3D11Renderer`**: passes the window handle and dimensions through `D3D11RendererConfig`.
-- **Clears and presents**: builds an empty `RenderFrame`, calls `renderFrame()` for a fixed frame count, clears the render target, presents, and exits cleanly.
+- **Clears and presents**: by default builds an empty `RenderFrame`, calls `renderFrame()` for a fixed frame count, clears the render target, presents, and exits cleanly.
+- **Optionally draws one Box**: with `--box`, builds a minimal `RenderFrame` containing one opaque `RenderPrimitiveKind::Box` command and submits it through `D3D11Renderer`.
+- **Exercises tiny Box subset**: `D3D11Renderer` can draw Box primitives for the Opaque, Vehicle, and Debug buckets with a private in-memory shader, cube vertex/index buffers, and a dynamic constant buffer.
 - **Exercises shutdown**: calls `D3D11Renderer::shutdown()` before closing the window.
 
 ## What it does not do
 
 - **No runtime integration**: it is not wired into `GameApp`, renderer CLI selection, or `RendererFactory`.
-- **No RenderFrame primitive drawing**: it does not draw boxes, meshes, debug lines, HUD, or real game render data.
+- **No full RenderFrame renderer**: it does not draw meshes, spheres, cylinders, quad panels, debug lines, HUD, or real game render data.
 - **No asset path**: it does not load meshes, textures, materials, shader files, or game assets.
+- **No material pipeline**: tint is passed directly as a constant color; there is no mesh/texture/material/shader-file pipeline.
 - **No raylib dependency**: the target does not link raylib or `bs3d_game_support`.
 - **No replacement for the boot spike**: `bs3d_d3d11_boot` remains as the standalone hardcoded cube spike.
 
@@ -28,6 +31,7 @@ cmake --build --preset ci --target bs3d_d3d11_renderer_smoke
 
 ```powershell
 .\build\ci\Debug\bs3d_d3d11_renderer_smoke.exe --frames 3
+.\build\ci\Debug\bs3d_d3d11_renderer_smoke.exe --frames 3 --box
 ```
 
 For single-config generators the executable may be directly under `build\ci`.

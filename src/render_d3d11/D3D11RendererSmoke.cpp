@@ -18,6 +18,7 @@ namespace {
 
 struct SmokeOptions {
     int frames = 120;
+    bool drawBox = false;
 };
 
 LRESULT CALLBACK smokeWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam) {
@@ -67,8 +68,10 @@ SmokeOptions parseOptions(int argc, char** argv) {
         const std::string arg = argv[index];
         if (arg == "--frames") {
             options.frames = parseNonNegativeInt(requireValue(index, argc, argv, arg), arg);
+        } else if (arg == "--box") {
+            options.drawBox = true;
         } else if (arg == "--help") {
-            std::cout << "Usage: bs3d_d3d11_renderer_smoke [--frames <count>]\n";
+            std::cout << "Usage: bs3d_d3d11_renderer_smoke [--frames <count>] [--box]\n";
             std::exit(0);
         } else {
             throw std::runtime_error("unknown option: " + arg);
@@ -121,6 +124,25 @@ HWND createSmokeWindow(HINSTANCE instance, int width, int height) {
     return window;
 }
 
+bs3d::RenderFrame makeSmokeFrame(const SmokeOptions& options, int frameIndex) {
+    bs3d::RenderFrame frame;
+    if (!options.drawBox) {
+        return frame;
+    }
+
+    bs3d::RenderPrimitiveCommand box;
+    box.kind = bs3d::RenderPrimitiveKind::Box;
+    box.bucket = bs3d::RenderBucket::Opaque;
+    box.transform.position = {0.0f, 0.0f, 0.0f};
+    box.transform.scale = {1.0f, 1.0f, 1.0f};
+    box.transform.yawRadians = static_cast<float>(frameIndex) * 0.08f;
+    box.size = {1.4f, 1.4f, 1.4f};
+    box.tint = {255, 180, 60, 255};
+    box.sourceId = "d3d11_renderer_smoke_box";
+    frame.primitives.push_back(box);
+    return frame;
+}
+
 int runSmoke(const SmokeOptions& options) {
     constexpr int width = 640;
     constexpr int height = 360;
@@ -146,7 +168,6 @@ int runSmoke(const SmokeOptions& options) {
     }
     std::cout << "D3D11Renderer initialized\n";
 
-    const bs3d::RenderFrame frame;
     int renderedFrames = 0;
     bool running = true;
     MSG message{};
@@ -170,7 +191,7 @@ int runSmoke(const SmokeOptions& options) {
             break;
         }
 
-        renderer.renderFrame(frame);
+        renderer.renderFrame(makeSmokeFrame(options, renderedFrames));
         ++renderedFrames;
     }
 

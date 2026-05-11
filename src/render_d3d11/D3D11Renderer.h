@@ -16,7 +16,11 @@
 
 struct ID3D11Device;
 struct ID3D11DeviceContext;
+struct ID3D11Buffer;
+struct ID3D11InputLayout;
+struct ID3D11PixelShader;
 struct ID3D11RenderTargetView;
+struct ID3D11VertexShader;
 struct IDXGISwapChain;
 
 namespace bs3d {
@@ -52,11 +56,19 @@ private:
     int renderCalls_ = 0;
     RenderFrameStats lastStats_{};
     RenderFrameValidationResult lastValidation_{};
+    int width_ = 0;
+    int height_ = 0;
 
     ID3D11Device* device_ = nullptr;
     ID3D11DeviceContext* context_ = nullptr;
     IDXGISwapChain* swapChain_ = nullptr;
     ID3D11RenderTargetView* renderTargetView_ = nullptr;
+    ID3D11VertexShader* vertexShader_ = nullptr;
+    ID3D11PixelShader* pixelShader_ = nullptr;
+    ID3D11InputLayout* inputLayout_ = nullptr;
+    ID3D11Buffer* vertexBuffer_ = nullptr;
+    ID3D11Buffer* indexBuffer_ = nullptr;
+    ID3D11Buffer* constantBuffer_ = nullptr;
 };
 
 } // namespace bs3d
