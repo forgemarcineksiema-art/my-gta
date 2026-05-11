@@ -55,6 +55,16 @@ Or run the combined CI helper:
 .\tools\ci_verify.ps1 -Preset ci
 ```
 
+## D3D11 shadow sidecar smoke (dev-only, Windows)
+
+Verifies the D3D11 shadow RenderFrame sidecar: diagnostics (no window) and full sidecar window with D3D11 rendering. Raylib remains the main runtime renderer. Does not activate `--renderer d3d11`.
+
+```powershell
+.\tools\d3d11_shadow_smoke.ps1 -Preset ci -Build
+```
+
+Without `-Build` the script expects an existing `blokowa_satyra.exe`.
+
 ## Build folders
 
 Official preset build folders live under `build/`:
