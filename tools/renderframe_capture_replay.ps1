@@ -107,7 +107,13 @@ if ($fileSize -eq 0) {
     exit 1
 }
 
-Write-Host "CAPTURE OK ($fileSize bytes)" -ForegroundColor Green
+$headerLine = (Get-Content $OutputFull -First 1).Trim()
+if ($headerLine -ne "RenderFrameDump v1") {
+    Write-Host "CAPTURE FAILED: unexpected dump header '$headerLine', expected 'RenderFrameDump v1'" -ForegroundColor Red
+    exit 1
+}
+
+Write-Host "CAPTURE OK ($fileSize bytes, v1 header)" -ForegroundColor Green
 
 # --- Replay (direct) ---
 Write-Host ""
