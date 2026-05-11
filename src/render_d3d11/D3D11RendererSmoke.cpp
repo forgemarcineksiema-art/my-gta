@@ -2,6 +2,7 @@
 
 #include "RenderExtraction.h"
 #include "bs3d/render/RenderFrameBuilder.h"
+#include "bs3d/render/RendererFactory.h"
 #include "bs3d/render/WorldRenderList.h"
 
 #ifndef WIN32_LEAN_AND_MEAN
@@ -28,6 +29,7 @@ struct SmokeOptions {
     bool useCamera = false;
     bool useBuilderFrame = false;
     bool useExtractionFrame = false;
+    bool useFactory = false;
 };
 
 LRESULT CALLBACK smokeWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam) {
@@ -90,8 +92,10 @@ SmokeOptions parseOptions(int argc, char** argv) {
             options.useBuilderFrame = true;
         } else if (arg == "--extraction-frame") {
             options.useExtractionFrame = true;
+        } else if (arg == "--factory") {
+            options.useFactory = true;
         } else if (arg == "--help") {
-            std::cout << "Usage: bs3d_d3d11_renderer_smoke [--frames <count>] [--box] [--two-boxes] [--debug-lines] [--camera] [--builder-frame] [--extraction-frame]\n";
+            std::cout << "Usage: bs3d_d3d11_renderer_smoke [--frames <count>] [--box] [--two-boxes] [--debug-lines] [--camera] [--builder-frame] [--extraction-frame] [--factory]\n";
             std::exit(0);
         } else {
             throw std::runtime_error("unknown option: " + arg);
@@ -343,7 +347,6 @@ int runSmoke(const SmokeOptions& options) {
     HINSTANCE instance = GetModuleHandleW(nullptr);
     HWND window = createSmokeWindow(instance, width, height);
 
-    bs3d::D3D11Renderer renderer;
     bs3d::D3D11RendererConfig config;
     config.window = window;
     config.width = width;
@@ -352,8 +355,49 @@ int runSmoke(const SmokeOptions& options) {
     config.enableDebugLayer = true;
 #endif
 
+    bs3d::D3D11Renderer* renderer = nullptr;
+    std::unique_ptr<bs3d::IRenderer> factoryOwned;
+    bs3d::D3D11Renderer directRenderer;
+
     std::string error;
-    if (!renderer.initialize(config, &error)) {
+
+    if (options.useFactory) {
+        bs3d::RendererFactoryRequest factoryRequest;
+        factoryRequest.backend = bs3d::RendererBackendKind::D3D11;
+        factoryRequest.allowExperimentalD3D11Renderer = true;
+
+        auto factoryResult = bs3d::createRenderer(factoryRequest);
+        if (!factoryResult.ok()) {
+            if (IsWindow(window) != FALSE) {
+                DestroyWindow(window);
+            }
+            throw std::runtime_error("RendererFactory failed for D3D11 with opt-in: " + factoryResult.error);
+        }
+
+        if (std::string(factoryResult.renderer->backendName()) != "d3d11") {
+            if (IsWindow(window) != FALSE) {
+                DestroyWindow(window);
+            }
+            throw std::runtime_error("RendererFactory returned wrong backend: " +
+                                     std::string(factoryResult.renderer->backendName()));
+        }
+
+        auto* d3d11 = dynamic_cast<bs3d::D3D11Renderer*>(factoryResult.renderer.get());
+        if (d3d11 == nullptr) {
+            if (IsWindow(window) != FALSE) {
+                DestroyWindow(window);
+            }
+            throw std::runtime_error("RendererFactory returned non-D3D11Renderer for D3D11 backend");
+        }
+
+        factoryOwned = std::move(factoryResult.renderer);
+        renderer = d3d11;
+        std::cout << "D3D11Renderer created through RendererFactory\n";
+    } else {
+        renderer = &directRenderer;
+    }
+
+    if (!renderer->initialize(config, &error)) {
         if (IsWindow(window) != FALSE) {
             DestroyWindow(window);
         }
@@ -384,11 +428,11 @@ int runSmoke(const SmokeOptions& options) {
             break;
         }
 
-        renderer.renderFrame(makeSmokeFrame(options, renderedFrames));
+        renderer->renderFrame(makeSmokeFrame(options, renderedFrames));
         ++renderedFrames;
     }
 
-    renderer.shutdown();
+    renderer->shutdown();
     std::cout << "rendered " << renderedFrames << " frames\n";
     if (IsWindow(window) != FALSE) {
         DestroyWindow(window);

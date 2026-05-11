@@ -14,6 +14,7 @@ Status: standalone Windows-only smoke executable for the production-facing `D3D1
 - **Optionally uses RenderFrame.camera**: with `--camera`, builds a `RenderFrame` with a non-default `RenderCamera` (eye at `(0, 2, -5)`, target at origin, fovy 60°). This exercises the `D3D11Renderer` camera-based view/projection path instead of the fallback fixed camera.
 - **Optionally builds frame through RenderFrameBuilder**: with `--builder-frame`, constructs a `RenderFrame` using `RenderFrameBuilder` (include/bs3d/render/RenderFrameBuilder.h) instead of manual primitive vector construction. The builder-constructed frame includes 2 Box primitives in supported buckets (Opaque, Vehicle), 3 debug lines, and valid production bucket order. This exercises the render-contract path: RenderFrameBuilder -> RenderFrame -> D3D11Renderer smoke. If `--camera` is combined with `--builder-frame`, a non-default `RenderCamera` is used.
 - **Optionally builds frame through WorldRenderList extraction**: with `--extraction-frame`, constructs local `WorldObject` instances and `WorldAssetDefinition` definitions, builds a `WorldRenderList`, then passes data through `RenderExtraction::addWorldRenderListFallbackBoxes(RenderFrameBuilder&, ...)` into `RenderFrameBuilder`, finally submitting to `D3D11Renderer`. This exercises: WorldRenderList-style data → RenderExtraction → RenderFrameBuilder → RenderFrame → D3D11Renderer smoke. Includes 6 WorldObjects across Opaque, Vehicle, Decal, Glass, missing-definition, and DebugOnly buckets; missing definitions and DebugOnly are skipped/counted. If `--camera` is combined with `--extraction-frame`, a non-default `RenderCamera` (eye at `(0, 4, -8)`, target at `(2, 0, 1)`, fovy 60°) is used.
+- **Optionally creates renderer through RendererFactory**: with `--factory`, creates the `D3D11Renderer` through `RendererFactory::createRenderer()` with `backend = D3D11` and `allowExperimentalD3D11Renderer = true`, verifies `result.ok()` and `backendName() == "d3d11"`, then `dynamic_cast`s to `D3D11Renderer*` to call `initialize()`. This exercises: RendererFactory → D3D11Renderer smoke path. Without `--factory`, the renderer is constructed directly on the stack.
 - **Exercises tiny Box subset**: `D3D11Renderer` can draw Box primitives for the Opaque, Vehicle, and Debug buckets with a private in-memory shader, cube vertex/index buffers, dynamic constant buffer, and depth-stencil state.
 - **Exercises tiny debug-line subset**: debug lines use a private in-memory shader, input layout, and dynamic vertex buffer, and are currently drawn after boxes through the same depth-tested path.
 - **Exercises shutdown**: calls `D3D11Renderer::shutdown()` before closing the window.
@@ -31,7 +32,7 @@ This is smoke-level camera support, not a full camera system. It is not wired in
 
 ## What it does not do
 
-- **No runtime integration**: it is not wired into `GameApp`, renderer CLI selection, or `RendererFactory`.
+- **No runtime integration**: it is not wired into `GameApp`, renderer CLI selection, or game runtime.
 - **No full RenderFrame renderer**: it does not draw meshes, spheres, cylinders, quad panels, HUD, or real game render data.
 - **No asset path**: it does not load meshes, textures, materials, shader files, or game assets.
 - **No material pipeline**: tint is passed directly as a constant color; there is no mesh/texture/material/shader-file pipeline.
@@ -63,6 +64,9 @@ cmake --build --preset ci --target bs3d_d3d11_renderer_smoke
 .\build\ci\Debug\bs3d_d3d11_renderer_smoke.exe --frames 3 --builder-frame --camera
 .\build\ci\Debug\bs3d_d3d11_renderer_smoke.exe --frames 3 --extraction-frame
 .\build\ci\Debug\bs3d_d3d11_renderer_smoke.exe --frames 3 --extraction-frame --camera
+.\build\ci\Debug\bs3d_d3d11_renderer_smoke.exe --frames 3 --factory
+.\build\ci\Debug\bs3d_d3d11_renderer_smoke.exe --frames 3 --factory --extraction-frame
+.\build\ci\Debug\bs3d_d3d11_renderer_smoke.exe --frames 3 --factory --extraction-frame --camera
 ```
 
 For single-config generators the executable may be directly under `build\ci`.
