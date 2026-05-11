@@ -54,6 +54,16 @@ add_library(bs3d_core
 
 target_include_directories(bs3d_core PUBLIC include)
 
+if(WIN32)
+    add_library(bs3d_renderer_d3d11 STATIC
+        src/render_d3d11/D3D11Renderer.cpp
+    )
+
+    target_link_libraries(bs3d_renderer_d3d11 PUBLIC bs3d_core)
+    target_include_directories(bs3d_renderer_d3d11 PUBLIC include PRIVATE src/render_d3d11)
+    bs3d_enable_warnings(bs3d_renderer_d3d11)
+endif()
+
 add_executable(bs3d_tests
     tests/core_tests.cpp
 )
@@ -72,6 +82,11 @@ add_executable(bs3d_render_tests
 
 target_link_libraries(bs3d_render_tests PRIVATE bs3d_core)
 target_include_directories(bs3d_render_tests PRIVATE include src/game)
+if(WIN32)
+    target_link_libraries(bs3d_render_tests PRIVATE bs3d_renderer_d3d11)
+    target_include_directories(bs3d_render_tests PRIVATE src/render_d3d11)
+    target_compile_definitions(bs3d_render_tests PRIVATE BS3D_HAS_D3D11_RENDERER=1)
+endif()
 bs3d_enable_warnings(bs3d_render_tests)
 add_test(NAME bs3d_render_frame_tests COMMAND bs3d_render_tests)
 

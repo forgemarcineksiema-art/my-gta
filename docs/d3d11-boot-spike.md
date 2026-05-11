@@ -13,6 +13,7 @@ Status: standalone Windows-only boot spike.
 ## What it does not do
 
 - **No production renderer**: this is not `D3D11Renderer`.
+- **Separate from the renderer skeleton**: production-facing `D3D11Renderer` lives under `src/render_d3d11/` and currently only records `RenderFrame` stats/validation without window, GPU, or drawing.
 - **No runtime integration**: it is not wired into `GameApp`, `IRenderer`, or `RendererFactory`.
 - **No RenderFrame drawing**: it does not consume `RenderFrame` commands.
 - **No gameplay changes**: the active game runtime remains raylib.

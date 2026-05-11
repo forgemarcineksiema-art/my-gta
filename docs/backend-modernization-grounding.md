@@ -38,11 +38,11 @@ Etykiety statusu używane w tym repo:
   - walidatory Python (assets/world contract/editor overlay/object outcomes/mission) uruchamiane w CTest, gdy dostępny jest Python.
 - **Implemented**: workflow presetów CMake i oficjalne foldery build (m.in. `build/ci-core`, `build/ci`) zgodnie z `CMakePresets.json`.
 
-## 3) Aspirational / not implemented yet (jasno: NIE jest zaimplementowane)
+## 3) Partial / aspirational status (jasno: co NIE jest gotowym runtime)
 
-Poniższe są **Aspirational (Not implemented)** — nie ma dowodu w aktualnym CMake, testach i runtime, że to istnieje:
+Poniższe są **Partial** albo **Aspirational** — nie ma dowodu w aktualnym CMake, testach i runtime, że istnieją jako kompletne systemy produkcyjne:
 
-- **Aspirational**: backend renderera **DirectX 11**.
+- **Partial**: produkcyjnie nazwany szkielet renderera **DirectX 11** (`D3D11Renderer`) istnieje tylko jako no-op implementacja `IRenderer`; pełny backend rysujący DirectX 11 nadal nie jest zaimplementowany.
 - **Aspirational**: backend fizyki **PhysX**.
 - **Aspirational**: backend fizyki **Jolt**.
 - **Aspirational**: render backend **DX12/Vulkan**.
@@ -83,58 +83,65 @@ Kierunek modernizacji ma umożliwić w przyszłości wybór backendów, ale **dz
 - **Implemented (Supported values today)**:
   - renderer: `raylib`
   - fizyka: `custom` (`WorldCollision`)
-- **Aspirational (Planned values; NOT implemented)**:
-  - renderer: `d3d11`
+- **Partial/Aspirational (Planned runtime values; NOT active)**:
+  - renderer: `d3d11` (`IRenderer` skeleton only; runtime selection/drawing not implemented)
   - fizyka: `physx`
 - **Implemented (Current CLI surface)**:
   - `--renderer <raylib>` (planned value `d3d11` fails with a clear error)
   - `--physics <custom>` (planned value `physx` fails with a clear error)
 
-Uwaga (explicit): **CLI flags do not mean d3d11/physx are implemented**. To jest tylko plumbing pod przyszłe prace.
+Uwaga (explicit): **CLI flags do not mean runtime d3d11/physx are implemented**. To jest tylko plumbing pod przyszłe prace.
 
 Backend prep status update: istnieją teraz backend-neutralne interfejsy `IPlatform` i `IInputReader`.
 Obecnie jedynymi implementacjami runtime są `RaylibPlatform` i `RaylibInputReader`.
-To nadal **nie oznacza**, że D3D11 ani PhysX są zaimplementowane.
+To nadal **nie oznacza**, że runtime D3D11 ani PhysX są zaimplementowane.
 
 Backend prep status update: istnieje teraz backend-neutralny szkielet `RenderFrame` / listy komend renderu.
 Obecny renderer runtime nadal jest raylibowy i nadal używa istniejących klas `WorldRenderer`, `HudRenderer` i `DebugRenderer`.
-D3D11 nadal **nie jest zaimplementowany**.
+Runtime D3D11 nadal **nie jest zaimplementowany**.
 Przyszłe prace nad rendererem powinny konsumować `RenderFrame`, zamiast kopiować raylibowe natychmiastowe wywołania typu `DrawCubeV`, `DrawSphere`, `DrawModelEx` albo stos `rlPushMatrix`.
 
 Backend prep status update: istnieje teraz częściowa ścieżka ekstrakcji `WorldRenderList` -> `RenderFrame` używana tylko w testach.
 To nadal jest eksperymentalna/data-only ścieżka graniczna; aktywny renderer runtime pozostaje raylibowy.
-D3D11 nadal **nie jest zaimplementowany**.
+Runtime D3D11 nadal **nie jest zaimplementowany**.
 Ta ekstrakcja jest krokiem pośrednim pod przyszły backend renderera, nie zamianą obecnego renderowania.
 
 Backend prep status update: `WorldRenderList` został przeniesiony do małego, backend-neutralnego nagłówka `include/bs3d/render/WorldRenderList.h`.
 `RenderExtraction` nie zależy już od `GameRenderers.h`.
 Runtime renderer nadal jest raylibowy.
-D3D11 nadal **nie jest zaimplementowany**.
+Runtime D3D11 nadal **nie jest zaimplementowany**.
 
 Backend prep status update: istnieje teraz backend-neutralny `RenderFrameBuilder` (`include/bs3d/render/RenderFrameBuilder.h`).
 `RenderFrameBuilder` akumuluje komendy prymitywów wg bucketu i buduje `RenderFrame` w produkcyjnej kolejności renderowania.
 Jest helperem kontraktowym/testowym — **nie jest render grafem i sam nic nie rysuje**.
 Aktywne renderowanie runtime nadal jest raylibowe.
-D3D11 nadal **nie jest zaimplementowany**.
+Runtime D3D11 nadal **nie jest zaimplementowany**.
 
 Backend prep status update: istnieje teraz `NullRenderer` (`include/bs3d/render/NullRenderer.h`) jako backend-neutralny no-op/testowy renderer implementujący `IRenderer`.
 `NullRenderer` nie otwiera okna, nie używa GPU i zapisuje statystyki oraz wyniki walidacji każdego skonsumowanego `RenderFrame`.
 Istnieje szkielet `RendererFactory` (`include/bs3d/render/RendererFactory.h`) jako przyszły seam do tworzenia rendererów.
 Aktualnie jedyna działająca ścieżka fabryki to `NullRenderer` (przez `useNullRenderer = true`).
 Raylib `IRenderer` adapter **nie jest zaimplementowany** — legacy runtime nadal używa `WorldRenderer`/`HudRenderer`/`DebugRenderer`.
-D3D11 nadal **nie jest zaimplementowany**.
+Runtime D3D11 nadal **nie jest zaimplementowany**.
 Aktywne renderowanie runtime nadal jest raylibowe.
+
+Backend prep status update: istnieje teraz Windows-only, produkcyjnie nazwany szkielet `D3D11Renderer` (`src/render_d3d11/D3D11Renderer.h/.cpp`).
+`D3D11Renderer` implementuje `IRenderer`, zwraca nazwę backendu `d3d11`, waliduje i podsumowuje przekazany `RenderFrame`, oraz zapisuje ostatnie statystyki/wynik walidacji do inspekcji testowej.
+Ten szkielet nie otwiera okna, nie tworzy urządzenia D3D11, nie używa GPU, nie rysuje i nie konsumuje jeszcze realnych danych runtime.
+Nie jest podłączony do `GameApp`, `RendererFactory` ani CLI wyboru backendu.
+Aktywne renderowanie runtime nadal jest raylibowe.
+Standalone `bs3d_d3d11_boot` pozostaje jedyną ścieżką, która faktycznie tworzy D3D11 device/swapchain i rysuje.
 
 Backend prep status update: istnieje teraz backend-neutralny interfejs `IRenderer`, który konsumuje `RenderFrame`.
 Testowy `RecordingRenderer` istnieje tylko w testach i zapisuje wyłącznie liczniki komend.
 Aktywne renderowanie runtime nadal przechodzi przez raylibowe `WorldRenderer`, `HudRenderer` i `DebugRenderer`.
-D3D11 nadal **nie jest zaimplementowany**.
+Runtime D3D11 nadal **nie jest zaimplementowany**.
 Przyszłe backendy renderera powinny implementować `IRenderer` i konsumować `RenderFrame`.
 
 Backend prep status update: istnieją teraz backend-neutralne helpery statystyk i walidacji `RenderFrame`.
 Są używane w testach do sprawdzania liczby komend i kolejności bucketów bez GPU ani runtime renderera.
 Aktywne renderowanie runtime nadal jest raylibowe.
-D3D11 nadal **nie jest zaimplementowany**.
+Runtime D3D11 nadal **nie jest zaimplementowany**.
 Przyszłe backendy renderera powinny walidować i podsumowywać `RenderFrame` przed rysowaniem.
 
 Backend spike status update: istnieje teraz samodzielny, Windows-only spike `bs3d_d3d11_boot`.
@@ -144,21 +151,21 @@ Ten target tworzy okno Win32, inicjalizuje Direct3D 11, czyści, rysuje hardcode
 `bs3d_d3d11_boot` potwierdza teraz minimalną ścieżkę depth buffer + depth-stencil state (D24_UNORM_S8_UINT, DepthEnable/LESS, clear depth co klatkę).
 `bs3d_d3d11_boot` potwierdza teraz minimalną ścieżkę indexed geometry: vertex buffer + index buffer (uint16_t, TRIANGLELIST) dla hardcoded colored cube.
 Nie jest podłączony do runtime renderingu, `GameApp`, `IRenderer` ani `RendererFactory`.
-`D3D11Renderer` nadal **nie jest zaimplementowany**.
+Nie jest współdzielony jako publiczne API silnika z produkcyjnym szkieletem `D3D11Renderer`.
 Aktywne renderowanie runtime nadal jest raylibowe.
 
 Backend spike status update: `bs3d_d3d11_boot` został zrefaktoryzowany z jednego monolitycznego pliku na lokalne moduły spike (D3D11BootMain, D3D11BootWindow, D3D11BootDevice, D3D11BootPipeline).
 Wszystkie typy D3D11 pozostają lokalne w `src/d3d11_spike/` — żaden nie jest wyeksponowany przez publiczne nagłówki silnika.
 Zachowanie spike'a jest identyczne jak przed refaktoryzacją.
 Aktywne renderowanie runtime nadal jest raylibowe.
-`D3D11Renderer` nadal **nie jest zaimplementowany**.
+`D3D11Renderer` istnieje tylko jako osobny no-op szkielet `IRenderer`, bez współdzielenia klas spike'a jako publicznego API.
 
 ## 7) First safe implementation pass (pierwszy bezpieczny pass – rekomendacja)
 
 Następny pass w kodzie (nie w ramach tej dokumentacji) powinien być mały, odwracalny i nie zmieniać zachowania:
 
 - **Recommended (Safe, prep-only)**: wprowadzić wybór backendu jako konfigurację/opcje (np. struktura `BackendOptions`) i „boundary interfaces” typu `IPlatform` / `IInputReader` / `IRenderer` / `IPhysicsWorld`, ale z jedyną realną implementacją opartą o raylib + custom collision.
-- **Do not do yet**: nie dodawać D3D11 ani PhysX w tym kroku.
+- **Do not do yet**: nie dodawać runtime D3D11, urządzenia D3D11 w `D3D11Renderer`, ani PhysX w tym kroku.
 - **Must preserve**: zachować wszystkie testy, walidatory i cały workflow smoke/build (`DEVELOPMENT.md`).
 
 ## 8) Verification commands (komendy weryfikacji)
@@ -179,7 +186,7 @@ ctest --preset ci
 
 During backend modernization prep, do not:
 
-- add DirectX 11 code;
+- add DirectX 11 device/window/drawing integration outside explicitly scoped spike/skeleton work;
 - add PhysX/Jolt code;
 - remove raylib;
 - rewrite GameApp.cpp wholesale;
@@ -204,7 +211,7 @@ A first backend-prep code pass is successful only if:
 - all existing CI/core/game tests still pass;
 - smoke workflow still launches the same playable slice;
 - new abstractions do not expose raylib types in public backend-neutral headers;
-- new docs do not claim D3D11/PhysX exists;
+- new docs do not claim runtime D3D11/PhysX exists;
 - any planned backend value is clearly marked as planned/not implemented.
 
 ## 11) Backend matrix
@@ -212,7 +219,7 @@ A first backend-prep code pass is successful only if:
 | Renderer | Physics | Status |
 |---|---|---|
 | raylib | custom WorldCollision | Implemented / current baseline |
-| d3d11 | custom WorldCollision | Standalone boot spike only; production renderer NOT implemented |
+| d3d11 | custom WorldCollision | Standalone boot spike draws; production `D3D11Renderer` skeleton records `RenderFrame` stats/validation only; runtime renderer NOT implemented |
 | raylib | physx | Aspirational / planned (NOT implemented) |
 | d3d11 | physx | Aspirational / long-term target (NOT implemented) |
 

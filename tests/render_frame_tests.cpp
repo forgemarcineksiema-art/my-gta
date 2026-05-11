@@ -12,7 +12,12 @@
 #include <cstdlib>
 #include <iostream>
 #include <string>
+#include <type_traits>
 #include <vector>
+
+#if defined(BS3D_HAS_D3D11_RENDERER)
+#include "D3D11Renderer.h"
+#endif
 
 namespace {
 
@@ -697,6 +702,68 @@ void nullRendererRecordsValidationFailureForInvalidBucketOrder() {
            "NullRenderer validation message names the out-of-order bucket");
 }
 
+#if defined(BS3D_HAS_D3D11_RENDERER)
+void d3d11RendererImplementsIRenderer() {
+    static_assert(std::is_base_of<bs3d::IRenderer, bs3d::D3D11Renderer>::value,
+                  "D3D11Renderer must implement IRenderer");
+
+    bs3d::D3D11Renderer renderer;
+    bs3d::IRenderer* interfaceRenderer = &renderer;
+
+    expect(std::string(interfaceRenderer->backendName()) == "d3d11",
+           "D3D11Renderer exposes backend name 'd3d11' through IRenderer");
+}
+
+void d3d11RendererConsumesEmptyRenderFrame() {
+    bs3d::D3D11Renderer renderer;
+    const bs3d::RenderFrame frame;
+
+    renderer.renderFrame(frame);
+
+    expect(renderer.renderCalls() == 1, "D3D11Renderer records one render call");
+    expect(renderer.lastStats().totalPrimitives == 0, "D3D11Renderer records zero primitives for empty frame");
+    expect(renderer.lastStats().debugLines == 0, "D3D11Renderer records zero debug lines for empty frame");
+    expect(renderer.lastFrameValid(), "D3D11Renderer validates empty frame as valid");
+}
+
+void d3d11RendererConsumesBuilderOutput() {
+    bs3d::RenderFrameBuilder builder;
+    builder.addPrimitive(makePrimitive(bs3d::RenderBucket::Sky, "sky"));
+    builder.addPrimitive(makePrimitive(bs3d::RenderBucket::Opaque, "opaque"));
+    builder.addPrimitive(makePrimitive(bs3d::RenderBucket::Vehicle, "vehicle"));
+    builder.addPrimitive(makePrimitive(bs3d::RenderBucket::Hud, "hud"));
+    builder.addDebugLine({0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 1.0f}, {255, 255, 255, 255});
+
+    bs3d::D3D11Renderer renderer;
+    renderer.renderFrame(builder.build());
+
+    expect(renderer.renderCalls() == 1, "D3D11Renderer consumes builder output");
+    expect(renderer.lastStats().totalPrimitives == 4, "D3D11Renderer records 4 primitives from builder");
+    expect(renderer.lastStats().debugLines == 1, "D3D11Renderer records 1 debug line from builder");
+    expect(renderer.lastStats().sky == 1, "D3D11Renderer records sky bucket from builder");
+    expect(renderer.lastStats().opaque == 1, "D3D11Renderer records opaque bucket from builder");
+    expect(renderer.lastStats().vehicle == 1, "D3D11Renderer records vehicle bucket from builder");
+    expect(renderer.lastStats().hud == 1, "D3D11Renderer records hud bucket from builder");
+    expect(renderer.lastFrameValid(), "D3D11Renderer validates builder output as valid");
+}
+
+void d3d11RendererRecordsValidationFailureForInvalidBucketOrder() {
+    bs3d::RenderFrame frame;
+    frame.primitives.push_back({bs3d::RenderPrimitiveKind::Box, bs3d::RenderBucket::Hud});
+    frame.primitives.push_back({bs3d::RenderPrimitiveKind::Box, bs3d::RenderBucket::Sky});
+
+    bs3d::D3D11Renderer renderer;
+    renderer.renderFrame(frame);
+
+    expect(renderer.renderCalls() == 1, "D3D11Renderer records invalid frame render call");
+    expect(renderer.lastStats().totalPrimitives == 2, "D3D11Renderer records invalid frame primitive stats");
+    expect(!renderer.lastFrameValid(), "D3D11Renderer records validation failure for invalid bucket order");
+    expect(!renderer.lastValidation().valid, "D3D11Renderer lastValidation reports invalid");
+    expect(renderer.lastValidation().message.find("Sky") != std::string::npos,
+           "D3D11Renderer validation message names the out-of-order bucket");
+}
+#endif
+
 // ---------- RendererFactory tests ----------
 
 void factoryCreatesNullRenderer() {
@@ -774,6 +841,12 @@ int main() {
     nullRendererRecordsRenderFrameStats();
     nullRendererRecordsValidationSuccessForValidFrames();
     nullRendererRecordsValidationFailureForInvalidBucketOrder();
+#if defined(BS3D_HAS_D3D11_RENDERER)
+    d3d11RendererImplementsIRenderer();
+    d3d11RendererConsumesEmptyRenderFrame();
+    d3d11RendererConsumesBuilderOutput();
+    d3d11RendererRecordsValidationFailureForInvalidBucketOrder();
+#endif
     factoryCreatesNullRenderer();
     factoryReturnsErrorForRaylibBackend();
     factoryDoesNotPretendRaylibAdapterExists();
