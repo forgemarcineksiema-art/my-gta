@@ -65,6 +65,13 @@ Verifies the D3D11 shadow RenderFrame sidecar: diagnostics (no window) and full 
 
 Without `-Build` the script expects an existing `blokowa_satyra.exe`.
 
+### Capture/replay shadow frame
+
+```powershell
+.\build\ci\Debug\blokowa_satyra.exe --smoke-frames 3 --renderframe-shadow --renderframe-shadow-interval 1 --renderframe-shadow-dump artifacts\shadow_frame.txt
+.\build\ci\Debug\bs3d_d3d11_renderer_smoke.exe --frames 3 --load-frame artifacts\shadow_frame.txt
+```
+
 ## Build folders
 
 Official preset build folders live under `build/`:

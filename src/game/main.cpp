@@ -40,6 +40,7 @@ void printHelp(std::ostream& out) {
         << "  --d3d11-shadow-window    Open a sidecar D3D11 window rendering the shadow RenderFrame (dev only)\n"
         << "  --d3d11-shadow-diagnostics  Log detailed sidecar/shadow bucket stats (dev only)\n"
         << "  --renderframe-shadow-interval <count>  Shadow frame build interval, default 120 (min 1)\n"
+        << "  --renderframe-shadow-dump <path>  Dump first shadow RenderFrame to a text file\n"
         << "  --no-load-save           Skip loading save at startup\n"
         << "  --no-save                Disable save writes\n"
         << "  --no-audio               Disable audio setup\n"
@@ -95,6 +96,9 @@ int main(int argc, char** argv) {
             } else if (arg == "--d3d11-shadow-window") {
                 options.renderFrameShadow = true;
                 options.d3d11ShadowWindow = true;
+            } else if (arg == "--renderframe-shadow-dump") {
+                options.renderFrameShadow = true;
+                options.renderFrameShadowDumpPath = requireValue(index, argc, argv, arg);
             } else if (arg == "--d3d11-shadow-diagnostics") {
                 options.renderFrameShadow = true;
                 options.d3d11ShadowDiagnostics = true;

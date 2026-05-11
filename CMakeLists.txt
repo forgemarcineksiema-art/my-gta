@@ -79,6 +79,7 @@ add_executable(bs3d_render_tests
     tests/render_frame_tests.cpp
     src/game/RenderExtraction.cpp
     src/render/RendererFactory.cpp
+    src/render/RenderFrameDump.cpp
 )
 
 target_link_libraries(bs3d_render_tests PRIVATE bs3d_core)
@@ -106,6 +107,7 @@ if(WIN32)
         src/render_d3d11/D3D11RendererSmoke.cpp
         src/game/RenderExtraction.cpp
         src/render/RendererFactory.cpp
+        src/render/RenderFrameDump.cpp
     )
 
     target_link_libraries(bs3d_d3d11_renderer_smoke PRIVATE bs3d_renderer_d3d11)
@@ -266,6 +268,7 @@ if(BS3D_BUILD_GAME)
     add_executable(blokowa_satyra
         src/game/GameApp.cpp
         src/game/main.cpp
+        src/render/RenderFrameDump.cpp
     )
 
     target_link_libraries(blokowa_satyra PRIVATE bs3d_core bs3d_game_support raylib)

@@ -7,6 +7,8 @@
 #include "CharacterPosePreview.h"
 #include "D3D11ShadowSidecar.h"
 #include "DevTools.h"
+
+#include "RenderFrameDump.h"
 #include "IntroLevelBuilder.h"
 #include "IntroLevelPresentation.h"
 #include "MissionOutcomeTrigger.h"
@@ -2533,6 +2535,7 @@ void GameApp::run(const GameRunOptions& options) {
         int shadowFramesBuilt = 0;
         int shadowFramesSubmitted = 0;
         bool sidecarCloseLogged = false;
+        bool shadowFrameDumped = false;
 
         D3D11ShadowSidecar sidecar;
         if (options.d3d11ShadowWindow) {
@@ -2588,6 +2591,18 @@ void GameApp::run(const GameRunOptions& options) {
                                      renderColor(128, 128, 255));
 
                 RenderFrame shadowFrame = builder.build();
+
+                if (!shadowFrameDumped && !options.renderFrameShadowDumpPath.empty()) {
+                    shadowFrameDumped = true;
+                    std::string dumpError;
+                    if (writeRenderFrameDump(shadowFrame, options.renderFrameShadowDumpPath, &dumpError)) {
+                        TraceLog(LOG_INFO, "RenderFrame shadow: dumped to %s",
+                                 options.renderFrameShadowDumpPath.c_str());
+                    } else {
+                        TraceLog(LOG_WARNING, "RenderFrame shadow dump failed: %s", dumpError.c_str());
+                    }
+                }
+
                 RenderFrameValidationResult validation = validateRenderFrame(shadowFrame);
                 RenderFrameStats stats = summarizeRenderFrame(shadowFrame);
 

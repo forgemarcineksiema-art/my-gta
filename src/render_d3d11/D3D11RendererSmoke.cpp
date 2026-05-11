@@ -1,6 +1,7 @@
 #include "D3D11Renderer.h"
 
 #include "RenderExtraction.h"
+#include "RenderFrameDump.h"
 #include "bs3d/render/RenderFrameBuilder.h"
 #include "bs3d/render/RendererFactory.h"
 #include "bs3d/render/WorldRenderList.h"
@@ -30,6 +31,7 @@ struct SmokeOptions {
     bool useBuilderFrame = false;
     bool useExtractionFrame = false;
     bool useFactory = false;
+    std::string loadFramePath;
 };
 
 LRESULT CALLBACK smokeWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam) {
@@ -94,8 +96,10 @@ SmokeOptions parseOptions(int argc, char** argv) {
             options.useExtractionFrame = true;
         } else if (arg == "--factory") {
             options.useFactory = true;
+        } else if (arg == "--load-frame") {
+            options.loadFramePath = requireValue(index, argc, argv, arg);
         } else if (arg == "--help") {
-            std::cout << "Usage: bs3d_d3d11_renderer_smoke [--frames <count>] [--box] [--two-boxes] [--debug-lines] [--camera] [--builder-frame] [--extraction-frame] [--factory]\n";
+            std::cout << "Usage: bs3d_d3d11_renderer_smoke [--frames <count>] [--box] [--two-boxes] [--debug-lines] [--camera] [--builder-frame] [--extraction-frame] [--factory] [--load-frame <path>]\n";
             std::exit(0);
         } else {
             throw std::runtime_error("unknown option: " + arg);
@@ -149,6 +153,21 @@ HWND createSmokeWindow(HINSTANCE instance, int width, int height) {
 }
 
 bs3d::RenderFrame makeSmokeFrame(const SmokeOptions& options, int frameIndex) {
+    if (!options.loadFramePath.empty()) {
+        bs3d::RenderFrame frame;
+        std::string error;
+        if (!bs3d::readRenderFrameDump(options.loadFramePath, frame, &error)) {
+            throw std::runtime_error("failed to load frame dump " + options.loadFramePath + ": " + error);
+        }
+        if (options.useCamera) {
+            frame.camera.position = {0.0f, 2.0f, -5.0f};
+            frame.camera.target = {0.0f, 0.0f, 0.0f};
+            frame.camera.up = {0.0f, 1.0f, 0.0f};
+            frame.camera.fovy = 60.0f;
+        }
+        return frame;
+    }
+
     if (options.useBuilderFrame) {
         bs3d::RenderFrameBuilder builder;
 

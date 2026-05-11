@@ -1,4 +1,5 @@
 #include "RenderExtraction.h"
+#include "RenderFrameDump.h"
 #include "bs3d/render/IRenderer.h"
 #include "bs3d/render/NullRenderer.h"
 #include "bs3d/render/RendererFactory.h"
@@ -889,6 +890,75 @@ void builderExtractionSupportsDecalGlassTranslucentBuckets() {
     expect(bs3d::isRenderFrameBucketOrderValid(frame), "multi-bucket extraction has valid order");
 }
 
+// ---------- RenderFrameDump tests ----------
+
+void dumpWriteAndReadRoundTrip() {
+    bs3d::RenderFrame original;
+    original.camera.position = {1.0f, 2.0f, 3.0f};
+    original.camera.target = {4.0f, 5.0f, 6.0f};
+    original.camera.fovy = 55.0f;
+
+    {
+        bs3d::RenderPrimitiveCommand box;
+        box.kind = bs3d::RenderPrimitiveKind::Box;
+        box.bucket = bs3d::RenderBucket::Opaque;
+        box.transform.position = {0.0f, 0.0f, 0.0f};
+        box.size = {1.4f, 1.4f, 1.4f};
+        box.tint = {255, 180, 60, 255};
+        box.sourceId = "test_box_1";
+        original.primitives.push_back(box);
+    }
+    {
+        bs3d::RenderPrimitiveCommand box;
+        box.kind = bs3d::RenderPrimitiveKind::Box;
+        box.bucket = bs3d::RenderBucket::Vehicle;
+        box.transform.position = {1.0f, 0.0f, 2.0f};
+        box.size = {0.8f, 0.8f, 0.8f};
+        box.tint = {100, 200, 100, 255};
+        box.sourceId = "test_box_2";
+        original.primitives.push_back(box);
+    }
+
+    original.debugLines.push_back({{0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {255, 0, 0, 255}});
+    original.debugLines.push_back({{0.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0, 255, 0, 255}});
+
+    const std::string dumpPath = "artifacts/test_dump_roundtrip.txt";
+    std::string error;
+    expect(bs3d::writeRenderFrameDump(original, dumpPath, &error),
+           "writeRenderFrameDump succeeds");
+    expect(error.empty(), "writeRenderFrameDump has no error");
+
+    bs3d::RenderFrame loaded;
+    expect(bs3d::readRenderFrameDump(dumpPath, loaded, &error),
+           "readRenderFrameDump succeeds");
+    expect(error.empty(), "readRenderFrameDump has no error");
+
+    expect(loaded.primitives.size() == 2, "dump round-trip preserves 2 primitives");
+    expect(loaded.debugLines.size() == 2, "dump round-trip preserves 2 debug lines");
+
+    expectNear(loaded.camera.position.x, 1.0f, 0.001f, "dump round-trip camera pos x");
+    expectNear(loaded.camera.fovy, 55.0f, 0.001f, "dump round-trip camera fovy");
+
+    expect(loaded.primitives[0].kind == bs3d::RenderPrimitiveKind::Box,
+           "dump round-trip primitive 0 is Box");
+    expect(loaded.primitives[0].bucket == bs3d::RenderBucket::Opaque,
+           "dump round-trip primitive 0 bucket");
+    expect(loaded.primitives[0].sourceId == "test_box_1",
+           "dump round-trip primitive 0 sourceId");
+    expect(loaded.primitives[0].tint.r == 255 && loaded.primitives[0].tint.g == 180,
+           "dump round-trip primitive 0 tint");
+    expect(loaded.primitives[1].bucket == bs3d::RenderBucket::Vehicle,
+           "dump round-trip primitive 1 bucket");
+
+    expect(loaded.debugLines[0].tint.r == 255, "dump round-trip debugline 0 tint red");
+    expect(loaded.debugLines[1].tint.g == 255, "dump round-trip debugline 1 tint green");
+
+    const auto validation = bs3d::validateRenderFrame(loaded);
+    expect(validation.valid, "dump round-trip frame validates");
+
+    std::remove(dumpPath.c_str());
+}
+
 // ---------- NullRenderer tests ----------
 
 void nullRendererConsumesEmptyRenderFrame() {
@@ -1334,6 +1404,7 @@ int main() {
     builderExtractionCountsMissingDefinitions();
     builderExtractionSkipsDebugOnly();
     builderExtractionSupportsDecalGlassTranslucentBuckets();
+    dumpWriteAndReadRoundTrip();
     nullRendererConsumesEmptyRenderFrame();
     nullRendererConsumesBuilderOutput();
     nullRendererRecordsRenderFrameStats();
