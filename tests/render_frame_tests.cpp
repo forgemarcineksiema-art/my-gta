@@ -2896,6 +2896,26 @@ void objLoaderRejectsMissingFile() {
     expect(result.error.find("cannot open") != std::string::npos, "error mentions cannot open");
 }
 
+void objLoaderIgnoresHarmlessUnsupportedLines() {
+    const std::string obj =
+        "o test_object\n"
+        "g test_group\n"
+        "s off\n"
+        "mtllib test.mtl\n"
+        "usemtl test_mat\n"
+        "v 0 1 0\n"
+        "vt 0 0\n"
+        "vn 0 1 0\n"
+        "v -1 -1 0\n"
+        "v 1 -1 0\n"
+        "f 1 2 3\n";
+
+    const auto result = bs3d::loadCpuMeshFromObjText(obj, "test_harmless");
+    expect(result.ok, "OBJ with unsupported but harmless lines loads");
+    expect(result.mesh.vertices.size() == 3, "only 3 vertices parsed (vt does not count)");
+    expect(result.mesh.indices.size() == 3, "3 indices for single triangle face");
+}
+
 } // namespace
 
 int main() {
@@ -2962,6 +2982,7 @@ int main() {
     objLoaderRejectsTwoVertexFace();
     objLoaderRejectsFiveVertexFace();
     objLoaderRejectsMissingFile();
+    objLoaderIgnoresHarmlessUnsupportedLines();
     dumpWriteAndReadRoundTrip();
     dumpReadMissingFileReturnsError();
     dumpReadMissingHeaderFails();

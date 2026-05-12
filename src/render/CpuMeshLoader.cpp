@@ -29,16 +29,6 @@ int parseFacePartIndex(const std::string& token) {
     return static_cast<int>(value);
 }
 
-int toZeroBased(int index, int vertexCount) {
-    if (index > 0) {
-        return index - 1;
-    }
-    if (index < 0) {
-        return vertexCount + index;
-    }
-    return -1;
-}
-
 } // namespace
 
 CpuMeshLoadResult loadCpuMeshFromObjText(const std::string& text, const std::string& debugName) {
