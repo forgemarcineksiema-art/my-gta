@@ -1,8 +1,9 @@
 # D3D11 mesh/material implementation checklist
 
-Status: LIVE (documentation only)
+Status: LIVE (Stage 1 implemented)
 Created: 2026-05-12
-First code pass: not started
+First code pass: completed 2026-05-12
+Stage 1 status: DONE
 
 See also:
 - `docs/d3d11-mesh-material-pipeline-plan.md` — full architecture plan

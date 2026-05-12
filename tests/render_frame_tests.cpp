@@ -1,3 +1,5 @@
+#include "MaterialRegistry.h"
+#include "MeshRegistry.h"
 #include "RenderExtraction.h"
 #include "RenderFrameDump.h"
 #include "bs3d/render/IRenderer.h"
@@ -1458,6 +1460,172 @@ void dumpRoundTripWithBoxAndNonBoxValidatesOnlyBoxSurvives() {
 
 // ---------- RendererFactory tests ----------
 
+// MeshRegistry data-only tests
+
+void meshRegistryHandleZeroIsInvalid() {
+    bs3d::MeshRegistry registry;
+    expect(!registry.isValid(bs3d::MeshHandle{0}), "MeshHandle{0} must be invalid");
+    expect(registry.assetId(bs3d::MeshHandle{0}) == nullptr, "MeshHandle{0} assetId must be nullptr");
+}
+
+void meshRegistryAllocateReturnsValidHandle() {
+    bs3d::MeshRegistry registry;
+    const auto handle = registry.allocate("prop_barrel");
+    expect(registry.isValid(handle), "allocated handle must be valid");
+    expect(handle.id >= 2, "first allocated id must be >= 2");
+    const std::string* asset = registry.assetId(handle);
+    expect(asset != nullptr, "assetId must not be nullptr for valid handle");
+    expect(*asset == "prop_barrel", "assetId must match allocated string");
+}
+
+void meshRegistryDuplicateAllocateReturnsSameHandle() {
+    bs3d::MeshRegistry registry;
+    const auto h1 = registry.allocate("a");
+    const auto h2 = registry.allocate("a");
+    expect(h1.id == h2.id, "duplicate allocate must return same handle");
+    const auto found = registry.find("a");
+    expect(found.id == h1.id, "find must match duplicate handle");
+}
+
+void meshRegistryFindUnknownReturnsZero() {
+    bs3d::MeshRegistry registry;
+    const auto found = registry.find("nonexistent");
+    expect(found.id == 0, "find unknown must return MeshHandle{0}");
+    expect(!registry.isValid(found), "find result for unknown must be invalid");
+}
+
+void meshRegistryReleaseMakesHandleInvalid() {
+    bs3d::MeshRegistry registry;
+    const auto handle = registry.allocate("release_test");
+    expect(registry.isValid(handle), "handle must be valid before release");
+    registry.release(handle);
+    expect(!registry.isValid(handle), "handle must be invalid after release");
+    expect(registry.assetId(handle) == nullptr, "assetId must be nullptr after release");
+}
+
+void meshRegistryReleaseThenReallocateIsNewHandle() {
+    bs3d::MeshRegistry registry;
+    const auto h1 = registry.allocate("a");
+    registry.release(h1);
+    const auto h2 = registry.allocate("a");
+    expect(h2.id != h1.id, "reallocated id must differ from released id");
+    expect(registry.isValid(h2), "reallocated handle must be valid");
+    expect(!registry.isValid(h1), "released handle must remain invalid");
+}
+
+void meshRegistryMultipleAllocationsIncreaseId() {
+    bs3d::MeshRegistry registry;
+    bs3d::MeshHandle previous{0};
+    for (int i = 0; i < 5; ++i) {
+        const auto handle = registry.allocate("asset_" + std::to_string(i));
+        expect(handle.id > previous.id, "each allocation must produce strictly increasing id");
+        previous = handle;
+    }
+}
+
+void meshRegistryBuiltInUnitCubeIdIsNotOwnedByRegistry() {
+    bs3d::MeshRegistry registry;
+    const bs3d::MeshHandle builtIn{bs3d::BuiltInUnitCubeMeshId};
+    expect(!registry.isValid(builtIn), "BuiltInUnitCubeMeshId (id=1) must not be owned by registry");
+    expect(registry.assetId(builtIn) == nullptr, "BuiltInUnitCubeMeshId assetId must be nullptr");
+    const auto found = registry.find("__builtin_unit_cube__");
+    expect(found.id == 0, "registry must not report BuiltInUnitCubeMeshId via any assetId");
+}
+
+void meshRegistryReleaseUnknownHandleIsSafe() {
+    bs3d::MeshRegistry registry;
+    registry.release(bs3d::MeshHandle{42});
+    registry.release(bs3d::MeshHandle{0});
+    expect(registry.isValid(bs3d::MeshHandle{0}) == false, "zero handle must stay invalid after release");
+}
+
+void meshRegistryFindAfterReleaseReturnsZero() {
+    bs3d::MeshRegistry registry;
+    registry.allocate("b");
+    const auto before = registry.find("b");
+    expect(before.id != 0, "find must return handle before release");
+    registry.release(before);
+    const auto after = registry.find("b");
+    expect(after.id == 0, "find must return zero after release");
+}
+
+// MaterialRegistry data-only tests
+
+void materialRegistryDefaultsArePreAllocated() {
+    bs3d::MaterialRegistry registry;
+    const auto opaque = registry.defaultOpaque();
+    const auto alpha = registry.defaultAlpha();
+    expect(opaque.id != 0, "defaultOpaque must be non-zero");
+    expect(alpha.id != 0, "defaultAlpha must be non-zero");
+    expect(opaque.id != alpha.id, "defaultOpaque and defaultAlpha must be different");
+    expect(registry.isValid(opaque), "defaultOpaque must be valid");
+    expect(registry.isValid(alpha), "defaultAlpha must be valid");
+    const std::string* opaqueName = registry.name(opaque);
+    const std::string* alphaName = registry.name(alpha);
+    expect(opaqueName != nullptr && *opaqueName == "default_opaque", "defaultOpaque name must be 'default_opaque'");
+    expect(alphaName != nullptr && *alphaName == "default_alpha", "defaultAlpha name must be 'default_alpha'");
+}
+
+void materialRegistryHandleZeroIsInvalid() {
+    bs3d::MaterialRegistry registry;
+    expect(!registry.isValid(bs3d::MaterialHandle{0}), "MaterialHandle{0} must be invalid");
+    expect(registry.name(bs3d::MaterialHandle{0}) == nullptr, "MaterialHandle{0} name must be nullptr");
+}
+
+void materialRegistryAllocateReturnsValidHandle() {
+    bs3d::MaterialRegistry registry;
+    const auto handle = registry.allocate("concrete");
+    expect(registry.isValid(handle), "allocated handle must be valid");
+    expect(handle.id >= 3, "first user allocation must be >= 3");
+    const std::string* matName = registry.name(handle);
+    expect(matName != nullptr, "name must not be nullptr for valid handle");
+    expect(*matName == "concrete", "name must match allocated string");
+}
+
+void materialRegistryDuplicateAllocateReturnsSameHandle() {
+    bs3d::MaterialRegistry registry;
+    const auto h1 = registry.allocate("wood");
+    const auto h2 = registry.allocate("wood");
+    expect(h1.id == h2.id, "duplicate allocate must return same handle");
+}
+
+void materialRegistryReleaseAndFind() {
+    bs3d::MaterialRegistry registry;
+    const auto handle = registry.allocate("glass");
+    const auto found1 = registry.find("glass");
+    expect(found1.id == handle.id, "find must return allocated handle");
+    registry.release(handle);
+    const auto found2 = registry.find("glass");
+    expect(found2.id == 0, "find must return zero after release");
+}
+
+void materialRegistryReleaseThenReallocateIsNewHandle() {
+    bs3d::MaterialRegistry registry;
+    const auto h1 = registry.allocate("metal");
+    registry.release(h1);
+    const auto h2 = registry.allocate("metal");
+    expect(h2.id != h1.id, "reallocated id must differ from released id");
+    expect(registry.isValid(h2), "reallocated handle must be valid");
+    expect(!registry.isValid(h1), "released handle must remain invalid");
+}
+
+void materialRegistryUserAllocationsDoNotCollideWithDefaults() {
+    bs3d::MaterialRegistry registry;
+    const auto h = registry.allocate("test");
+    expect(h.id != registry.defaultOpaque().id, "user handle must not collide with defaultOpaque");
+    expect(h.id != registry.defaultAlpha().id, "user handle must not collide with defaultAlpha");
+}
+
+void materialRegistryFindDefaultsByName() {
+    bs3d::MaterialRegistry registry;
+    const auto opaque = registry.find("default_opaque");
+    const auto alpha = registry.find("default_alpha");
+    expect(opaque.id != 0, "find default_opaque must return non-zero");
+    expect(alpha.id != 0, "find default_alpha must return non-zero");
+    expect(opaque.id == registry.defaultOpaque().id, "find default_opaque must match defaultOpaque()");
+    expect(alpha.id == registry.defaultAlpha().id, "find default_alpha must match defaultAlpha()");
+}
+
 void factoryCreatesNullRenderer() {
     bs3d::RendererFactoryRequest request;
     request.useNullRenderer = true;
@@ -1604,6 +1772,24 @@ int main() {
     d3d11RendererDrawCoverageIsZeroWhenUninitialized();
     d3d11RendererFrameStatsCountUnsupportedKinds();
 #endif
+    meshRegistryHandleZeroIsInvalid();
+    meshRegistryAllocateReturnsValidHandle();
+    meshRegistryDuplicateAllocateReturnsSameHandle();
+    meshRegistryFindUnknownReturnsZero();
+    meshRegistryReleaseMakesHandleInvalid();
+    meshRegistryReleaseThenReallocateIsNewHandle();
+    meshRegistryMultipleAllocationsIncreaseId();
+    meshRegistryBuiltInUnitCubeIdIsNotOwnedByRegistry();
+    meshRegistryReleaseUnknownHandleIsSafe();
+    meshRegistryFindAfterReleaseReturnsZero();
+    materialRegistryDefaultsArePreAllocated();
+    materialRegistryHandleZeroIsInvalid();
+    materialRegistryAllocateReturnsValidHandle();
+    materialRegistryDuplicateAllocateReturnsSameHandle();
+    materialRegistryReleaseAndFind();
+    materialRegistryReleaseThenReallocateIsNewHandle();
+    materialRegistryUserAllocationsDoNotCollideWithDefaults();
+    materialRegistryFindDefaultsByName();
     factoryCreatesNullRenderer();
     factoryReturnsErrorForRaylibBackend();
     factoryDoesNotPretendRaylibAdapterExists();

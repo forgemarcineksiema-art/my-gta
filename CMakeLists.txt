@@ -78,6 +78,8 @@ add_test(NAME bs3d_core_tests COMMAND bs3d_tests)
 add_executable(bs3d_render_tests
     tests/render_frame_tests.cpp
     src/game/RenderExtraction.cpp
+    src/render/MeshRegistry.cpp
+    src/render/MaterialRegistry.cpp
     src/render/RendererFactory.cpp
     src/render/RenderFrameDump.cpp
 )
