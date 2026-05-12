@@ -10,11 +10,14 @@ namespace bs3d {
 namespace {
 
 float smoothAlpha(float response, float deltaSeconds) {
+    // Returns 1 - exp(-response * dt).  Clamped to safe range to guard against
+    // extreme deltaSeconds (e.g. from long pauses or startup).
     if (deltaSeconds <= 0.0f) {
         return 0.0f;
     }
 
-    return 1.0f - std::exp(-response * deltaSeconds);
+    const float exponent = std::clamp(-response * deltaSeconds, -25.0f, 0.0f);
+    return 1.0f - std::exp(exponent);
 }
 
 Vec3 lerp(Vec3 from, Vec3 to, float alpha) {
@@ -65,11 +68,13 @@ CameraRigMode resolveStableCameraMode(CameraRigMode mode, bool stableCameraMode)
 
 CameraRigState CameraRig::update(const CameraRigTarget& target, float deltaSeconds, const WorldCollision* collision) {
     const float dt = std::max(0.0f, deltaSeconds);
+    // On first frame, snap to desired pose to avoid visual pop from zero origin.
     if (!initialized_) {
         cameraYawRadians_ = target.yawRadians;
         pitchRadians_ = isDriving(target.mode) ? -0.42f : -0.36f;
     }
 
+    // Compute desired camera pose based on mode, speed, tension, and mouse input.
     CameraRigState desired = desiredState(target);
     desired.desiredPosition = desired.position;
     desired.fullBoomLength = vecLength(desired.desiredPosition - desired.target);
@@ -77,6 +82,7 @@ CameraRigState CameraRig::update(const CameraRigTarget& target, float deltaSecon
         desired.position = collision->resolveCameraBoom(desired.target, desired.position, config_.boomCollisionRadius);
     }
     desired.boomLength = vecLength(desired.position - desired.target);
+    // Slightly lift target and camera when clipped to reduce occlusion discomfort.
     if (!isDriving(target.mode) && desired.boomLength + 0.34f < desired.fullBoomLength) {
         desired.target.y += 0.16f;
         desired.position.y += 0.10f;
@@ -91,10 +97,13 @@ CameraRigState CameraRig::update(const CameraRigTarget& target, float deltaSecon
         return state_;
     }
 
+    // Two-pass smooth interpolation: target before position.
+    // Driving uses faster response for predictable chase framing.
     const float targetAlpha = smoothAlpha(isDriving(target.mode) ? 4.8f : 34.0f, dt);
     const float positionAlpha = smoothAlpha(isDriving(target.mode) ? 4.6f : 18.0f, dt);
     const bool desiredBoomIsOccluded = desired.boomLength + 0.02f < desired.fullBoomLength;
     const float currentBoomLength = vecLength(state_.position - state_.target);
+    // Bypass smooth lerp when collision immediately shortens the boom.
     const bool boomNeedsImmediateShortening =
         desiredBoomIsOccluded && desired.boomLength + 0.10f < currentBoomLength;
 

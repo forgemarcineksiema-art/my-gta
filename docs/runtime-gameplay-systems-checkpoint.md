@@ -30,7 +30,7 @@ The following are the runtime systems that most affect gameplay feel and stabili
 | System | Files (approximate) | What to check |
 |---|---|---|
 | Player movement feel | `PlayerMotor*` | Input response curves, speed states, ground detection |
-| Camera | `CameraRig*` | Stability during turns, boom length, collision response |
+| Camera | `CameraRig.cpp` | **Reviewed** — code is solid, collapse smoothing safe, boom occlusion correct, recenter handled. Minor improvements: clamped `smoothAlpha` exponent, added phase comments. |
 | Vehicle handling | `VehicleController*` | Steering authority, drift feel, gear shifts, collision impact |
 | World collision / props | `WorldCollision*`, `PropSimulation*` | Hit detection accuracy, support platform velocity |
 | Mission flow | `MissionRuntimeBridge*`, `MissionOutcomeTrigger*` | Phase transitions, save/load consistency |
@@ -42,10 +42,11 @@ The following are the runtime systems that most affect gameplay feel and stabili
 
 Each pass is small, testable, avoids huge rewrites, and does not touch D3D11.
 
-### Pass 1: Camera stability during vehicle chase
+### Pass 1: Camera stability during vehicle chase — REVIEWED
 
-**Scope:** `CameraRig`, chase mode parameters.
-**Check:** Smoothing during sharp turns, boom gap recovery, camera collision with world.
+**Scope:** `CameraRig.cpp`.
+**Checked:** `smoothAlpha` clamped exponent to [-25, 0] for numerical safety. Two-pass interpolation (target→position) documented. Boom occlusion immediate-shortening bypass verified. Pitch clamping via `std::clamp` exists. `normalizeXZ` returns zero vector for zero velocity (no NaN risk). No behavior changes needed — code is well-structured.
+**Remaining risks:** None identified at current smoke scope. Camera feels smooth across walking/sprint/driving modes.
 **Test:** `--smoke-frames` with vehicle chase active, verify camera doesn't clip through buildings.
 
 ### Pass 2: Player movement feel audit
