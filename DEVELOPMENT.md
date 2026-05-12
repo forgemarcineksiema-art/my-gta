@@ -98,6 +98,24 @@ Run with `--diagnostics` to print frame stats and D3D11 draw coverage:
 .\build\ci\Debug\bs3d_d3d11_game_shell.exe --frames 3 --load-frame artifacts\shadow_frame.txt --diagnostics
 ```
 
+Run with `--orbit-camera` for an inspection camera that can be moved with keyboard controls:
+
+```powershell
+.\build\ci\Debug\bs3d_d3d11_game_shell.exe --frames 120 --load-frame artifacts\shadow_frame.txt --diagnostics --orbit-camera
+```
+
+Add `--auto-orbit` (implies `--orbit-camera`) for slow automatic yaw rotation:
+
+```powershell
+.\build\ci\Debug\bs3d_d3d11_game_shell.exe --frames 120 --load-frame artifacts\shadow_frame.txt --diagnostics --orbit-camera --auto-orbit
+```
+
+**Orbit camera controls:**
+- Left/Right arrows or A/D — rotate yaw
+- W/S — zoom radius in/out
+- Q/E — lower/raise height
+- R — reset camera defaults (yaw=0, radius=8, height=4)
+
 Or build and run through the capture/replay script:
 
 ```powershell

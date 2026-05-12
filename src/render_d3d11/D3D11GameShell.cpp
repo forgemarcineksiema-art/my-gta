@@ -13,6 +13,7 @@
 
 #include <windows.h>
 
+#include <cmath>
 #include <cstdlib>
 #include <iostream>
 #include <stdexcept>
@@ -24,6 +25,8 @@ struct ShellOptions {
     std::string loadFramePath;
     int frames = 120;
     bool diagnostics = false;
+    bool orbitCamera = false;
+    bool autoOrbit = false;
 };
 
 LRESULT CALLBACK shellWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam) {
@@ -77,8 +80,14 @@ ShellOptions parseOptions(int argc, char** argv) {
             options.loadFramePath = requireValue(index, argc, argv, arg);
         } else if (arg == "--diagnostics") {
             options.diagnostics = true;
+        } else if (arg == "--orbit-camera") {
+            options.orbitCamera = true;
+        } else if (arg == "--auto-orbit") {
+            options.orbitCamera = true;
+            options.autoOrbit = true;
         } else if (arg == "--help") {
             std::cout << "Usage: bs3d_d3d11_game_shell --load-frame <path> [--frames <count>] [--diagnostics]\n"
+                      << "                                [--orbit-camera] [--auto-orbit]\n"
                       << "\n"
                       << "Standalone D3D11 main-window shell that loads a RenderFrameDump v1 file\n"
                       << "and renders it through D3D11Renderer.\n"
@@ -86,7 +95,17 @@ ShellOptions parseOptions(int argc, char** argv) {
                       << "  --load-frame <path>   required: path to RenderFrameDump v1 text file\n"
                       << "  --frames <count>      frame count before exit (default 120)\n"
                       << "  --diagnostics         print frame stats and D3D11 draw coverage\n"
-                      << "  --help                print this message\n";
+                      << "  --orbit-camera        enable orbit inspection camera controls\n"
+                      << "  --auto-orbit          imply --orbit-camera and slowly auto-rotate\n"
+                      << "\n"
+                      << "Orbit camera controls:\n"
+                      << "  Left/Right arrows  rotate yaw\n"
+                      << "  A / D              rotate yaw\n"
+                      << "  W / S              zoom radius in/out\n"
+                      << "  Q / E              lower/raise height\n"
+                      << "  R                  reset camera defaults\n"
+                      << "\n"
+                      << "  --help              print this message\n";
             std::exit(0);
         } else {
             throw std::runtime_error("unknown option: " + arg);
@@ -177,6 +196,27 @@ int runShell(const ShellOptions& options) {
     bs3d::RenderFrame frame = loadFrame(options.loadFramePath);
     std::cout << "loaded frame from " << options.loadFramePath << '\n';
 
+    float orbitYaw = 0.0f;
+    float orbitRadius = 8.0f;
+    float orbitHeight = 4.0f;
+    float orbitFovy = frame.camera.fovy > 0.0f ? frame.camera.fovy : 60.0f;
+    bs3d::Vec3 orbitTarget = {0.0f, 0.0f, 0.0f};
+    {
+        const auto& t = frame.camera.target;
+        if (t.x != 0.0f || t.y != 0.0f || t.z != 0.0f) {
+            orbitTarget = t;
+        }
+    }
+    const float autoOrbitSpeed = 0.02f;
+
+    if (options.orbitCamera && options.diagnostics) {
+        std::cout << "orbit camera: enabled"
+                  << " auto-orbit=" << (options.autoOrbit ? "enabled" : "disabled")
+                  << " radius=" << orbitRadius
+                  << " height=" << orbitHeight
+                  << " fovy=" << orbitFovy << '\n';
+    }
+
     if (options.diagnostics) {
         const auto stats = bs3d::summarizeRenderFrame(frame);
         const auto validation = bs3d::validateRenderFrame(frame);
@@ -216,6 +256,52 @@ int runShell(const ShellOptions& options) {
             DestroyWindow(window);
             running = false;
             break;
+        }
+
+        if (options.orbitCamera) {
+            if ((GetAsyncKeyState(VK_LEFT) & 0x8000) != 0 || (GetAsyncKeyState(0x41) & 0x8000) != 0) {
+                orbitYaw -= 0.04f;
+            }
+            if ((GetAsyncKeyState(VK_RIGHT) & 0x8000) != 0 || (GetAsyncKeyState(0x44) & 0x8000) != 0) {
+                orbitYaw += 0.04f;
+            }
+            if ((GetAsyncKeyState(0x57) & 0x8000) != 0) {
+                orbitRadius -= 0.1f;
+                if (orbitRadius < 1.0f) orbitRadius = 1.0f;
+            }
+            if ((GetAsyncKeyState(0x53) & 0x8000) != 0) {
+                orbitRadius += 0.1f;
+            }
+            if ((GetAsyncKeyState(0x51) & 0x8000) != 0) {
+                orbitHeight -= 0.1f;
+            }
+            if ((GetAsyncKeyState(0x45) & 0x8000) != 0) {
+                orbitHeight += 0.1f;
+            }
+            if ((GetAsyncKeyState(0x52) & 0x8000) != 0) {
+                orbitYaw = 0.0f;
+                orbitRadius = 8.0f;
+                orbitHeight = 4.0f;
+                orbitFovy = frame.camera.fovy > 0.0f ? frame.camera.fovy : 60.0f;
+                const auto& t = frame.camera.target;
+                if (t.x != 0.0f || t.y != 0.0f || t.z != 0.0f) {
+                    orbitTarget = t;
+                } else {
+                    orbitTarget = {0.0f, 0.0f, 0.0f};
+                }
+            }
+
+            if (options.autoOrbit) {
+                orbitYaw += autoOrbitSpeed;
+            }
+
+            frame.camera.position = {
+                orbitTarget.x + std::sin(orbitYaw) * orbitRadius,
+                orbitTarget.y + orbitHeight,
+                orbitTarget.z - std::cos(orbitYaw) * orbitRadius};
+            frame.camera.target = orbitTarget;
+            frame.camera.up = {0.0f, 1.0f, 0.0f};
+            frame.camera.fovy = orbitFovy;
         }
 
         renderer.renderFrame(frame);

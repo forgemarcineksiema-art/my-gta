@@ -149,5 +149,16 @@ if ($LASTEXITCODE -eq 0) {
     exit 1
 }
 
+# --- Replay (game shell orbit) ---
+Write-Host ""
+Write-Host "--- REPLAY: D3D11 game shell (orbit + auto) ---"
+& $ShellExe --frames 3 --load-frame $OutputFull --diagnostics --orbit-camera --auto-orbit
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "REPLAY (game shell orbit) OK" -ForegroundColor Green
+} else {
+    Write-Host "REPLAY (game shell orbit) FAILED (exit code $LASTEXITCODE)" -ForegroundColor Red
+    exit 1
+}
+
 Write-Host ""
 Write-Host "All passes OK" -ForegroundColor Green
