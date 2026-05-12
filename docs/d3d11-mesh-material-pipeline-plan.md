@@ -419,20 +419,63 @@ Behavior:
 - Existing smoke scripts still pass.
 - `--renderer d3d11` still rejected.
 
-### Stage 6 — Only later: actual asset loading / materials / textures
+### Stage 6 — Real mesh asset loading (planned)
 
-**Deferred.** This is the point where:
-- Mesh data is extracted from loaded models (OBJ/GLTF) into backend-neutral arrays.
-- `WorldModelCache` is replaced or complemented by a backend-neutral mesh loader.
-- Texture loading pipeline exists.
-- Material system with shader references exists.
-- Per-asset `MaterialHandle` allocation from manifest metadata.
+**Goal:** Load mesh data from existing `WorldAssetDefinition.modelPath` files into backend-neutral `CpuMeshData`, then upload to `D3D11MeshCache` where needed. This enables D3D11 sidecar to draw non-procedural meshes for real world assets.
 
-No design commitments yet for Stage 6.
+**Architecture:**
+
+| Step | Input | Output | Location |
+|---|---|---|---|
+| Parse model file | `modelPath` (OBJ/GLTF) | raw vertices + indices | New: `src/render/CpuMeshLoader` |
+| Convert to CpuMeshData | raw data | `CpuMeshData` | `CpuMeshLoader` |
+| Convert to D3D11MeshUpload | `CpuMeshData` | `D3D11MeshUpload` | Existing `D3D11MeshUploadAdapter` |
+| Upload to GPU cache | `D3D11MeshUpload` + `MeshHandle` | `D3D11CachedMeshView` | Existing `D3D11MeshCache` |
+
+**Stage 6 sub-stages:**
+
+**Stage 6a — CpuMeshLoader (data-only, tests):**
+- New file: `src/render/CpuMeshLoader.h/.cpp`
+- Backend-neutral loader interface producing `CpuMeshData` from file paths
+- First format: minimal OBJ subset (positions + faces/triangulation only)
+- No normals, no texture coordinates, no materials
+- Test data: tiny inline OBJ strings, not real large assets
+- No D3D11, no GPU, no asset registry integration
+- Linked into `bs3d_render_tests`
+
+**Stage 6b — D3D11GameShell upload from file:**
+- Shell loads a CpuMeshData from a file path via `CpuMeshLoader`
+- Uploads to `D3D11MeshCache` via existing `uploadTestMesh` path
+- New shell flag: `--load-mesh <path>` (appends Mesh primitive with test tint)
+- Diagnostics show `drawnMeshes` incrementing
+- No GameApp integration
+
+**Stage 6c — Dev-only shadow sidecar upload (optional):**
+- When `--renderframe-shadow-meshes` and `--d3d11-shadow-window` are both active
+- Load selected `WorldAssetDefinition.modelPath` files for seeded MeshHandle ids
+- Upload loaded `CpuMeshData` to sidecar's `D3D11MeshCache`
+- Diagnostics: `drawnMeshes` now reflects real mesh geometry
+- Gated entirely behind existing dev flags
+- `WorldModelCache` / raylib `Model` loading unchanged
+
+**Later (6d+):**
+- Broad `WorldAssetRegistry` integration — MeshRegistry populated for all active assets
+- GLTF support (positions-first, minimal subset)
+- `RenderFrameDump v3` or geometry embedding — deferred design
+
+**Strict Stage 6 non-goals:**
+- No texture loading
+- No material definitions beyond `MaterialHandle` identity tokens
+- No animation/skinning
+- No GameApp main renderer replacement
+- No `--renderer d3d11` activation
+- No replacement of raylib `WorldModelCache` — the new loader is parallel and dev-only
+- No normals or texture coordinates in mesh data (positions-only)
+- No external dependency beyond what's already in the repo
 
 ## 4) Explicit non-goals
 
-These are explicitly out of scope for Stages 1-5 and must not be implemented yet:
+These are explicitly out of scope for Stages 1-5, and most remain out of scope for Stage 6 (except file-based CpuMeshData loading):
 
 - **No texture loading.** No `ID3D11ShaderResourceView`, no `ID3D11SamplerState`, no texture paths in mesh data.
 - **No shader-file pipeline.** All shaders remain in-memory compiled strings in `D3D11Renderer.cpp`. No `.hlsl` or `.fx` file loading.
@@ -471,10 +514,13 @@ ctest --preset ci
 
 ## 7) Recommended next code pass
 
-**Stage 3 — Backend-neutral `CpuMeshData` + `D3D11MeshUpload` adapter.**
+**Stage 6a — CpuMeshLoader.**
 
-- Create a backend-neutral `CpuMeshVertex` / `CpuMeshData` representation in `src/render/`.
-- Provide conversion to `D3D11MeshUpload` (trivial — same position-only layout).
-- Extend `D3D11GameShell` with `--mesh-test-triangle` to upload a custom triangle through `D3D11MeshCache`.
-- Diagnostics show `drawnMeshes=2`.
-- No asset loading. No GameApp integration. No RenderFrameDump v2.
+- New file: `src/render/CpuMeshLoader.h/.cpp`
+- Backend-neutral loader producing `CpuMeshData` from file paths
+- First format: minimal OBJ subset (positions + triangulated faces only)
+- Test data: tiny inline OBJ strings, not real large assets
+- No D3D11, no GPU, no asset registry integration
+- Linked into `bs3d_render_tests`
+- No GameApp integration
+- No `--renderer d3d11` activation

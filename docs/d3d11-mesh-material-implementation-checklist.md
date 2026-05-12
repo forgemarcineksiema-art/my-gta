@@ -12,6 +12,8 @@ Stage 5 status: DONE
   - Stage 5c (DONE): D3D11 sidecar uploads procedural meshes for emitted MeshHandle ids
   - Stage 5d (DONE): selectShadowMeshSeedAssetIds deterministic seed helper
 
+Stage 6 status: PLANNED — see `docs/d3d11-mesh-material-pipeline-plan.md` §3 Sixth stage for details.
+
 See also:
 - `docs/d3d11-mesh-material-pipeline-plan.md` — full architecture plan
 - `docs/backend-modernization-grounding.md` — truth hierarchy, protected systems, non-goals
@@ -282,13 +284,18 @@ Stage 1 and cleanup are complete. Stage 2 is DONE (`D3D11MeshCache` integrated i
 - 5 new dump tests; v1 and v2 capture/replay smoke both pass.
 - `--renderer d3d11` remains inactive.
 
-**Stage 4 next pass:**
-- Stage 5 — GameApp shadow extraction may emit Mesh commands (when MeshRegistry is available).
+**Stage 4 next pass:** DONE.
 
 **Stage 5 plan (Stage 5a/5b/5c/5d DONE):**
 - Stage 5a (DONE): `addWorldRenderListMeshCommands` data-only helper in `RenderExtraction.h/.cpp`. Emits Mesh commands from `WorldRenderList` via `MeshRegistry`/`MaterialRegistry`. Falls back to Box when mesh missing. Stats: `emittedMeshes`, `meshFallbacks`, `missingDefinitions`. 12 new data-only tests. Not wired to GameApp.
 - Stage 5b (DONE): `--renderframe-shadow-meshes` CLI flag wired to GameApp. Implies `--renderframe-shadow`. Creates `MeshRegistry`/`MaterialRegistry` seeded with first 3 assetIds from WorldRenderList. Diagnostics include `emittedMeshes`, `meshFallbacks`, `missingDefinitions`. v1 dump unchanged (skips Mesh), v2 dump preserves Mesh commands. No D3D11 mesh upload, no asset loading. `--renderer d3d11` still inactive.
 - Stage 5c (DONE): D3D11 sidecar procedural mesh upload. `D3D11ShadowSidecar::uploadTestMesh` bridges to `D3D11Renderer::uploadTestMesh`. GameApp uploads `makeCpuMeshUnitCube` for each seeded MeshHandle once after seeding, when sidecar is initialized. Diagnostics show `drawnMeshes=5` (3 seeded handles appear multiple times in render list). No real asset loading. No GameApp main renderer. `--renderer d3d11` remains inactive.
 - Stage 5d (DONE): `selectShadowMeshSeedAssetIds` deterministic helper replaces ad-hoc opaque-only loop. Iterates buckets in production order, deduplicates, skips missing definitions. 7 new data-only tests. Seed IDs logged in diagnostics when `--d3d11-shadow-diagnostics` is active.
+
+**Stage 6 plan (PLANNED):**
+- Stage 6a: `CpuMeshLoader` — backend-neutral loader producing `CpuMeshData` from file paths. Minimal OBJ subset (positions + triangulated faces). Test data using tiny inline OBJ strings. No D3D11, no GPU. Linked into `bs3d_render_tests`.
+- Stage 6b: `D3D11GameShell --load-mesh <path>` uploads loaded `CpuMeshData` to `D3D11MeshCache`.
+- Stage 6c: Optional dev-only shadow sidecar upload from selected `WorldAssetDefinition.modelPath` files for seeded MeshHandle ids.
+- No texture loading, no material system, no GameApp main renderer, no `--renderer d3d11`.
 
 Do NOT skip stages. See `docs/d3d11-mesh-material-pipeline-plan.md` Section 3 for the full staged plan.
