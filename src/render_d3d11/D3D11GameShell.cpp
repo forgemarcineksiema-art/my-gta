@@ -290,7 +290,7 @@ int runShell(const ShellOptions& options) {
         bs3d::RenderPrimitiveCommand meshCmd;
         meshCmd.kind = bs3d::RenderPrimitiveKind::Mesh;
         meshCmd.bucket = bs3d::RenderBucket::Opaque;
-        meshCmd.mesh.id = 1;
+        meshCmd.mesh.id = bs3d::BuiltInUnitCubeMeshId;
         meshCmd.transform.position = {0.0f, 2.0f, 0.0f};
         meshCmd.transform.scale = {1.2f, 1.2f, 1.2f};
         meshCmd.tint = {255, 128, 0, 255};

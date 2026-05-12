@@ -132,7 +132,7 @@ Add `--wire-boxes` for a wireframe overlay on Box/Mesh primitives:
 .\build\ci\Debug\bs3d_d3d11_game_shell.exe --frames 0 --load-frame artifacts\shadow_frame.txt --diagnostics --orbit-camera --wire-boxes
 ```
 
-Add `--add-test-mesh` to append a built-in Mesh (id=1 unit cube) test primitive:
+Add `--add-test-mesh` to append a built-in Mesh (BuiltInUnitCubeMeshId, unit cube) test primitive:
 
 ```powershell
 .\build\ci\Debug\bs3d_d3d11_game_shell.exe --frames 3 --load-frame artifacts\shadow_frame.txt --diagnostics --orbit-camera --add-test-mesh

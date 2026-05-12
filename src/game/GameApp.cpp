@@ -2640,7 +2640,7 @@ void GameApp::run(const GameRunOptions& options) {
                         }
                         if (prim.kind == RenderPrimitiveKind::Box) {
                             ++supportedBoxes;
-                        } else if (prim.kind == RenderPrimitiveKind::Mesh && prim.mesh.id == 1) {
+                        } else if (prim.kind == RenderPrimitiveKind::Mesh && isBuiltInUnitCubeMesh(prim.mesh)) {
                             ++supportedMeshes;
                         }
                     }

@@ -33,6 +33,15 @@ struct MeshHandle {
     std::uint32_t id = 0;
 };
 
+/// Temporary built-in mesh convention for D3D11 smoke/testing.
+/// MeshHandle.id == BuiltInUnitCubeMeshId maps to a unit cube (same geometry as Box).
+/// This is not an asset-registry handle — no real mesh loading is implied.
+constexpr std::uint32_t BuiltInUnitCubeMeshId = 1;
+
+inline bool isBuiltInUnitCubeMesh(MeshHandle mesh) {
+    return mesh.id == BuiltInUnitCubeMeshId;
+}
+
 struct MaterialHandle {
     std::uint32_t id = 0;
 };

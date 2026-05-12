@@ -818,7 +818,7 @@ void D3D11Renderer::renderFrame(const RenderFrame& frame) {
 
     for (const RenderPrimitiveCommand& command : frame.primitives) {
         const bool isSupportedKind = (command.kind == RenderPrimitiveKind::Box) ||
-            (command.kind == RenderPrimitiveKind::Mesh && command.mesh.id == 1);
+            (command.kind == RenderPrimitiveKind::Mesh && isBuiltInUnitCubeMesh(command.mesh));
         if (!isSupportedKind) {
             if (command.kind != RenderPrimitiveKind::Box && command.kind != RenderPrimitiveKind::Mesh) {
                 ++lastD3D11Stats_.skippedUnsupportedKinds;
@@ -952,7 +952,7 @@ void D3D11Renderer::renderFrame(const RenderFrame& frame) {
 
         for (const RenderPrimitiveCommand& command : frame.primitives) {
             const bool isWireKind = (command.kind == RenderPrimitiveKind::Box) ||
-                (command.kind == RenderPrimitiveKind::Mesh && command.mesh.id == 1);
+                (command.kind == RenderPrimitiveKind::Mesh && isBuiltInUnitCubeMesh(command.mesh));
             if (!isWireKind) {
                 continue;
             }
