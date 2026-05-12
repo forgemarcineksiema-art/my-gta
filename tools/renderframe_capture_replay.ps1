@@ -3,6 +3,7 @@ param(
     [string]$Configuration = "Debug",
     [int]$SmokeFrames = 3,
     [string]$Output = "artifacts\shadow_frame.txt",
+    [string]$DumpVersion = "v1",
     [switch]$Build
 )
 
@@ -77,6 +78,7 @@ Write-Host "Game exe: $GameExe"
 Write-Host "Smoke exe: $SmokeExe"
 Write-Host "Smoke frames: $SmokeFrames"
 Write-Host "Output: $OutputFull"
+Write-Host "DumpVersion: $DumpVersion"
 
 # --- Capture ---
 Write-Host ""
@@ -89,7 +91,8 @@ Write-Host "--- CAPTURE: run GameApp shadow RenderFrame dump ---"
     --smoke-frames $SmokeFrames `
     --renderframe-shadow `
     --renderframe-shadow-interval 1 `
-    --renderframe-shadow-dump $OutputFull
+    --renderframe-shadow-dump $OutputFull `
+    --renderframe-shadow-dump-version $DumpVersion
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "CAPTURE FAILED (exit code $LASTEXITCODE)" -ForegroundColor Red
@@ -108,12 +111,13 @@ if ($fileSize -eq 0) {
 }
 
 $headerLine = (Get-Content $OutputFull -First 1).Trim()
-if ($headerLine -ne "RenderFrameDump v1") {
-    Write-Host "CAPTURE FAILED: unexpected dump header '$headerLine', expected 'RenderFrameDump v1'" -ForegroundColor Red
+$expectedHeader = if ($DumpVersion -eq "v2") { "RenderFrameDump v2" } else { "RenderFrameDump v1" }
+if ($headerLine -ne $expectedHeader) {
+    Write-Host "CAPTURE FAILED: unexpected dump header '$headerLine', expected '$expectedHeader'" -ForegroundColor Red
     exit 1
 }
 
-Write-Host "CAPTURE OK ($fileSize bytes, v1 header)" -ForegroundColor Green
+Write-Host "CAPTURE OK ($fileSize bytes, $DumpVersion header)" -ForegroundColor Green
 
 # --- Replay (direct) ---
 Write-Host ""

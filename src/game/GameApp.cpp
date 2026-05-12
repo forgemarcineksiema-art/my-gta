@@ -2594,10 +2594,15 @@ void GameApp::run(const GameRunOptions& options) {
 
                 if (!shadowFrameDumped && !options.renderFrameShadowDumpPath.empty()) {
                     shadowFrameDumped = true;
+                    RenderFrameDumpWriteOptions dumpOpts;
+                    dumpOpts.version = options.renderFrameShadowDumpVersion == 2
+                                           ? RenderFrameDumpVersion::V2
+                                           : RenderFrameDumpVersion::V1;
                     std::string dumpError;
-                    if (writeRenderFrameDump(shadowFrame, options.renderFrameShadowDumpPath, &dumpError)) {
-                        TraceLog(LOG_INFO, "RenderFrame shadow: dumped to %s",
-                                 options.renderFrameShadowDumpPath.c_str());
+                    if (writeRenderFrameDump(shadowFrame, options.renderFrameShadowDumpPath, dumpOpts, &dumpError)) {
+                        TraceLog(LOG_INFO, "RenderFrame shadow: dumped to %s version=%s",
+                                 options.renderFrameShadowDumpPath.c_str(),
+                                 dumpOpts.version == RenderFrameDumpVersion::V2 ? "v2" : "v1");
                     } else {
                         TraceLog(LOG_WARNING, "RenderFrame shadow dump failed: %s", dumpError.c_str());
                     }

@@ -41,6 +41,7 @@ void printHelp(std::ostream& out) {
         << "  --d3d11-shadow-diagnostics  Log detailed sidecar/shadow bucket stats (dev only)\n"
         << "  --renderframe-shadow-interval <count>  Shadow frame build interval, default 120 (min 1)\n"
         << "  --renderframe-shadow-dump <path>  Dump first shadow RenderFrame to a text file\n"
+        << "  --renderframe-shadow-dump-version <v1|v2>  Dump format version (default v1)\n"
         << "  --no-load-save           Skip loading save at startup\n"
         << "  --no-save                Disable save writes\n"
         << "  --no-audio               Disable audio setup\n"
@@ -99,6 +100,15 @@ int main(int argc, char** argv) {
             } else if (arg == "--renderframe-shadow-dump") {
                 options.renderFrameShadow = true;
                 options.renderFrameShadowDumpPath = requireValue(index, argc, argv, arg);
+            } else if (arg == "--renderframe-shadow-dump-version") {
+                const std::string value = requireValue(index, argc, argv, arg);
+                if (value == "v1") {
+                    options.renderFrameShadowDumpVersion = 1;
+                } else if (value == "v2") {
+                    options.renderFrameShadowDumpVersion = 2;
+                } else {
+                    throw std::runtime_error(arg + " requires 'v1' or 'v2'");
+                }
             } else if (arg == "--d3d11-shadow-diagnostics") {
                 options.renderFrameShadow = true;
                 options.d3d11ShadowDiagnostics = true;
