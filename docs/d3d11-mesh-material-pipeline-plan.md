@@ -7,6 +7,7 @@ Next code pass: not started
 See also:
 - `docs/backend-modernization-grounding.md` — truth hierarchy, protected systems, non-goals
 - `docs/d3d11-modernization-milestone.md` — implemented D3D11 subset, supported buckets, coverage
+- `docs/d3d11-mesh-material-implementation-checklist.md` — stage 1 readiness gates and implementation steps
 - `DEVELOPMENT.md` — daily workflow, D3D11 smoke/verification commands
 
 ## 1) Current state (Implemented)

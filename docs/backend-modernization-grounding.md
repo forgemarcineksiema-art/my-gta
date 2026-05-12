@@ -3,7 +3,7 @@
 Status: LIVE (for modernization prep)
 Last verified against implementation evidence: 2026-05-12
 
-See also: `docs/d3d11-modernization-milestone.md` for a concise D3D11 renderer modernization milestone summary. See also: `docs/d3d11-mesh-material-pipeline-plan.md` for the mesh/material pipeline architecture plan.
+See also: `docs/d3d11-modernization-milestone.md` for a concise D3D11 renderer modernization milestone summary. See also: `docs/d3d11-mesh-material-pipeline-plan.md` for the mesh/material pipeline architecture plan. See also: `docs/d3d11-mesh-material-implementation-checklist.md` for the stage 1 implementation checklist.
 
 Cel tego dokumentu: uziemić przyszłe prace modernizacyjne backendu tak, żeby nie „dopisywać” systemów, które nie istnieją, i żeby nie psuć aktualnego workflow build/test/smoke.
 
