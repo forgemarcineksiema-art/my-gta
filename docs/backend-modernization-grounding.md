@@ -229,6 +229,8 @@ Runtime renderer nadal jest raylibowy.
 
 Backend prep status update: `D3D11MeshCache` is integrated into `D3D11Renderer` (`src/render_d3d11/D3D11MeshCache.h/.cpp`). `D3D11Renderer` owns a private `meshCache_` and uploads a procedural unit cube as `BuiltInUnitCubeMeshId` during `initialize()`. `renderFrame()` resolves `RenderPrimitiveKind::Mesh` commands through `meshCache_.find()`, binding cached VB/IB/indexCount. Wireframe overlay also supports cached meshes. `--add-test-mesh` game shell flag verifies with `drawnMeshes=1`. No GameApp integration. `--renderer d3d11` is still NOT active.
 
+Backend prep status update: `docs/d3d11-mesh-material-pipeline-plan.md` now reflects implemented reality: Stages 1-2 marked DONE, Stage 3 marked NEXT (backend-neutral `CpuMeshData` + `D3D11MeshUpload` adapter).
+
 Backend prep status update: `MeshRegistry` and `MaterialRegistry` data-only registries are implemented (`src/render/MeshRegistry.h/.cpp`, `src/render/MaterialRegistry.h/.cpp`) with full test coverage (23 tests in `bs3d_render_tests`). Stage 1 and cleanup are complete. Both are backend-neutral, data-only classes with `count()`/`empty()` inspection helpers and no D3D11, GPU, or asset loading. MaterialRegistry defaults (`defaultOpaque`, `defaultAlpha`) are permanent (non-releasable). `BuiltInUnitCubeMeshId` remains a `RenderFrame.h` smoke constant, not owned by `MeshRegistry`. Runtime renderer is still raylib. `--renderer d3d11` is still NOT active.
 
 Backend prep status update: istnieje teraz backend-neutralny interfejs `IRenderer`, który konsumuje `RenderFrame`.

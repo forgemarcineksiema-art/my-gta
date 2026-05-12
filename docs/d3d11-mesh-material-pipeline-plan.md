@@ -1,8 +1,10 @@
 # D3D11 mesh/material pipeline plan
 
-Status: Aspirational (design document)
+Status: LIVE (Stages 1-2 implemented, Stage 3 next)
 Created: 2026-05-12
-Next code pass: not started
+Stage 1: DONE — MeshRegistry + MaterialRegistry data-only registries
+Stage 2: DONE — D3D11MeshCache integrated into D3D11Renderer
+Next code pass: Stage 3 — CpuMeshData + D3D11MeshUpload adapter
 
 See also:
 - `docs/backend-modernization-grounding.md` — truth hierarchy, protected systems, non-goals
@@ -20,13 +22,30 @@ See also:
 |---|---|---|
 | `RenderPrimitiveKind::Box` | Implemented | All supported buckets (Opaque, Vehicle, Decal, Glass, Translucent, Debug). Uses the per-primitive constant-buffer path with size/transform/tint. Draws 36-index unit cube at scaled/rotated/translated world position. |
 | Debug lines | Implemented | Up to 2048 line-pair capacity (`DebugLineVertexCapacity`). Dynamic vertex buffer, line-list topology. |
-| `RenderPrimitiveKind::Mesh` | Smoke-only | Only `BuiltInUnitCubeMeshId` (id=1) is recognized. Treated as `Box`-equivalent geometry (shared hardcoded cube VB/IB). No real mesh upload. |
-| Wireframe overlay | Optional | Second pass with `D3D11_FILL_WIREFRAME` rasterizer on Box + BuiltInUnitCubeMesh primitives. |
+| `RenderPrimitiveKind::Mesh` | Implemented (cached) | `D3D11MeshCache` holds GPU buffers for each `MeshHandle`. `BuiltInUnitCubeMeshId` (id=1) is uploaded during `initialize()`. Other handles must be explicitly uploaded before rendering. Missing handles → `skippedMissingMeshes`. Shares the Box pipeline (VS/PS/constant buffer, different VB/IB/indexCount). |
+| Wireframe overlay | Optional | Second pass with `D3D11_FILL_WIREFRAME` rasterizer on Box + cached Mesh primitives. |
 
 Unsupported (skipped with stat tracking):
 - `RenderPrimitiveKind::Sphere`, `CylinderX`, `QuadPanel`
-- `RenderPrimitiveKind::Mesh` with any handle other than `BuiltInUnitCubeMeshId` → counted as `skippedMissingMeshes`
+- `RenderPrimitiveKind::Mesh` with uncached handles → counted as `skippedMissingMeshes`
 - Buckets: `Sky`, `Ground`, `Hud`
+
+### 1.1a MeshRegistry / MaterialRegistry (Stage 1 — Implemented)
+
+- `MeshRegistry` (`src/render/MeshRegistry.h/.cpp`): data-only handle allocator. `BuiltInUnitCubeMeshId` not owned by registry; first real allocation starts at id=2. `count()` / `empty()` inspection helpers.
+- `MaterialRegistry` (`src/render/MaterialRegistry.h/.cpp`): data-only handle allocator with permanent `defaultOpaque` (id=1) and `defaultAlpha` (id=2). User allocations start at id=3.
+- 23 tests in `bs3d_render_tests`. No D3D11, no GPU, no asset loading.
+
+### 1.1b D3D11MeshCache (Stage 2 — Implemented)
+
+- `D3D11MeshCache` (`src/render_d3d11/D3D11MeshCache.h/.cpp`): D3D11-private GPU buffer cache keyed by `MeshHandle`.
+- `D3D11MeshVertex` (positions-only, matching existing `Vertex` struct) + `D3D11MeshUpload` (vertices + uint16_t indices).
+- `D3D11CachedMeshView` non-owning read-only lookup via `find()`.
+- Integrated as private `meshCache_` member in `D3D11Renderer`.
+- Procedural unit cube uploaded into cache during `initialize()`.
+- `renderFrame()` resolves Mesh commands through `meshCache_.find()`.
+- 11 GPU-free tests in `bs3d_render_tests`. `--add-test-mesh` shell flag verifies `drawnMeshes=1`.
+- No asset loading, no GameApp integration.
 
 ### 1.2 RenderFrame data model
 
@@ -38,7 +57,7 @@ Unsupported (skipped with stat tracking):
 - `TextureHandle` (line 49) is a zero-struct with `uint32_t id`.
 - `RenderMaterial` (line 53) has `RenderColor tint` and `TextureHandle texture`.
 
-These handles are reserved in the data model but are **not yet populated by any extraction path** and **not yet consumed by D3D11Renderer beyond `BuiltInUnitCubeMeshId`**.
+These handles are reserved in the data model. `MeshHandle` is now consumed by `D3D11Renderer` through `D3D11MeshCache` for cached handles. `MaterialHandle` is still not consumed by the renderer (bucket-based fallback only). No extraction path populates mesh/material handles yet (Stage 5 deferred).
 
 ### 1.3 RenderFrameDump v1
 
@@ -68,111 +87,107 @@ Non-Box primitive kinds (Sphere, Mesh, CylinderX, QuadPanel) are **silently skip
 ### 1.7 Coverage diagnostics
 
 Current D3D11 coverage stats track:
-- `drawnBoxes`, `drawnMeshes` (only BuiltInUnitCubeMeshId increments this)
-- `skippedMissingMeshes`, `skippedUnsupportedKinds`, `skippedUnsupportedBuckets`
-- `boxCoveragePct`, `meshCoveragePct` (mesh coverage is always 0 since no real meshes are drawn)
+- `drawnBoxes`, `drawnMeshes` (cached Mesh handles increment this; `--add-test-mesh` shows `drawnMeshes=1`)
+- `skippedMissingMeshes` (uncached Mesh handles), `skippedUnsupportedKinds`, `skippedUnsupportedBuckets`
+- `boxCoveragePct`, `meshCoveragePct` (mesh coverage reflects only cached uploaded meshes)
 - `primitiveCoveragePct`, `lineCoveragePct`
 
 ## 2) Architecture proposal
 
-### 2.1 CPU-side mesh registry (backend-neutral)
+### 2.1 CPU-side mesh registry (backend-neutral) — IMPLEMENTED
 
-A new **`MeshRegistry`** class, backend-neutral, owned by the game layer:
+`MeshRegistry` lives at `src/render/MeshRegistry.h/.cpp`:
 
 ```
-// Conceptual location: src/game/MeshRegistry.h or include/bs3d/render/MeshRegistry.h
-// TBD during implementation — initial pass is data-only and should not expose
-// D3D11/Win32/raylib types in public headers.
-
 class MeshRegistry {
 public:
     MeshHandle allocate(const std::string& assetId);
     void release(MeshHandle handle);
     bool isValid(MeshHandle handle) const;
-
     const std::string* assetId(MeshHandle handle) const;
-
-    // Returns MeshHandle{0} if not found.
     MeshHandle find(const std::string& assetId) const;
-
-private:
-    std::vector<std::string> assetIds_;
-    // indexById_ maps assetId → handle.id
+    std::size_t count() const;
+    bool empty() const;
 };
 ```
 
-Key design decisions:
-- **Handle allocation is monotonic** — ids increase by 1, never reused within a session.
-- **Handle id 0 is reserved** for "invalid/none" (matches current `MeshHandle{}` default).
-- **id 1** is already reserved for `BuiltInUnitCubeMeshId` (smoke/testing only).
-- **id 2+** are allocated for real assets.
-- The registry does **not** own GPU resources — it is a mapping from handle → assetId + metadata.
-- The registry does **not** load mesh data — it only registers that asset "foo" → MeshHandle{3}.
+Implemented behavior:
+- **Handle allocation is monotonic** — ids increase by 1, never reused.
+- **Handle id 0 is reserved** for invalid (matches `MeshHandle{}` default).
+- **id 1** (`BuiltInUnitCubeMeshId`) is NOT owned by the registry — smoke/testing convention only.
+- **id 2+** allocated for real assets. First allocation returns id=2.
+- Idempotent: duplicate `allocate("foo")` returns same handle.
+- `release()` invalidates handle; `count()` excludes released handles.
+- `count()` / `empty()`: `count() == 0` and `empty() == true` on fresh registry.
+- No I/O, no GPU, no asset loading. Backend-neutral. Linked into `bs3d_render_tests`.
 
-### 2.2 Material handle registry (backend-neutral)
+### 2.2 Material handle registry (backend-neutral) — IMPLEMENTED
 
-A parallel **`MaterialRegistry`**:
+`MaterialRegistry` lives at `src/render/MaterialRegistry.h/.cpp`:
 
 ```
 class MaterialRegistry {
 public:
+    MaterialRegistry();
     MaterialHandle allocate(const std::string& name);
     void release(MaterialHandle handle);
     bool isValid(MaterialHandle handle) const;
-
     const std::string* name(MaterialHandle handle) const;
     MaterialHandle find(const std::string& name) const;
-    MaterialHandle defaultOpaque() const;   // pre-registered handle for fallback
-    MaterialHandle defaultAlpha() const;    // pre-registered handle for fallback
-
-private:
-    std::vector<std::string> names_;
+    MaterialHandle defaultOpaque() const;
+    MaterialHandle defaultAlpha() const;
+    std::size_t count() const;
+    bool empty() const;
 };
 ```
 
-Key decisions:
+Implemented behavior:
 - **Handle 0 = invalid**.
-- **Pre-register fallback materials** (e.g., id=1 "default_opaque", id=2 "default_alpha") at registry construction.
-- Material registry is **data-only** at this stage — no shader parameters, no texture slots.
-- Real material data (shader references, texture bindings, blend modes) comes in **Stage 6 or later**.
+- **`defaultOpaque()` (id=1) and `defaultAlpha()` (id=2)** pre-allocated at construction.
+- **Defaults are permanent** — `release(defaultOpaque/defaultAlpha)` is silently ignored.
+- User allocations start at id=3. `count()` returns 2 on fresh registry; `empty()` returns `false`.
+- Material registry is **data-only** — no shader parameters, no texture slots, no GPU work.
+- Real material data (shader references, textures, blend modes) comes in **Stage 6 or later**.
 
-### 2.3 GPU-side D3D11 mesh cache (D3D11-private)
+### 2.3 GPU-side D3D11 mesh cache (D3D11-private) — IMPLEMENTED
 
-Inside `D3D11Renderer` (or a private helper):
+`D3D11MeshCache` lives at `src/render_d3d11/D3D11MeshCache.h/.cpp`, integrated as a private `meshCache_` member in `D3D11Renderer`:
 
 ```
-// D3D11-private, not in public headers.
-struct D3D11CachedMesh {
-    MeshHandle handle;
+struct D3D11MeshVertex {
+    float position[3];
+};
+
+struct D3D11MeshUpload {
+    std::vector<D3D11MeshVertex> vertices;
+    std::vector<std::uint16_t> indices;
+};
+
+struct D3D11CachedMeshView {
     ID3D11Buffer* vertexBuffer = nullptr;
     ID3D11Buffer* indexBuffer = nullptr;
-    UINT indexCount = 0;
-    DXGI_FORMAT indexFormat = DXGI_FORMAT_UNKNOWN;
-    D3D11_PRIMITIVE_TOPOLOGY topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+    std::uint32_t indexCount = 0;
 };
 
 class D3D11MeshCache {
 public:
-    bool uploadMesh(ID3D11Device* device, MeshHandle handle,
-                    const float* vertexData, int vertexCount, int vertexStride,
-                    const std::uint16_t* indexData, int indexCount);
-
-    void releaseMesh(MeshHandle handle);
-    void releaseAll();
-
-    const D3D11CachedMesh* find(MeshHandle handle) const;
-
-private:
-    std::unordered_map<uint32_t, D3D11CachedMesh> cache_;
+    bool upload(ID3D11Device* device, MeshHandle handle, const D3D11MeshUpload& mesh, std::string* error = nullptr);
+    bool contains(MeshHandle handle) const;
+    bool find(MeshHandle handle, D3D11CachedMeshView& out) const;
+    void release(MeshHandle handle);
+    void clear();
+    std::size_t count() const;
 };
 ```
 
-Key decisions:
-- **All mesh data arrives as raw float/index arrays** — no file I/O here.
-- The cache does **not** own the `MeshRegistry` — it receives handles and data.
+Implemented behavior:
+- `upload()` validates: null device → fail, zero handle → fail, empty vertices/indices → fail.
+- Creates `IMMUTABLE` `ID3D11Buffer` for vertex and index data.
+- Replaces existing handle entry (releases old buffers first).
+- `find()` returns non-owning `D3D11CachedMeshView` (read-only VB/IB/indexCount pointers); returns false and resets view on miss.
+- `clear()` / destructor release all GPU buffers. `count()` returns number of cached entries.
 - **No textures, no materials, no shaders per mesh** at this stage.
-- **Static (`IMMUTABLE`) buffers** for initial pass; dynamic upload can come later.
-- The cache is **D3D11Renderer private** — never exposed via `IRenderer` or `RenderFrame`.
+- **D3D11Renderer private** — never exposed via `IRenderer` or public headers.
 
 ### 2.4 MeshHandle allocation/lifetime
 
@@ -249,89 +264,51 @@ At Stage 3 (game shell), mesh handles come from code, not from live WorldObjects
 | Component | Visibility | Location |
 |---|---|---|
 | `MeshHandle` / `MaterialHandle` / `RenderPrimitiveCommand.mesh` / `.material` | Backend-neutral, public | `include/bs3d/render/RenderFrame.h` (already exists) |
-| `MeshRegistry` (allocation/lookup) | Backend-neutral, game layer | `src/game/` or new `src/render/` |
-| `MaterialRegistry` (allocation/lookup) | Backend-neutral, game layer | `src/game/` or new `src/render/` |
-| `D3D11MeshCache` (GPU buffers) | D3D11-private | `src/render_d3d11/` (private helper, not exposed) |
-| `D3D11CachedMesh` (buffer handles) | D3D11-private | `src/render_d3d11/` (private struct) |
+| `MeshRegistry` (allocation/lookup) | Backend-neutral | `src/render/MeshRegistry.h/.cpp` |
+| `MaterialRegistry` (allocation/lookup) | Backend-neutral | `src/render/MaterialRegistry.h/.cpp` |
+| `D3D11MeshCache` (GPU buffers) | D3D11-private | `src/render_d3d11/D3D11MeshCache.h/.cpp` (private helper) |
+| `D3D11CachedMeshView` / `D3D11MeshVertex` / `D3D11MeshUpload` | D3D11-private | `src/render_d3d11/D3D11MeshCache.h` (private structs) |
 | `WorldAssetRegistry` / `WorldModelCache` | Game layer (currently raylib-coupled) | `src/game/WorldAssetRegistry.h` (existing — to be gradually decoupled) |
-| Mesh vertex/index data format | Backend-neutral | Raw float arrays (positions), std::uint16_t indices |
+| Mesh vertex/index data format | Backend-neutral | `D3D11MeshVertex` (float[3] positions), std::uint16_t indices
 
 ### 2.9 What should NOT go into public include/bs3d headers yet
 
-- `D3D11CachedMesh` or any `ID3D11*` types
+- `D3D11CachedMeshView` or any `ID3D11*` types
 - `D3D11MeshCache` class declaration
-- `MeshRegistry` — keep in `src/game/` or `src/render/` until the API stabilizes across both D3D11 and raylib consumers
+- `D3D11MeshVertex` / `D3D11MeshUpload` structs
+- `MeshRegistry` — lives in `src/render/`, not in `include/bs3d/`
 - `MaterialRegistry` — same reasoning
 - Any `using` or `#include` that pulls Windows.h, d3d11.h, or raylib.h into public headers
 
-The public `include/bs3d/render/RenderFrame.h` already has everything needed (`MeshHandle`, `MaterialHandle`, `RenderPrimitiveCommand` fields). No public header changes are required for stages 1-5.
+The public `include/bs3d/render/RenderFrame.h` already has everything needed (`MeshHandle`, `MaterialHandle`, `RenderPrimitiveCommand` fields). No public header changes have been required for Stages 1-2.
 
 ## 3) Staged implementation plan
 
-### Stage 1 — Backend-neutral mesh/material handle registry skeleton (data-only, tests)
+### Stage 1 — Backend-neutral mesh/material handle registry skeleton (data-only, tests) — DONE
 
-**Goal:** `MeshRegistry` and `MaterialRegistry` classes exist as testable, data-only types with unit tests.
+Implemented. See sections 2.1 and 2.2 above for actual API. 23 tests in `bs3d_render_tests`.
 
-**Scope:**
-- New files (exact location TBD during implementation):
-  - `src/render/MeshRegistry.h` / `.cpp` or `src/game/MeshRegistry.h` / `.cpp`
-  - `src/render/MaterialRegistry.h` / `.cpp` or `src/game/MaterialRegistry.h` / `.cpp`
-- Both classes are header-only or compiled into `bs3d_core`/`bs3d_game_support` (TBD).
-- **No GPU code, no D3D11, no Windows.h.**
-- Unit tests in `tests/`:
-  - Allocate → valid handle (id >= 2 for MeshRegistry, id >= 3 for MaterialRegistry after seeded defaults).
-  - Handle 0 → invalid.
-  - `find(assetId)` → correct handle.
-  - `assetId(handle)` → correct string.
-  - `release()` → handle becomes invalid.
-  - Duplicate allocation → returns existing handle (idempotent).
-  - `defaultOpaque()` / `defaultAlpha()` → non-zero, valid.
+### Stage 2 — D3D11Renderer private GPU mesh cache + integration — DONE
 
-**Verification:**
-- `cmake --preset ci-core && cmake --build --preset ci-core && ctest --preset ci-core`
+Implemented. See section 2.3 above for actual API. `D3D11MeshCache` integrates into `D3D11Renderer::renderFrame()`. Procedural unit cube uploaded during `initialize()`. `--add-test-mesh` shell flag verifies `drawnMeshes=1`. 11 GPU-free tests in `bs3d_render_tests`.
 
-**Runtime behavior:** No change. No D3D11, no GameApp modification.
+### Stage 3 — Backend-neutral CpuMeshData + D3D11MeshUpload adapter — NEXT
 
-### Stage 2 — D3D11Renderer private GPU mesh cache for one uploaded mesh
-
-**Goal:** `D3D11MeshCache` exists and D3D11Renderer can draw one explicitly uploaded `MeshHandle`.
+**Goal:** Create a backend-neutral CPU-side mesh data struct that can be converted to `D3D11MeshUpload`, enabling game shell to upload custom procedural meshes beyond `BuiltInUnitCubeMeshId`.
 
 **Scope:**
-- New file: `src/render_d3d11/D3D11MeshCache.h` / `.cpp` (D3D11-private).
-- `D3D11MeshCache::uploadMesh()` creates `ID3D11Buffer` (vertex + index, `IMMUTABLE`).
-- `D3D11MeshCache::find()` returns `const D3D11CachedMesh*` or nullptr.
-- `D3D11Renderer::renderFrame()` changes:
-  - When `command.kind == Mesh` and `isBuiltInUnitCubeMesh(command.mesh)` → existing path (unchanged).
-  - When `command.kind == Mesh` and mesh is in `D3D11MeshCache` → draw cached mesh using its own VB/IB/indexCount.
-  - It shares the same pipeline (vertex shader, pixel shader, constant buffer, blend state) — only the geometry binding changes.
-  - `D3D11Renderer::shutdown()` releases the mesh cache.
-- `bs3d_d3d11_renderer_smoke` or new test:
-  - Upload a small triangle mesh to D3D11MeshCache.
-  - Build a RenderFrame with a Mesh command referencing that handle.
-  - Verify it draws (counts increment).
+- Backend-neutral `CpuMeshData` struct (or `CpuMeshVertex` + indices) in `src/render/` or new location.
+- Adapter/conversion to `D3D11MeshUpload` (trivial since both use `float position[3]` and `uint16_t` indices).
+- `D3D11GameShell` can create a `CpuMeshData` for a simple triangle, convert to `D3D11MeshUpload`, upload to `D3D11MeshCache` via a new `D3D11Renderer` method or direct access.
+- New `--mesh-test-triangle` flag or reuse `--mesh-test`.
+- Diagnostics show `drawnMeshes=2` (BuiltInUnitCube + custom mesh).
+- **No file I/O, no asset loading, no GameApp integration, no RenderFrameDump v2.**
 
 **Verification:**
-- `.\tools\renderframe_capture_replay.ps1 -Preset ci -Build` (existing smoke still passes)
-- New D3D11 smoke test with custom mesh.
+- `.\build\ci\Debug\bs3d_d3d11_game_shell.exe --frames 3 --load-frame artifacts\shadow_frame.txt --add-test-mesh --mesh-test-triangle`
+- `.\tools\renderframe_capture_replay.ps1 -Preset ci -Build` (existing passes still work)
 
-**Runtime behavior:** No change to GameApp. `bs3d_d3d11_renderer_smoke` gains new optional `--mesh-test` flag.
-
-### Stage 3 — D3D11 game shell can load a small test mesh from code
-
-**Goal:** `D3D11GameShell` creates a `MeshRegistry`, allocates a test mesh handle, loads simple vertex data, uploads to D3D11MeshCache, and renders it alongside existing Box primitives.
-
-**Scope:**
-- `D3D11GameShell` optionally creates `MeshRegistry` (if `--add-test-mesh` or new flag `--mesh-test <vertex-count>`).
-- Mesh data is **hardcoded or procedurally generated** (e.g., a simple triangle or tetrahedron) — no file I/O.
-- Shell calls `D3D11MeshCache::uploadMesh()` through a new method on `D3D11Renderer` or by owning its own `D3D11MeshCache`.
-- The existing `--add-test-mesh` flag continues to work with `BuiltInUnitCubeMeshId`.
-- New `--mesh-test` flag creates a registered MeshHandle with real geometry.
-
-**Verification:**
-- `.\build\ci\Debug\bs3d_d3d11_game_shell.exe --frames 3 --load-frame artifacts\shadow_frame.txt --add-test-mesh --mesh-test`
-- Diagnostics show `drawnMeshes=2` (BuiltInUnitCubeMesh + custom mesh).
-
-**Runtime behavior:** No change to GameApp.
+**Runtime behavior:** No change to GameApp. `D3D11GameShell` only.
 
 ### Stage 4 — RenderFrameDump v2 may serialize Mesh commands
 
@@ -430,18 +407,12 @@ ctest --preset ci
 .\tools\renderframe_capture_replay.ps1 -Preset ci -Build
 ```
 
-## 7) Recommended first code pass after doc
+## 7) Recommended next code pass
 
-**Stage 1 — `MeshRegistry` and `MaterialRegistry` data-only skeleton with unit tests.**
+**Stage 3 — Backend-neutral `CpuMeshData` + `D3D11MeshUpload` adapter.**
 
-This is the smallest, safest, most reversible step:
-- Two new classes with `allocate`/`release`/`find`/`isValid`.
-- No header changes to `include/bs3d/`.
-- No CMake changes to existing targets (new test target only).
-- No runtime behavior change.
-- Tests validate handle allocation semantics.
-
-Concrete suggested deliverable:
-- `tests/MeshRegistryTests.cpp` — 6-8 test cases for handle lifecycle.
-- `tests/MaterialRegistryTests.cpp` — 4-5 test cases for defaults + allocation.
-- Registry implementation files in `src/render/` or `src/game/` (TBD based on link dependencies).
+- Create a backend-neutral `CpuMeshVertex` / `CpuMeshData` representation in `src/render/`.
+- Provide conversion to `D3D11MeshUpload` (trivial — same position-only layout).
+- Extend `D3D11GameShell` with `--mesh-test-triangle` to upload a custom triangle through `D3D11MeshCache`.
+- Diagnostics show `drawnMeshes=2`.
+- No asset loading. No GameApp integration. No RenderFrameDump v2.
