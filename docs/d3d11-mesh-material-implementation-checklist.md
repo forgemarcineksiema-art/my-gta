@@ -281,16 +281,9 @@ Stage 1 and cleanup are complete. Stage 2 is DONE (`D3D11MeshCache` integrated i
 **Stage 4 next pass:**
 - Stage 5 — GameApp shadow extraction may emit Mesh commands (when MeshRegistry is available).
 
-**Stage 5 plan (in progress — Stage 5b):**
+**Stage 5 plan (in progress — Stage 5b DONE, 5c next):**
 - Stage 5a (DONE): `addWorldRenderListMeshCommands` data-only helper in `RenderExtraction.h/.cpp`. Emits Mesh commands from `WorldRenderList` via `MeshRegistry`/`MaterialRegistry`. Falls back to Box when mesh missing. Stats: `emittedMeshes`, `meshFallbacks`, `missingDefinitions`. 12 new data-only tests. Not wired to GameApp.
 - Stage 5b (DONE): `--renderframe-shadow-meshes` CLI flag wired to GameApp. Implies `--renderframe-shadow`. Creates `MeshRegistry`/`MaterialRegistry` seeded with first 3 assetIds from WorldRenderList. Diagnostics include `emittedMeshes`, `meshFallbacks`, `missingDefinitions`. v1 dump unchanged (skips Mesh), v2 dump preserves Mesh commands. No D3D11 mesh upload, no asset loading. `--renderer d3d11` still inactive.
-- Next (Stage 5c): `--renderframe-shadow-meshes`
-- `GameApp` creates `MeshRegistry` + `MaterialRegistry` when flag is active.
-- `RenderExtraction::addWorldRenderListMeshes()` resolves `WorldObject.assetId` → `MeshHandle`.
-- Emits `RenderPrimitiveKind::Mesh` commands for resolved handles; fallback Box for unresolved.
-- `WorldRenderExtractionStats` gains `emittedMeshes` counter.
-- Shadow diagnostics log `emittedMeshes` / `meshFallbacks`.
-- `RenderFrameDump v2` should be used for Mesh capture.
-- No real asset loading. No GameApp main renderer changes. `--renderer d3d11` remains inactive.
+- Stage 5c (NEXT): D3D11 sidecar mesh-cache alignment. Currently emitted Mesh commands from GameApp shadow extraction may be skipped by D3D11 sidecar unless matching MeshHandle ids are uploaded into D3D11MeshCache. Stage 5c should add a dev-only path to upload procedural/test meshes for those emitted handles, so that sidecar diagnostics show `drawnMeshes > 0` when both `--renderframe-shadow-meshes` and `--d3d11-shadow-window` are active. No real asset loading. No GameApp main renderer. `--renderer d3d11` remains inactive.
 
 Do NOT skip stages. See `docs/d3d11-mesh-material-pipeline-plan.md` Section 3 for the full staged plan.
