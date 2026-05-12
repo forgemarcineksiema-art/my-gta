@@ -1,12 +1,15 @@
 # D3D11 mesh/material implementation checklist
 
-Status: LIVE (Stage 4 complete, Stage 5 planned)
+Status: LIVE (Stage 5 complete, Stage 6 deferred)
 Created: 2026-05-12
 Stage 1 status: DONE
 Stage 2 status: DONE — D3D11MeshCache + renderer integration.
 Stage 3 status: DONE — CpuMeshData + adapter + shell procedural mesh.
 Stage 4 status: DONE — RenderFrameDump v2 implemented + CLI/tooling exposed.
-Stage 5 status: IN PROGRESS — Stage 5c implemented (sidecar procedural mesh upload).
+Stage 5 status: DONE
+  - Stage 5a (DONE): addWorldRenderListMeshCommands extraction helper
+  - Stage 5b (DONE): --renderframe-shadow-meshes wired to GameApp shadow path
+  - Stage 5c (DONE): D3D11 sidecar uploads procedural meshes for emitted MeshHandle ids
 
 See also:
 - `docs/d3d11-mesh-material-pipeline-plan.md` — full architecture plan

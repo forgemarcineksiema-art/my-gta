@@ -92,6 +92,16 @@ v1 is the default dump format. To use v2 (Mesh command metadata round-trip, no g
 
 Output: `artifacts\shadow_frame.txt` (dump file with `RenderFrameDump v1` or `RenderFrameDump v2` header).
 
+### Mesh shadow extraction + sidecar (dev-only, Windows)
+
+Emits Mesh commands from live WorldRenderList via `--renderframe-shadow-meshes`, uploads procedural unit cubes for seeded MeshHandle ids into the D3D11 sidecar, and renders through `D3D11Renderer`. Raylib remains the main runtime renderer. Does not activate `--renderer d3d11`.
+
+```powershell
+.\build\ci\Debug\blokowa_satyra.exe --smoke-frames 3 --renderframe-shadow --renderframe-shadow-meshes --d3d11-shadow-window --d3d11-shadow-diagnostics --renderframe-shadow-interval 1 --no-audio --no-save --no-load-save
+```
+
+Expected diagnostics should include `emittedMeshes > 0` and `drawnMeshes > 0` when test handles upload correctly to the D3D11MeshCache.
+
 ### D3D11 game shell (standalone, Windows-only)
 
 Standalone D3D11 main-window shell that loads a `RenderFrameDump v1` or `v2` file and renders it through `D3D11Renderer` in its own Win32 window (1280x720). This is NOT GameApp integration — it does not use raylib, does not link `bs3d_game_support`, and does not activate `--renderer d3d11`.
