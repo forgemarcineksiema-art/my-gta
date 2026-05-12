@@ -110,11 +110,12 @@ Add `--auto-orbit` (implies `--orbit-camera`) for slow automatic yaw rotation:
 .\build\ci\Debug\bs3d_d3d11_game_shell.exe --frames 120 --load-frame artifacts\shadow_frame.txt --diagnostics --orbit-camera --auto-orbit
 ```
 
-**Orbit camera controls:**
-- Left/Right arrows or A/D — rotate yaw
-- W/S — zoom radius in/out
-- Q/E — lower/raise height
+**Orbit camera controls (time-based):**
+- Left/Right arrows or A/D — rotate yaw (2.4 rad/s)
+- W/S — zoom radius in/out (6.0 units/s)
+- Q/E — lower/raise height (6.0 units/s)
 - R — reset camera defaults (yaw=0, radius=8, height=4)
+- Auto-orbit speed: 1.2 rad/s
 
 Use `--frames 0` to run until closed (Escape or window X) instead of auto-exiting after a fixed frame count:
 

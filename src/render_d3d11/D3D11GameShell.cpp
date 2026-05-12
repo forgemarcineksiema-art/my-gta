@@ -13,6 +13,7 @@
 
 #include <windows.h>
 
+#include <chrono>
 #include <cmath>
 #include <cstdlib>
 #include <iostream>
@@ -200,29 +201,36 @@ void resetOrbitCameraState(OrbitCameraState& state, const bs3d::RenderFrame& fra
     }
 }
 
-void updateOrbitCameraStateFromKeyboard(OrbitCameraState& state, bool autoOrbit) {
+void updateOrbitCameraStateFromKeyboard(OrbitCameraState& state, bool autoOrbit, float deltaSeconds) {
+    const float yawSpeed = 2.4f;
+    const float zoomSpeed = 6.0f;
+    const float heightSpeed = 6.0f;
+    const float autoOrbitSpeed = 1.2f;
+
+    const float dt = deltaSeconds > 0.1f ? 0.1f : deltaSeconds;
+
     if ((GetAsyncKeyState(VK_LEFT) & 0x8000) != 0 || (GetAsyncKeyState(0x41) & 0x8000) != 0) {
-        state.yaw -= 0.04f;
+        state.yaw -= yawSpeed * dt;
     }
     if ((GetAsyncKeyState(VK_RIGHT) & 0x8000) != 0 || (GetAsyncKeyState(0x44) & 0x8000) != 0) {
-        state.yaw += 0.04f;
+        state.yaw += yawSpeed * dt;
     }
     if ((GetAsyncKeyState(0x57) & 0x8000) != 0) {
-        state.radius -= 0.1f;
+        state.radius -= zoomSpeed * dt;
         if (state.radius < 1.0f) state.radius = 1.0f;
     }
     if ((GetAsyncKeyState(0x53) & 0x8000) != 0) {
-        state.radius += 0.1f;
+        state.radius += zoomSpeed * dt;
     }
     if ((GetAsyncKeyState(0x51) & 0x8000) != 0) {
-        state.height -= 0.1f;
+        state.height -= heightSpeed * dt;
     }
     if ((GetAsyncKeyState(0x45) & 0x8000) != 0) {
-        state.height += 0.1f;
+        state.height += heightSpeed * dt;
     }
 
     if (autoOrbit) {
-        state.yaw += 0.02f;
+        state.yaw += autoOrbitSpeed * dt;
     }
 }
 
@@ -276,7 +284,8 @@ int runShell(const ShellOptions& options) {
                   << " auto-orbit=" << (options.autoOrbit ? "enabled" : "disabled")
                   << " radius=" << orbit.radius
                   << " height=" << orbit.height
-                  << " fovy=" << orbit.fovy << '\n';
+                  << " fovy=" << orbit.fovy
+                  << " yawSpeed=2.4 zoomSpeed=6.0 heightSpeed=6.0 autoOrbitSpeed=1.2\n";
     }
 
     if (options.diagnostics) {
@@ -300,7 +309,13 @@ int runShell(const ShellOptions& options) {
     bool diagnosticsCoveragePrinted = false;
     bool running = true;
     MSG message{};
+    auto prevTimestamp = std::chrono::steady_clock::now();
     while (running && (options.frames == 0 || renderedFrames < options.frames)) {
+        auto now = std::chrono::steady_clock::now();
+        float deltaSeconds = std::chrono::duration<float>(now - prevTimestamp).count();
+        if (deltaSeconds > 0.1f) deltaSeconds = 0.1f;
+        prevTimestamp = now;
+
         while (PeekMessageW(&message, nullptr, 0, 0, PM_REMOVE) != FALSE) {
             if (message.message == WM_QUIT) {
                 running = false;
@@ -324,7 +339,7 @@ int runShell(const ShellOptions& options) {
             if ((GetAsyncKeyState(0x52) & 0x8000) != 0) {
                 resetOrbitCameraState(orbit, frame);
             } else {
-                updateOrbitCameraStateFromKeyboard(orbit, options.autoOrbit);
+                updateOrbitCameraStateFromKeyboard(orbit, options.autoOrbit, deltaSeconds);
             }
 
             applyOrbitCameraToFrame(orbit, frame);
