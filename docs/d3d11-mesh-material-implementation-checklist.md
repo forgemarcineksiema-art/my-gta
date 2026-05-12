@@ -1,13 +1,15 @@
 # D3D11 mesh/material implementation checklist
 
-Status: LIVE (Stage 2 complete)
+Status: LIVE (Stage 3 in progress)
 Created: 2026-05-12
 First code pass: completed 2026-05-12
 Stage 1 cleanup: completed 2026-05-12
 Stage 2 skeleton: completed 2026-05-12
 Stage 2 rendering integration: completed 2026-05-12
+Stage 3 CpuMeshData + adapter: completed 2026-05-12
 Stage 1 status: DONE
-Stage 2 status: DONE — D3D11MeshCache integrated into D3D11Renderer, cached mesh rendering verified.
+Stage 2 status: DONE — D3D11MeshCache integrated into D3D11Renderer.
+Stage 3 status: IN PROGRESS — CpuMeshData + adapter exist; built-in cube upload uses them; shell test mesh pending.
 
 See also:
 - `docs/d3d11-mesh-material-pipeline-plan.md` — full architecture plan
@@ -251,17 +253,21 @@ Stage 1 and cleanup are complete. Stage 2 is DONE (`D3D11MeshCache` integrated i
 
 **Stage 2 status (completed):**
 - `D3D11MeshCache` integrated as private `meshCache_` member in `D3D11Renderer`.
-- Procedural unit cube (8 vertices, 36 indices) uploaded during `initialize()` as `MeshHandle{BuiltInUnitCubeMeshId}`.
+- Procedural unit cube uploaded during `initialize()` as `MeshHandle{BuiltInUnitCubeMeshId}`.
 - `renderFrame()` routes `RenderPrimitiveKind::Mesh` commands through `meshCache_.find()`, binding cached VB/IB/indexCount.
-- Box rendering uses hardcoded cube VB/IB (unchanged).
-- Wireframe overlay supports cached meshes via `meshCache_.find()`.
-- `shutdown()` calls `meshCache_.clear()` before releasing D3D11 resources.
-- Diagnostics confirmed: `drawnMeshes=1` with `--add-test-mesh`, `skippedMissingMeshes` for uncached handles.
-- GPU-free tests in `bs3d_render_tests` (11 tests under `BS3D_HAS_D3D11_RENDERER` guard).
-- No asset loading, no GameApp integration, no material pipeline.
+- Box/wireframe/debug-lines paths unchanged.
+- Diagnostics: `drawnMeshes=1` with `--add-test-mesh`.
 
-**Stage 2 next pass (future):**
-- Stage 3 — Game shell uploads test mesh through `D3D11MeshCache` API directly (beyond BuiltInUnitCubeMeshId).
+**Stage 3 status (in progress):**
+- `CpuMeshData` / `CpuMeshVertex` (`src/render/CpuMeshData.h/.cpp`) — backend-neutral CPU mesh data with `isValidCpuMeshData()`, `makeCpuMeshUnitCube()`, `makeCpuMeshTriangle()`.
+- `D3D11MeshUploadAdapter` (`src/render_d3d11/D3D11MeshUploadAdapter.h/.cpp`) — converts `CpuMeshData` → `D3D11MeshUpload`.
+- `D3D11Renderer::initialize()` built-in unit cube upload now uses:
+  `makeCpuMeshUnitCube()` → `makeD3D11MeshUpload()` → `meshCache_.upload()`.
+- 6 tests for CpuMeshData + adapter (all GPU-free, passing).
+- No asset loading, no GameApp integration, no `--renderer d3d11` activation.
 
-Do NOT skip stages or combine Stage 2 rendering with Stage 3 in a single pass.
-See `docs/d3d11-mesh-material-pipeline-plan.md` Section 3 for the full staged plan.
+**Stage 3 next pass:**
+- `D3D11GameShell` creates a procedural `CpuMeshData` test mesh (triangle) beyond `BuiltInUnitCubeMeshId`, uploads it through `D3D11Renderer`/`D3D11MeshCache`, and renders it.
+- Diagnostics show `drawnMeshes=2` (BuiltInUnitCube + custom mesh).
+
+Do NOT skip stages. See `docs/d3d11-mesh-material-pipeline-plan.md` Section 3 for the full staged plan.

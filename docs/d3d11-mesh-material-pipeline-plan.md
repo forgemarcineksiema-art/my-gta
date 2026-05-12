@@ -292,7 +292,13 @@ Implemented. See sections 2.1 and 2.2 above for actual API. 23 tests in `bs3d_re
 
 Implemented. See section 2.3 above for actual API. `D3D11MeshCache` integrates into `D3D11Renderer::renderFrame()`. Procedural unit cube uploaded during `initialize()`. `--add-test-mesh` shell flag verifies `drawnMeshes=1`. 11 GPU-free tests in `bs3d_render_tests`.
 
-### Stage 3 — Backend-neutral CpuMeshData + D3D11MeshUpload adapter — NEXT
+### Stage 3 — Backend-neutral CpuMeshData + D3D11MeshUpload adapter — IN PROGRESS
+
+**Stage 3a — data/adapter (DONE):**
+`CpuMeshData` (`src/render/CpuMeshData.h/.cpp`), `D3D11MeshUploadAdapter` (`src/render_d3d11/D3D11MeshUploadAdapter.h/.cpp`), and `D3D11Renderer::initialize()` built-in cube upload refactored to use `makeCpuMeshUnitCube()` → `makeD3D11MeshUpload()` → `meshCache_.upload()`.
+
+**Stage 3b — shell test mesh (NEXT):**
+Create a procedural `CpuMeshData` triangle in `D3D11GameShell`, upload through adapter/cache, render alongside `BuiltInUnitCubeMeshId`. Diagnostics show `drawnMeshes=2`.
 
 **Goal:** Create a backend-neutral CPU-side mesh data struct that can be converted to `D3D11MeshUpload`, enabling game shell to upload custom procedural meshes beyond `BuiltInUnitCubeMeshId`.
 
