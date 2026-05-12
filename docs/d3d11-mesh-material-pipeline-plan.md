@@ -322,7 +322,7 @@ Implemented. See section 2.3 above for actual API. `D3D11MeshCache` integrates i
 
 **Runtime behavior:** No change to GameApp. `D3D11GameShell` only.
 
-### Stage 4 — RenderFrameDump v2 serializing Mesh commands — IN PROGRESS
+### Stage 4 — RenderFrameDump v2 serializing Mesh commands — DONE
 
 **Implemented:**
 - `RenderFrameDumpVersion` enum (`V1`, `V2`), `RenderFrameDumpWriteOptions` struct in `RenderFrameDump.h`.
@@ -330,15 +330,13 @@ Implemented. See section 2.3 above for actual API. `D3D11MeshCache` integrates i
 - v2 writer: header `"RenderFrameDump v2"`, writes all primitives with `meshId`/`materialId` tokens.
 - v2 reader: accepts both v1 and v2 headers; parses `meshId`/`materialId` when present.
 - v1 remains default write format; v1 writer unchanged (still skips non-Box primitives).
-- 5 new dump tests: v2 Mesh round-trip, Box+Mesh mixed, v1 Mesh skip, unsupported version, debug lines.
+- GameApp CLI: `--renderframe-shadow-dump-version <v1|v2>`.
+- Capture/replay script: `-DumpVersion v1` (default) or `-DumpVersion v2`.
+- 5 new dump tests; v1 and v2 capture/replay smoke both pass.
+- **No geometry data, no textures, no material definitions, no asset loading.**
+- `--renderer d3d11` remains inactive.
 
-**Not yet done:**
-- CLI/tooling exposure (no `--dump-version` flag yet).
-- GameApp shadow dump still uses v1 only.
-- No geometry/assets/textures in dump format.
-
-**Remaining Stage 4 work:**
-- Expose v2 in tooling/CLI (e.g. `--renderframe-shadow-dump-version v2` in GameApp or `--write-v2` in smoke).
+**Next: Stage 5 — GameApp shadow extraction Mesh commands.**
 
 ### Stage 5 — GameApp shadow extraction may emit Mesh commands (only when safe)
 
