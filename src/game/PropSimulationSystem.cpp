@@ -98,6 +98,7 @@ void PropSimulationSystem::update(float deltaSeconds, const WorldCollision& stat
 }
 
 void PropSimulationSystem::updateInternal(float deltaSeconds, const WorldCollision* staticCollision) {
+    // Clamp dt to prevent large jumps during frame spikes or paused state.
     const float dt = std::clamp(deltaSeconds, 0.0f, 0.10f);
     for (PropSimulationState& prop : props_) {
         if (prop.id == carriedId_) {

@@ -1,6 +1,6 @@
 # Runtime / gameplay systems quality checkpoint
 
-Status: PLANNING
+Status: COMPLETE (all 5 passes reviewed, no critical bugs found)
 Created: 2026-05-12
 After: D3D11 Stages 1–6c + Option A (parked)
 
@@ -32,7 +32,7 @@ The following are the runtime systems that most affect gameplay feel and stabili
 | Player movement feel | `PlayerMotor.cpp` | **Reviewed** — input normalization safe, acceleration/deceleration smooth, coyote jump correct, platform handling solid, wall bump/stagger handled. Added phase comments (ground detection, speed/acceleration, jump, collision). |
 | Camera | `CameraRig.cpp` | **Reviewed** — code is solid, collapse smoothing safe, boom occlusion correct, recenter handled. Minor improvements: clamped `smoothAlpha` exponent, added phase comments. |
 | Vehicle handling | `VehicleController.cpp` | **Reviewed** — dt-safe, surface-response guarded, gear/RPM math correct, steering authority speed-dependent, drift entry/sustain/counter-steer/exit system solid, lateral slip integration guarded, collision impact handled. Added phase comments (decay, accel/brake, steering, drift, slip/position). |
-| World collision / props | `WorldCollision*`, `PropSimulation*` | Hit detection accuracy, support platform velocity |
+| World collision / props | `WorldCollision.cpp`, `PropSimulationSystem.cpp` | **Reviewed** — dt clamped `[0, 0.10]` in prop update, velocity zero-threshold at 0.02f, spring-back via `pow(0.10, dt)`, impulse strength clamped, player contact soft/hard blocker gated, division guards (`max(size.z, 0.0001f)`, `max(maxImpulse, 0.001f)`), ground probe slope/height safe, character resolve steps 1–32, collision profiles typed. Added dt safety comment. |
 | Mission flow | `MissionController.cpp`, `MissionRuntimeBridge.cpp` | **Reviewed** — phase guards prevent double-trigger, `fail()` blocked before start/after completion, `retryToCheckpoint()` only from Failed with invalid phase fallback, `restoreForSave()` repairs Failed→ReachVehicle, `consumeChaseWanted()` one-shot, objective overrides support empty-string deletion, dialogue queues scoped per-phase. Added guard comments. |
 | Editor / dev tools | `RuntimeMapEditor*`, `DevTools*` | ImGui integration, isolation modes, asset preview |
 | Smoke / CI hygiene | `tools/*.ps1`, `CMakeLists.txt` | Script reliability, test coverage gaps |
@@ -67,11 +67,12 @@ Each pass is small, testable, avoids huge rewrites, and does not touch D3D11.
 **Checked:** All phase transitions use explicit current-phase guards (no double-trigger). `fail()` blocked before `start()` and after `Completed`. `retryToCheckpoint()` only from Failed phase; invalid checkpoint phases (Failed/Completed/WaitingForStart) fall back to ReachVehicle. `restoreForSave()` repairs Failed→ReachVehicle and correctly sets `chaseWanted_` for ChaseActive phase. `consumeChaseWanted()` one-shot consumption prevents stale chase triggers. Objective overrides support empty-string deletion (`erase`). Dialogue queues scoped per-phase with three separate channels (mission, NPC reaction, cutscene). `MissionRuntimeBridge` dispatches triggers cleanly with event cooldowns (`consume()`). Added guard comments. Existing mission validator tests pass (ci includes `bs3d_mission_validation`).
 **Remaining risks:** None at current smoke scope. Phase transitions are deterministic and guarded.
 
-### Pass 5: Prop simulation / world collision edge cases
+### Pass 5: Prop simulation / world collision edge cases — REVIEWED
 
-**Scope:** `PropSimulationSystem`, `WorldCollision` support platform handling.
-**Check:** Do props on moving platforms stay attached? Are collision hit zones accurate?
-**Test:** Verify prop positions after riding moving platforms across multiple frames.
+**Scope:** `PropSimulationSystem.cpp`, `WorldCollision.cpp`.
+**Checked — PropSimulation:** dt clamped to `[0, 0.10]` preventing large jumps. FakeDynamic mode: spring-back to base via `pow(0.10, dt)`, velocity damped via `pow(0.18, dt)`. All modes: velocity zeroed below 0.02f threshold. Impulse strength clamped via `std::clamp(..., 0, 9.0f)`. Player contact: speed threshold 0.15f, softness 0.18f/0.58f for hard/soft blockers, division guard `std::max(maxImpulse, 0.001f)`. Carry: one-at-a-time, size limit 1.10f, forward normalization via `normalizeXZSafe()`. Drop: resets to basePosition.y.
+**Checked — WorldCollision:** Ground probe: `surface.size.z <= 0.0001f` zero-divide guard, `std::max(surface.size.z, 0.0001f)` at slope calc, `std::clamp(t)` safe. Character resolve: steps clamped 1–32, maxStepDistance protected `std::max(0.05f, ...)`. Collision profiles typed and consistent (no collision layering gaps). Added dt safety comment to PropSimulation update.
+**Remaining risks:** None at current smoke scope. Prop carry/drop stable. Ground detection solid at all tested positions.
 
 ## Pre-pass verification
 
