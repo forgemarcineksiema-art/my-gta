@@ -1,11 +1,12 @@
 # D3D11 mesh/material implementation checklist
 
-Status: LIVE (Stage 4 in progress)
+Status: LIVE (Stage 4 complete, Stage 5 planned)
 Created: 2026-05-12
 Stage 1 status: DONE
 Stage 2 status: DONE — D3D11MeshCache + renderer integration.
 Stage 3 status: DONE — CpuMeshData + adapter + shell procedural mesh.
-Stage 4 status: DONE — RenderFrameDump v2 Mesh command round-trip implemented; CLI/tooling exposed; v1 remains default.
+Stage 4 status: DONE — RenderFrameDump v2 implemented + CLI/tooling exposed.
+Stage 5 status: NOT STARTED — planned; see docs for details.
 
 See also:
 - `docs/d3d11-mesh-material-pipeline-plan.md` — full architecture plan
@@ -279,5 +280,15 @@ Stage 1 and cleanup are complete. Stage 2 is DONE (`D3D11MeshCache` integrated i
 
 **Stage 4 next pass:**
 - Stage 5 — GameApp shadow extraction may emit Mesh commands (when MeshRegistry is available).
+
+**Stage 5 plan (not started):**
+- New CLI flag: `--renderframe-shadow-meshes` (implies `--renderframe-shadow`).
+- `GameApp` creates `MeshRegistry` + `MaterialRegistry` when flag is active.
+- `RenderExtraction::addWorldRenderListMeshes()` resolves `WorldObject.assetId` → `MeshHandle`.
+- Emits `RenderPrimitiveKind::Mesh` commands for resolved handles; fallback Box for unresolved.
+- `WorldRenderExtractionStats` gains `emittedMeshes` counter.
+- Shadow diagnostics log `emittedMeshes` / `meshFallbacks`.
+- `RenderFrameDump v2` should be used for Mesh capture.
+- No real asset loading. No GameApp main renderer changes. `--renderer d3d11` remains inactive.
 
 Do NOT skip stages. See `docs/d3d11-mesh-material-pipeline-plan.md` Section 3 for the full staged plan.

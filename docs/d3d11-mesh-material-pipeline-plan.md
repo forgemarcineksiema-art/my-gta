@@ -338,30 +338,79 @@ Implemented. See section 2.3 above for actual API. `D3D11MeshCache` integrates i
 
 **Next: Stage 5 — GameApp shadow extraction Mesh commands.**
 
-### Stage 5 — GameApp shadow extraction may emit Mesh commands (only when safe)
+### Stage 5 — GameApp shadow Mesh extraction — NEXT
 
-**Goal:** The `--renderframe-shadow` path can populate `RenderPrimitiveKind::Mesh` commands in the shadow RenderFrame when `MeshRegistry` is available.
+**Goal:** The `--renderframe-shadow` path can optionally emit `RenderPrimitiveKind::Mesh` commands in the shadow `RenderFrame` when a `MeshRegistry` is available.
 
-**Scope:**
-- `GameApp` optionally creates a `MeshRegistry` when `--renderframe-shadow` is active (gated, dev-only).
-- `RenderExtraction` gains a new function or parameter:
-  - `addWorldRenderListMeshes(RenderFrameBuilder&, const WorldRenderList&, const MeshRegistry&)`
-  - For each `WorldObject` in the render list, resolve `assetId` → `MeshHandle` via `MeshRegistry`.
-  - Emit `RenderPrimitiveCommand` with `kind=Mesh`, `mesh=handle`, `material=defaultOpaque()`.
-  - **Only emits Mesh commands when `MeshRegistry` is non-null** — fallback Box path remains as-is when registry is absent.
-- `--d3d11-shadow-window` D3D11Renderer gains access to the mesh cache so Mesh commands can be drawn.
-- **No change to default gameplay render path** — shadow extraction is dev-only.
+**This is dev/shadow only.** Main raylib renderer remains unchanged. `--renderer d3d11` remains inactive.
 
-**Gate:**
-- The existing dev flags `--renderframe-shadow`, `--d3d11-shadow-window`, `--d3d11-shadow-diagnostics` remain the only way to exercise this path.
-- `--renderer d3d11` remains inactive.
+**Gating:**
+
+New explicit dev flag:
+- `--renderframe-shadow-meshes` — enables Mesh command emission in the shadow frame.
+- Implies `--renderframe-shadow` (not meaningful without it).
+- Default remains fallback Box extraction only.
+- Invalid/absent MeshRegistry → fallback Box extraction (unchanged behavior).
+
+**Registry behavior (first pass):**
+
+- `MeshRegistry` maps `WorldObject.assetId` → `MeshHandle`.
+  - `WorldObject.assetId` matches `WorldAssetDefinition.id`.
+  - `MeshRegistry.find(definition.id)` returns `MeshHandle` or `MeshHandle{0}`.
+- `MaterialRegistry` uses `defaultOpaque()` / `defaultAlpha()` only (no per-asset materials yet).
+- First pass may map a **small subset** of assetIds to procedural/test handles — not every WorldObject needs a Mesh.
+- No real asset (OBJ/GLTF) loading in Stage 5. Meshes must be pre-uploaded into `D3D11MeshCache` beforehand.
+
+**Extraction design:**
+
+New function (additive to existing fallback Box path):
+```
+int addWorldRenderListMeshes(RenderFrameBuilder& builder,
+                             const WorldRenderList& renderList,
+                             const std::vector<WorldAssetDefinition>& assetDefinitions,
+                             const MeshRegistry& meshRegistry,
+                             const MaterialRegistry& materialRegistry);
+```
+
+Behavior:
+- Iterates `WorldRenderList` buckets (Opaque, Vehicle, Decal, Glass, Translucent) in production order.
+- For each `WorldObject`, resolves `assetId` via `MeshRegistry.find()`.
+- If resolved: emits `RenderPrimitiveCommand` with `kind=Mesh`, `mesh=handle`, `material=materialRegistry.defaultOpaque()` (or `defaultAlpha()` for Glass/Translucent buckets).
+- If NOT resolved: **falls back to existing Box extraction** (uses `WorldAssetDefinition.fallbackSize`/`fallbackColor`).
+- Returns `emittedMeshCount` for diagnostics.
+- `MeshRegistry` is passed by const-ref; if not available (caller passes empty/default registry), emits only fallback Boxes.
+
+**Diagnostics:**
+
+- `WorldRenderExtractionStats` gains `emittedMeshes` counter.
+- Shadow diagnostics log: `emittedMeshes`, `meshFallbacks` (objects where mesh was unresolved → Box fallback).
+- D3D11 sidecar diagnostics already track `drawnMeshes` and `meshCoveragePct`.
+- `RenderFrameDump v2` should be used when capturing shadow frames with Mesh commands (v1 would skip them).
+
+**Explicit non-goals (Stage 5):**
+
+- No real model/OBJ/GLTF loading.
+- No texture/material pipeline (MaterialRegistry is data-only).
+- No GameApp main D3D11 renderer.
+- No `--renderer d3d11` activation.
+- No replacement of `WorldRenderer`/`HudRenderer`/`DebugRenderer`.
+- No mesh auto-upload from `WorldModelCache` — meshes must be explicitly uploaded before extraction runs.
+- No `WorldRenderList` changes — extraction reads existing lists, does not modify them.
+
+**First Stage 5 code pass:**
+
+1. Add `--renderframe-shadow-meshes` CLI flag to `GameRunOptions` and `main.cpp`.
+2. In `GameApp`, create `MeshRegistry` and `MaterialRegistry` when the flag is active.
+3. Add `addWorldRenderListMeshes()` to `RenderExtraction.h/.cpp`.
+4. Wire into the shadow frame build path gated by the flag.
+5. Add `emittedMeshes` to `WorldRenderExtractionStats` and shadow diagnostics.
+6. Test: `--renderframe-shadow --renderframe-shadow-meshes --renderframe-shadow-dump artifacts\shadow_v2.txt --renderframe-shadow-dump-version v2` with pre-uploaded test handles.
 
 **Verification:**
 - `.\tools\d3d11_shadow_smoke.ps1 -Preset ci -Build`
-- Shadow diagnostics show `meshCoveragePct > 0` for the first time.
+- Shadow diagnostics show `emittedMeshes > 0` and `meshCoveragePct > 0`.
 - Existing smoke scripts still pass.
-
-**Runtime behavior:** Main game rendering unchanged. Shadow sidecar renders real mesh geometry (if D3D11MeshCache has uploaded data alongside WorldModelCache).
+- `--renderer d3d11` still rejected.
 
 ### Stage 6 — Only later: actual asset loading / materials / textures
 
