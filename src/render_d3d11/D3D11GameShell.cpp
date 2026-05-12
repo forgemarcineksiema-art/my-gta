@@ -309,6 +309,8 @@ int runShell(const ShellOptions& options) {
     int renderedFrames = 0;
     bool diagnosticsCoveragePrinted = false;
     bool running = true;
+    bool wasF5Down = false;
+    bool wasRDown = false;
     MSG message{};
     auto prevTimestamp = std::chrono::steady_clock::now();
     while (running && (options.frames == 0 || renderedFrames < options.frames)) {
@@ -336,7 +338,8 @@ int runShell(const ShellOptions& options) {
             break;
         }
 
-        if ((GetAsyncKeyState(VK_F5) & 0x8000) != 0) {
+        const bool currentF5Down = (GetAsyncKeyState(VK_F5) & 0x8000) != 0;
+        if (currentF5Down && !wasF5Down) {
             bs3d::RenderFrame reloaded;
             std::string reloadError;
             if (bs3d::readRenderFrameDump(options.loadFramePath, reloaded, &reloadError)) {
@@ -366,13 +369,16 @@ int runShell(const ShellOptions& options) {
                 std::cerr << "reload failed: " << reloadError << '\n';
             }
         }
+        wasF5Down = currentF5Down;
 
         if (options.orbitCamera) {
-            if ((GetAsyncKeyState(0x52) & 0x8000) != 0) {
+            const bool currentRDown = (GetAsyncKeyState(0x52) & 0x8000) != 0;
+            if (currentRDown && !wasRDown) {
                 resetOrbitCameraState(orbit, frame);
-            } else {
+            } else if (!currentRDown) {
                 updateOrbitCameraStateFromKeyboard(orbit, options.autoOrbit, deltaSeconds);
             }
+            wasRDown = currentRDown;
 
             applyOrbitCameraToFrame(orbit, frame);
         }
