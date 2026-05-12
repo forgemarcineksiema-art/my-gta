@@ -235,6 +235,8 @@ Backend prep status update: Stage 4 DONE — `RenderFrameDump v2` is implemented
 
 Backend prep status update: Stage 6c DONE — dev-only shadow sidecar modelPath upload resolves paths via `options.dataRoot / "assets" / definition.modelPath`, matching `WorldModelCache` asset root pattern. Falls back to procedural unit cube on load failure/empty path. Diagnostics: `loadedMeshFiles`/`proceduralFallbackUploads`/`meshLoadFailures` with resolved paths in warnings. Minimal OBJ only, no textures/materials. WorldModelCache unchanged. `--renderer d3d11` still inactive.
 
+Next direction: see `docs/d3d11-next-direction-decision.md` for Stage 6d+ options (broader integration, GLTF, material pipeline, pause renderer work).
+
 Backend prep status update: `MeshRegistry` and `MaterialRegistry` data-only registries are implemented (`src/render/MeshRegistry.h/.cpp`, `src/render/MaterialRegistry.h/.cpp`) with full test coverage (23 tests in `bs3d_render_tests`). Stage 1 and cleanup are complete. Both are backend-neutral, data-only classes with `count()`/`empty()` inspection helpers and no D3D11, GPU, or asset loading. MaterialRegistry defaults (`defaultOpaque`, `defaultAlpha`) are permanent (non-releasable). `BuiltInUnitCubeMeshId` remains a `RenderFrame.h` smoke constant, not owned by `MeshRegistry`. Runtime renderer is still raylib. `--renderer d3d11` is still NOT active.
 
 Backend prep status update: istnieje teraz backend-neutralny interfejs `IRenderer`, który konsumuje `RenderFrame`.

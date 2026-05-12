@@ -14,12 +14,13 @@ Stage 5d: DONE — selectShadowMeshSeedAssetIds deterministic seed helper
 Stage 6a: DONE — CpuMeshLoader minimal OBJ parser to CpuMeshData
 Stage 6b: DONE — D3D11GameShell --load-mesh <path> (scripted smoke via renderframe_capture_replay.ps1)
 Stage 6c: DONE — Dev-only shadow sidecar modelPath upload for seeded MeshHandle ids
-Next code pass: TBD — planning-only; see checklist "Next decisions" section
+Next code pass: TBD — planning-only; see `docs/d3d11-next-direction-decision.md`
 
 See also:
 - `docs/backend-modernization-grounding.md` — truth hierarchy, protected systems, non-goals
 - `docs/d3d11-modernization-milestone.md` — implemented D3D11 subset, supported buckets, coverage
 - `docs/d3d11-mesh-material-implementation-checklist.md` — stage 1 readiness gates and implementation steps
+- `docs/d3d11-next-direction-decision.md` — next direction options after Stages 1-6c
 - `DEVELOPMENT.md` — daily workflow, D3D11 smoke/verification commands
 
 ## 1) Current state (Implemented)
