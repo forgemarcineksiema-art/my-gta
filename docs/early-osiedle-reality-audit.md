@@ -325,3 +325,58 @@ git diff --check
 | Top 3 improvements? | (1) Continuous readable footpath bench→shop, (2) Reframed objective texts with local motivation, (3) One visible social conflict near the shop |
 
 **Explicit statement: No code or content has been changed by this audit.** The audit is analysis-only. Implementation should follow after review.
+
+---
+
+## 8. Implementation (2026-05-12): First 3 audit fixes applied
+
+### Fix 1: Continuous footpath Bogus bench → Zenon shop
+
+**What was done:**
+- Added 4 new `irregular_grass_patch` objects (`grass_wear_bogus_path_2` through `_5`) extending the existing two patches south and southeast toward the shop, forming a readable ~35m informal walking route.
+- Each patch uses subtle scale variation (1.9–2.2m width, 2.8–3.4m length) and slight yaw rotation (−0.10 to +0.28 rad) to avoid looking like a clean debug line.
+- Added one midpoint landmark: `footpath_weathered_planter` — a tinted `planter_concrete` object at `{-5.5, 0, -1.4}` that serves as a visible orientation anchor roughly halfway along the path.
+- All patches and the planter use no collision (decorative only) and follow the existing `addGroundPatch`/`addTintedDecor` patterns.
+
+**Files changed:** `src/game/IntroLevelGroundTruthDressing.cpp`
+
+### Fix 2: Reframed early objective text
+
+**What was done:**
+- Changed 4 mission objective strings in `MissionController::objectiveText()`:
+  - `WaitingForStart`: "Pogadaj z Bogusiem" → "Spytaj Bogusia o zeszyt dlugow"
+  - `WalkToShop`: "Idz do sklepu Zenona" → "Sprawdz u Zenona, czy dlug nadal zyje"
+  - `ReturnToBench`: "Wroc do Bogusia" → "Wroc do Bogusia z wiesciami"
+  - `DriveToShop`: "Podjedz pod sklep" → "Podjedz gruzem pod Zenona"
+- Each new text hints at the debt ledger, local stakes, or vehicle identity rather than giving a bare "go here" instruction.
+- No mission phases, triggers, or mechanics were changed.
+
+**Files changed:** `src/core/MissionController.cpp`
+
+### Fix 3: Social-conflict hint near the shop
+
+**What was done:**
+- Added `shop_window_repair_patch` — a tinted `wall_stain` at the shop front, positioned below the left window, with a light plaster/concrete tint (122, 118, 108, 172 alpha) that stands out from the building base color.
+- Tagged with `lived_in_microdetail`, `surface_breakup`, `story_dressing` to match the existing dressing classification.
+- The patch suggests something was thrown at the shop window and hastily repaired — visible on the player's first approach, connecting to Halina's window surveillance and the neighborhood tension without requiring any dialogue.
+
+**Files changed:** `src/game/IntroLevelIdentityDressing.cpp`
+
+### What remains unsolved (not addressed in this pass)
+- Road loop geometry is still a tech-demo rectangle
+- Future_district blocks still exist as visual placeholders
+- No ambient NPCs or social rhythms
+- Mission flow is still a linear fetch chain (only motivation text improved)
+- No terrain variation or organic scene composition
+- No interior spaces
+- D3D11 remains parked and untouched
+
+### Manual verification steps
+1. Start fresh near Bogus bench (no save loaded).
+2. Without relying on the HUD marker, check if the grass-wear path creates a visible walking direction toward the shop (south/southeast).
+3. Walk the path — confirm the weathered planter midpoint marker is visible as a landmark during transit.
+4. Check the starting HUD objective — confirm it says "Spytaj Bogusia o zeszyt dlugow" (not "Pogadaj z Bogusiem").
+5. Talk to Bogus, start mission, check WalkToShop objective says "Sprawdz u Zenona, czy dlug nadal zyje".
+6. Walk to the shop — confirm the repair patch below the left window is visible and distinguishable from building color.
+7. Confirm: no new mission arc, no D3D11 changes, no renderer changes, no map expansion.
+8. Confirm: `--renderer d3d11` still returns error (not activated).

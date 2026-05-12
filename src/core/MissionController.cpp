@@ -267,15 +267,15 @@ std::string MissionController::objectiveText() const {
 
     switch (phase_) {
     case MissionPhase::WaitingForStart:
-        return "Pogadaj z Bogusiem";
+        return "Spytaj Bogusia o zeszyt dlugow";
     case MissionPhase::WalkToShop:
-        return "Idz do sklepu Zenona";
+        return "Sprawdz u Zenona, czy dlug nadal zyje";
     case MissionPhase::ReturnToBench:
-        return "Wroc do Bogusia";
+        return "Wroc do Bogusia z wiesciami";
     case MissionPhase::ReachVehicle:
         return "Wsiadz do gruza";
     case MissionPhase::DriveToShop:
-        return "Podjedz pod sklep";
+        return "Podjedz gruzem pod Zenona";
     case MissionPhase::ChaseActive:
         return "Zgub przypal";
     case MissionPhase::ReturnToLot:

@@ -131,6 +131,13 @@ void addIdentityDressing(IntroLevelData& level) {
                    WorldLocationTag::Shop,
                    {"shop_identity", "shop_hero_v2", "subtle_decal"},
                    objectTint(73, 66, 54, 112));
+    addTintedDecor("shop_window_repair_patch",
+                   "wall_stain",
+                   {level.shopPosition.x - 2.45f, 0.58f, shopFrontZ - 0.14f},
+                   {1.05f, 0.36f, 0.038f},
+                   WorldLocationTag::Shop,
+                   {"shop_identity", "shop_hero_v2", "lived_in_microdetail", "surface_breakup", "story_dressing"},
+                   objectTint(122, 118, 108, 172));
     addTintedDecor("shop_threshold_worn",
                    "wall_stain",
                    {level.shopPosition.x, 0.12f, shopFrontZ - 0.18f},
