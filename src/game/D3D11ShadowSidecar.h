@@ -14,6 +14,8 @@ struct D3D11RendererFrameStats;
 /// Mirrors the struct in src/render_d3d11/D3D11Renderer.h.
 struct D3D11ShadowFrameStats {
     int drawnBoxes = 0;
+    int drawnMeshes = 0;
+    int skippedMissingMeshes = 0;
     int skippedUnsupportedKinds = 0;
     int skippedUnsupportedBuckets = 0;
     int skippedPrimitives = 0;

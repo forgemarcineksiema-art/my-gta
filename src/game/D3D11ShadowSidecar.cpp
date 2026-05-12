@@ -238,6 +238,8 @@ D3D11ShadowFrameStats D3D11ShadowSidecar::lastD3D11Stats() const {
     const auto& d3d11Stats = impl_->renderer->lastD3D11Stats();
     D3D11ShadowFrameStats result;
     result.drawnBoxes = d3d11Stats.drawnBoxes;
+    result.drawnMeshes = d3d11Stats.drawnMeshes;
+    result.skippedMissingMeshes = d3d11Stats.skippedMissingMeshes;
     result.skippedUnsupportedKinds = d3d11Stats.skippedUnsupportedKinds;
     result.skippedUnsupportedBuckets = d3d11Stats.skippedUnsupportedBuckets;
     result.skippedPrimitives = d3d11Stats.skippedPrimitives;

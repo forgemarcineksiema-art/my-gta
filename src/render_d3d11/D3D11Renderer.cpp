@@ -817,8 +817,14 @@ void D3D11Renderer::renderFrame(const RenderFrame& frame) {
     context_->OMSetBlendState(opaqueBlendState_, nullptr, 0xFFFFFFFF);
 
     for (const RenderPrimitiveCommand& command : frame.primitives) {
-        if (command.kind != RenderPrimitiveKind::Box) {
-            ++lastD3D11Stats_.skippedUnsupportedKinds;
+        const bool isSupportedKind = (command.kind == RenderPrimitiveKind::Box) ||
+            (command.kind == RenderPrimitiveKind::Mesh && command.mesh.id == 1);
+        if (!isSupportedKind) {
+            if (command.kind != RenderPrimitiveKind::Box && command.kind != RenderPrimitiveKind::Mesh) {
+                ++lastD3D11Stats_.skippedUnsupportedKinds;
+            } else if (command.kind == RenderPrimitiveKind::Mesh) {
+                ++lastD3D11Stats_.skippedMissingMeshes;
+            }
             ++lastD3D11Stats_.skippedPrimitives;
             continue;
         }
@@ -828,7 +834,11 @@ void D3D11Renderer::renderFrame(const RenderFrame& frame) {
             continue;
         }
 
-        ++lastD3D11Stats_.drawnBoxes;
+        if (command.kind == RenderPrimitiveKind::Box) {
+            ++lastD3D11Stats_.drawnBoxes;
+        } else {
+            ++lastD3D11Stats_.drawnMeshes;
+        }
 
         if (isAlphaBlendBucket(command.bucket)) {
             if (!usingAlphaBlend) {
@@ -941,7 +951,9 @@ void D3D11Renderer::renderFrame(const RenderFrame& frame) {
         context_->PSSetConstantBuffers(0, 1, &constBuffer);
 
         for (const RenderPrimitiveCommand& command : frame.primitives) {
-            if (command.kind != RenderPrimitiveKind::Box) {
+            const bool isWireKind = (command.kind == RenderPrimitiveKind::Box) ||
+                (command.kind == RenderPrimitiveKind::Mesh && command.mesh.id == 1);
+            if (!isWireKind) {
                 continue;
             }
             if (!isSupportedBoxBucket(command.bucket)) {

@@ -32,6 +32,8 @@ namespace bs3d {
 
 struct D3D11RendererFrameStats {
     int drawnBoxes = 0;
+    int drawnMeshes = 0;
+    int skippedMissingMeshes = 0;
     int skippedUnsupportedKinds = 0;
     int skippedUnsupportedBuckets = 0;
     int skippedPrimitives = 0;

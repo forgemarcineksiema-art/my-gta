@@ -29,6 +29,7 @@ struct ShellOptions {
     bool orbitCamera = false;
     bool autoOrbit = false;
     bool wireBoxes = false;
+    bool addTestMesh = false;
 };
 
 LRESULT CALLBACK shellWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam) {
@@ -89,6 +90,8 @@ ShellOptions parseOptions(int argc, char** argv) {
             options.autoOrbit = true;
         } else if (arg == "--wire-boxes") {
             options.wireBoxes = true;
+        } else if (arg == "--add-test-mesh") {
+            options.addTestMesh = true;
         } else if (arg == "--help") {
             std::cout << "Usage: bs3d_d3d11_game_shell --load-frame <path> [--frames <count>] [--diagnostics]\n"
                       << "                                [--orbit-camera] [--auto-orbit] [--wire-boxes]\n"
@@ -102,6 +105,7 @@ ShellOptions parseOptions(int argc, char** argv) {
                       << "  --orbit-camera        enable orbit inspection camera controls\n"
                       << "  --auto-orbit          imply --orbit-camera and slowly auto-rotate\n"
                       << "  --wire-boxes          draw wireframe overlay on Box primitives\n"
+                      << "  --add-test-mesh       append built-in Mesh (id=1) test primitive\n"
                       << "\n"
                       << "Orbit camera controls:\n"
                       << "  Left/Right arrows  rotate yaw\n"
@@ -282,6 +286,18 @@ int runShell(const ShellOptions& options) {
     bs3d::RenderFrame frame = loadFrame(options.loadFramePath);
     std::cout << "loaded frame from " << options.loadFramePath << '\n';
 
+    if (options.addTestMesh) {
+        bs3d::RenderPrimitiveCommand meshCmd;
+        meshCmd.kind = bs3d::RenderPrimitiveKind::Mesh;
+        meshCmd.bucket = bs3d::RenderBucket::Opaque;
+        meshCmd.mesh.id = 1;
+        meshCmd.transform.position = {0.0f, 2.0f, 0.0f};
+        meshCmd.transform.scale = {1.2f, 1.2f, 1.2f};
+        meshCmd.tint = {255, 128, 0, 255};
+        meshCmd.sourceId = "d3d11_shell_builtin_mesh_test";
+        frame.primitives.push_back(meshCmd);
+    }
+
     OrbitCameraState orbit = makeOrbitCameraState(frame);
 
     if (options.orbitCamera) {
@@ -400,6 +416,8 @@ int runShell(const ShellOptions& options) {
             diagnosticsCoveragePrinted = true;
             const auto& d3d11 = renderer.lastD3D11Stats();
             std::cout << "d3d11 coverage: drawnBoxes=" << d3d11.drawnBoxes
+                      << " drawnMeshes=" << d3d11.drawnMeshes
+                      << " skipMissMesh=" << d3d11.skippedMissingMeshes
                       << " skipKinds=" << d3d11.skippedUnsupportedKinds
                       << " skipBuckets=" << d3d11.skippedUnsupportedBuckets
                       << " skipPrims=" << d3d11.skippedPrimitives

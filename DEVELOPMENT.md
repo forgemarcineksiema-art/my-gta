@@ -122,14 +122,20 @@ Add `--auto-orbit` (implies `--orbit-camera`) for slow automatic yaw rotation:
 
 Use `--frames 0` to run until closed (Escape or window X) instead of auto-exiting after a fixed frame count:
 
-Add `--wire-boxes` for a wireframe overlay on Box primitives:
+```powershell
+.\build\ci\Debug\bs3d_d3d11_game_shell.exe --frames 0 --load-frame artifacts\shadow_frame.txt --diagnostics --orbit-camera
+```
+
+Add `--wire-boxes` for a wireframe overlay on Box/Mesh primitives:
 
 ```powershell
 .\build\ci\Debug\bs3d_d3d11_game_shell.exe --frames 0 --load-frame artifacts\shadow_frame.txt --diagnostics --orbit-camera --wire-boxes
 ```
 
+Add `--add-test-mesh` to append a built-in Mesh (id=1 unit cube) test primitive:
+
 ```powershell
-.\build\ci\Debug\bs3d_d3d11_game_shell.exe --frames 0 --load-frame artifacts\shadow_frame.txt --diagnostics --orbit-camera
+.\build\ci\Debug\bs3d_d3d11_game_shell.exe --frames 3 --load-frame artifacts\shadow_frame.txt --diagnostics --orbit-camera --add-test-mesh
 ```
 
 Or build and run through the capture/replay script:
