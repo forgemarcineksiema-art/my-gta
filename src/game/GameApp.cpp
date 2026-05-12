@@ -2619,6 +2619,9 @@ void GameApp::run(const GameRunOptions& options) {
                         int proceduralFallbackUploads = 0;
                         int meshLoadFailures = 0;
 
+                        const std::filesystem::path assetsRoot =
+                            std::filesystem::path(options.dataRoot) / "assets";
+
                         for (const auto& handle : shadowSeededMeshHandles) {
                             const std::string* assetId = shadowMeshRegistry.assetId(handle);
                             const WorldAssetDefinition* def =
@@ -2628,7 +2631,8 @@ void GameApp::run(const GameRunOptions& options) {
                             bool useLoadedMesh = false;
 
                             if (def != nullptr && !def->modelPath.empty()) {
-                                const auto loadResult = loadCpuMeshFromObjFile(def->modelPath);
+                                const std::filesystem::path resolvedPath = assetsRoot / def->modelPath;
+                                const auto loadResult = loadCpuMeshFromObjFile(resolvedPath.string());
                                 if (loadResult.ok) {
                                     meshData = loadResult.mesh;
                                     useLoadedMesh = true;
@@ -2637,7 +2641,7 @@ void GameApp::run(const GameRunOptions& options) {
                                     ++meshLoadFailures;
                                     TraceLog(LOG_WARNING,
                                              "D3D11 shadow sidecar: load failed for %s (%s): %s",
-                                             def->id.c_str(), def->modelPath.c_str(), loadResult.error.c_str());
+                                             def->id.c_str(), resolvedPath.string().c_str(), loadResult.error.c_str());
                                 }
                             }
 
