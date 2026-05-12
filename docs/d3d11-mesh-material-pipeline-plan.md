@@ -1,6 +1,6 @@
 # D3D11 mesh/material pipeline plan
 
-Status: LIVE (Stages 1-6b implemented, 6c next)
+Status: LIVE (Stages 1-6c implemented)
 Created: 2026-05-12
 Stage 1: DONE — MeshRegistry + MaterialRegistry data-only registries
 Stage 2: DONE — D3D11MeshCache integrated into D3D11Renderer
@@ -13,7 +13,8 @@ Stage 5c: DONE — D3D11 sidecar procedural mesh upload for emitted MeshHandle i
 Stage 5d: DONE — selectShadowMeshSeedAssetIds deterministic seed helper
 Stage 6a: DONE — CpuMeshLoader minimal OBJ parser to CpuMeshData
 Stage 6b: DONE — D3D11GameShell --load-mesh <path> (scripted smoke via renderframe_capture_replay.ps1)
-Next code pass: Stage 6c — dev-only shadow sidecar upload from selected modelPath files
+Stage 6c: DONE — Dev-only shadow sidecar modelPath upload for seeded MeshHandle ids
+Next code pass: Stage 6d or Stage 7 planning (broader asset integration, GLTF, material system)
 
 See also:
 - `docs/backend-modernization-grounding.md` — truth hierarchy, protected systems, non-goals
@@ -377,11 +378,12 @@ Implemented. See section 2.3 above for actual API. `D3D11MeshCache` integrates i
 - Diagnostics show `drawnMeshes` incrementing
 - No GameApp integration
 
-**Stage 6c — Dev-only shadow sidecar upload (optional):**
+**Stage 6c — Dev-only shadow sidecar upload — DONE:**
 - When `--renderframe-shadow-meshes` and `--d3d11-shadow-window` are both active
 - Load selected `WorldAssetDefinition.modelPath` files for seeded MeshHandle ids
 - Upload loaded `CpuMeshData` to sidecar's `D3D11MeshCache`
-- Diagnostics: `drawnMeshes` now reflects real mesh geometry
+- Falls back to procedural unit cube on load failure or empty modelPath
+- Diagnostics: `loadedMeshFiles`/`proceduralFallbackUploads`/`meshLoadFailures`
 - Gated entirely behind existing dev flags
 - `WorldModelCache` / raylib `Model` loading unchanged
 
@@ -441,12 +443,10 @@ ctest --preset ci
 
 ## 7) Recommended next code pass
 
-**Stage 6c — Dev-only shadow sidecar upload from modelPath files.**
+**Stage 6d or Stage 7 — Broader integration planning.**
 
-- When `--renderframe-shadow-meshes` and `--d3d11-shadow-window` are both active
-- Load selected `WorldAssetDefinition.modelPath` files for seeded MeshHandle ids via `CpuMeshLoader`
-- Upload loaded `CpuMeshData` to sidecar's `D3D11MeshCache`
-- Diagnostics: `drawnMeshes` reflects real mesh geometry from asset files
-- Gated entirely behind existing dev flags
-- `WorldModelCache` / raylib `Model` loading unchanged
+- Broader `WorldAssetRegistry` integration — MeshRegistry populated for all active assets
+- GLTF support (positions-first, minimal subset)
+- Material system or texture pipeline — deferred design
+- `RenderFrameDump v3` or geometry embedding — deferred design
 - No GameApp main renderer, no `--renderer d3d11` activation

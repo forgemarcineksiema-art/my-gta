@@ -262,6 +262,7 @@ if(BS3D_BUILD_GAME)
         src/game/EditorOverlayApply.cpp
         src/game/EditorOverlayCodec.cpp
         src/game/WorldDataLoader.cpp
+        src/render/CpuMeshLoader.cpp
         src/render/MeshRegistry.cpp
         src/render/MaterialRegistry.cpp
     )

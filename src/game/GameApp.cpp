@@ -13,6 +13,7 @@
 #include "RenderFrameDump.h"
 
 #include "CpuMeshData.h"
+#include "CpuMeshLoader.h"
 #include "IntroLevelBuilder.h"
 #include "IntroLevelPresentation.h"
 #include "MissionOutcomeTrigger.h"
@@ -2614,19 +2615,52 @@ void GameApp::run(const GameRunOptions& options) {
 
                     if (!shadowSidecarTestMeshesUploaded && sidecar.isInitialized()) {
                         shadowSidecarTestMeshesUploaded = true;
-                        int uploadedCount = 0;
+                        int loadedMeshFiles = 0;
+                        int proceduralFallbackUploads = 0;
+                        int meshLoadFailures = 0;
+
                         for (const auto& handle : shadowSeededMeshHandles) {
+                            const std::string* assetId = shadowMeshRegistry.assetId(handle);
+                            const WorldAssetDefinition* def =
+                                assetId != nullptr ? runtime.assetRegistry.find(*assetId) : nullptr;
+
+                            CpuMeshData meshData;
+                            bool useLoadedMesh = false;
+
+                            if (def != nullptr && !def->modelPath.empty()) {
+                                const auto loadResult = loadCpuMeshFromObjFile(def->modelPath);
+                                if (loadResult.ok) {
+                                    meshData = loadResult.mesh;
+                                    useLoadedMesh = true;
+                                    ++loadedMeshFiles;
+                                } else {
+                                    ++meshLoadFailures;
+                                    TraceLog(LOG_WARNING,
+                                             "D3D11 shadow sidecar: load failed for %s (%s): %s",
+                                             def->id.c_str(), def->modelPath.c_str(), loadResult.error.c_str());
+                                }
+                            }
+
+                            if (!useLoadedMesh) {
+                                meshData = makeCpuMeshUnitCube("shadow_" + std::to_string(handle.id));
+                            }
+
                             std::string uploadError;
-                            if (sidecar.uploadTestMesh(handle, makeCpuMeshUnitCube("shadow_" + std::to_string(handle.id)), &uploadError)) {
-                                ++uploadedCount;
+                            if (sidecar.uploadTestMesh(handle, meshData, &uploadError)) {
+                                if (!useLoadedMesh) {
+                                    ++proceduralFallbackUploads;
+                                }
                             } else {
                                 TraceLog(LOG_WARNING, "D3D11 shadow sidecar: mesh upload failed for id=%u: %s",
                                          handle.id, uploadError.c_str());
                             }
                         }
-                        if (uploadedCount > 0) {
-                            TraceLog(LOG_INFO, "D3D11 shadow sidecar: uploaded %d procedural mesh handles",
-                                     uploadedCount);
+
+                        const int totalUploaded = loadedMeshFiles + proceduralFallbackUploads;
+                        if (totalUploaded > 0) {
+                            TraceLog(LOG_INFO, "D3D11 shadow sidecar: uploaded %d mesh handles"
+                                     " (loadedMeshFiles=%d proceduralFallback=%d loadFailures=%d)",
+                                     totalUploaded, loadedMeshFiles, proceduralFallbackUploads, meshLoadFailures);
                         }
                     }
 
