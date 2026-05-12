@@ -100,7 +100,7 @@ Emits Mesh commands from live WorldRenderList via `--renderframe-shadow-meshes`,
 .\build\ci\Debug\blokowa_satyra.exe --smoke-frames 3 --renderframe-shadow --renderframe-shadow-meshes --d3d11-shadow-window --d3d11-shadow-diagnostics --renderframe-shadow-interval 1 --no-audio --no-save --no-load-save
 ```
 
-Expected diagnostics should include `emittedMeshes > 0`, `drawnMeshes > 0`, `loadedMeshFiles`, `proceduralFallbackUploads`, and `meshLoadFailures` when test handles upload correctly to the D3D11MeshCache.
+Expected diagnostics should include `seedCount`, `emittedMeshes > 0`, `drawnMeshes > 0`, `loadedMeshFiles`, `proceduralFallbackUploads`, and `meshLoadFailures` when test handles upload correctly to the D3D11MeshCache. Seeding is a one-time shadow snapshot (current limit 16), not dynamic asset streaming.
 
 ### D3D11 game shell (standalone, Windows-only)
 

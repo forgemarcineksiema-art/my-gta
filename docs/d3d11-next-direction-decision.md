@@ -50,7 +50,10 @@ Stages 1–6c are fully implemented:
 - Prefers assetIds with non-empty `modelPath` so real OBJ meshes are prioritized
 - Skips `renderInGameplay=false`, skips missing definitions
 - Seeding limit raised from 3 to 16 (`ShadowMeshSeedLimit`)
-- Diagnostics: `seedCount=16 loadedMeshFiles=16 drawnMeshes=36` (up from drawnMeshes=5)
+- Seed selection is a one-time shadow snapshot seed, not dynamic runtime asset streaming
+- Sample smoke diagnostics: `seedCount=16 loadedMeshFiles=16 drawnMeshes=36` (up from drawnMeshes=5)
+- No GLTF support, no textures/materials, no `--renderer d3d11` activation
+- Seeding is dev/shadow-only — no impact on raylib runtime or gameplay
 - No `WorldModelCache` changes, no GLTF, no material system
 
 ## Option B — GLTF support
