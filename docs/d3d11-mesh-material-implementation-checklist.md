@@ -1,9 +1,10 @@
 # D3D11 mesh/material implementation checklist
 
-Status: LIVE (Stage 1 implemented)
+Status: LIVE (Stage 1 + cleanup complete)
 Created: 2026-05-12
 First code pass: completed 2026-05-12
-Stage 1 status: DONE
+Stage 1 cleanup: completed 2026-05-12
+Stage 1 status: DONE — **all implementation and cleanup tasks finished.**
 
 See also:
 - `docs/d3d11-mesh-material-pipeline-plan.md` — full architecture plan
@@ -71,19 +72,25 @@ All gate failures must be resolved before starting implementation. This checklis
 
 Stage 1 of `docs/d3d11-mesh-material-pipeline-plan.md`: **MeshRegistry + MaterialRegistry data-only skeleton with unit tests.**
 
-### 2.1 Scope
+### 2.1 Scope — actual implementation
 
 | Item | Detail |
 |---|---|
-| New files | `tests/MeshRegistryTests.cpp`, `tests/MaterialRegistryTests.cpp` |
-| New files | `src/render/MeshRegistry.h`, `src/render/MeshRegistry.cpp` (or in `src/game/` — TBD) |
-| New files | `src/render/MaterialRegistry.h`, `src/render/MaterialRegistry.cpp` (or in `src/game/` — TBD) |
-| CMake | New test target only (no changes to existing targets) |
-| Public headers | None (no changes to `include/bs3d/`) |
+| Registry files | `src/render/MeshRegistry.h`, `src/render/MeshRegistry.cpp` |
+| Registry files | `src/render/MaterialRegistry.h`, `src/render/MaterialRegistry.cpp` |
+| Test file | `tests/render_frame_tests.cpp` (tests added inline, no separate test files) |
+| CMake | Added `.cpp` sources to `bs3d_render_tests` target (no new library target) |
+| Public headers | None changed (`include/bs3d/` untouched) |
 | D3D11 | None (no `d3d11.h`, `windows.h`, or D3D11-specific code) |
 | Runtime behavior | None (GameApp, shell, smoke unchanged) |
 
-### 2.2 MeshRegistry API
+Decision points resolved:
+- Registry file location: **`src/render/`** — registries link only to `bs3d_core` (via `RenderFrame.h`), no game-layer dependencies.
+- Test target: **`bs3d_render_tests`** — existing render test binary, already includes `src/render/` sources and include paths.
+- Implementation style: **compiled `.cpp`** — matching existing pattern (`RenderFrameDump.cpp`, `RendererFactory.cpp`).
+- `BuiltInUnitCubeMeshId`: **not owned by `MeshRegistry`** — remains a `RenderFrame.h` constant. Registry starts real handles at id=2.
+
+### 2.2 MeshRegistry API (implemented)
 
 ```
 class MeshRegistry {
@@ -92,6 +99,8 @@ class MeshRegistry {
     bool isValid(MeshHandle handle) const;
     const std::string* assetId(MeshHandle handle) const;
     MeshHandle find(const std::string& assetId) const;
+    std::size_t count() const;
+    bool empty() const;
 };
 ```
 
@@ -103,12 +112,15 @@ Rules:
 - `release()` removes the handle but does not reuse the id.
 - `assetId()` returns nullptr for invalid handles.
 - `find()` returns `MeshHandle{0}` for unknown assetId.
+- `count()` returns the number of registered meshes (does not include `BuiltInUnitCubeMeshId`).
+- `empty()` returns `true` only when no meshes are registered.
 - The registry does no I/O, no GPU work, no mesh data storage.
 
-### 2.3 MaterialRegistry API
+### 2.3 MaterialRegistry API (implemented)
 
 ```
 class MaterialRegistry {
+    MaterialRegistry();
     MaterialHandle allocate(const std::string& name);
     void release(MaterialHandle handle);
     bool isValid(MaterialHandle handle) const;
@@ -116,6 +128,8 @@ class MaterialRegistry {
     MaterialHandle find(const std::string& name) const;
     MaterialHandle defaultOpaque() const;
     MaterialHandle defaultAlpha() const;
+    std::size_t count() const;
+    bool empty() const;
 };
 ```
 
@@ -124,10 +138,14 @@ Rules:
 - `defaultOpaque()` and `defaultAlpha()` are pre-allocated at construction (ids 1 and 2).
 - User allocations start at id=3.
 - Same idempotent-allocation and no-reuse semantics as MeshRegistry.
+- **Defaults are permanent:** `release(defaultOpaque())` and `release(defaultAlpha())` are silently ignored. Defaults cannot be removed from the registry.
+- `count()` returns 2 on construction (defaults); `empty()` returns `false` (defaults prevent emptiness).
 
-### 2.4 Test cases
+### 2.4 Test cases (implemented — 23 tests total)
 
-#### MeshRegistryTests.cpp (minimum 6 cases)
+All tests live in `tests/render_frame_tests.cpp` (not separate files).
+
+#### MeshRegistry tests (13 cases, all passing)
 
 | Test | What it verifies |
 |---|---|
@@ -138,16 +156,26 @@ Rules:
 | `releaseMakesHandleInvalid` | `allocate`, `release`, then `isValid` = false, `assetId` = nullptr |
 | `releaseThenReallocateIsNewHandle` | `allocate("a")`, `release`, `allocate("a")` → handle.id != original.id |
 | `multipleAllocationsIncreaseId` | Allocate N items → `id` strictly increases |
+| `builtInUnitCubeIdIsNotOwnedByRegistry` | `BuiltInUnitCubeMeshId` (id=1) → `isValid` = false, not findable |
+| `releaseUnknownHandleIsSafe` | Releasing handles 0 and 42 does not crash or change registry |
+| `findAfterReleaseReturnsZero` | allocate, release, find → `MeshHandle{0}` |
+| `countTracksAllocations` | count/empty track allocate/release correctly |
+| `releaseUnknownDoesNotChangeCount` | Releasing 0 or unknown handle does not decrement count |
 
-#### MaterialRegistryTests.cpp (minimum 5 cases)
+#### MaterialRegistry tests (10 cases, all passing)
 
 | Test | What it verifies |
 |---|---|
-| `defaultsArePreAllocated` | `defaultOpaque()` and `defaultAlpha()` are valid, non-zero, different from each other |
+| `defaultsArePreAllocated` | `defaultOpaque()` and `defaultAlpha()` are valid, non-zero, different |
 | `handleZeroIsInvalid` | `MaterialHandle{0}` → `isValid` = false |
 | `allocateReturnsValidHandle` | `allocate("concrete")` → `isValid` = true, `name` = "concrete", handle.id >= 3 |
 | `duplicateAllocateReturnsSameHandle` | Same semantics as MeshRegistry |
 | `releaseAndFind` | `allocate`, `release`, `find` returns zero |
+| `releaseThenReallocateIsNewHandle` | Released id not reused |
+| `userAllocationsDoNotCollideWithDefaults` | User handle id != default ids |
+| `findDefaultsByName` | `find("default_opaque")` / `find("default_alpha")` match `defaultOpaque()` / `defaultAlpha()` |
+| `startsWithDefaultsCount` | `count()` = 2, `!empty()` on fresh registry |
+| `defaultsAreNotReleased` | `release(defaultOpaque())` / `release(defaultAlpha())` are ignored; count stays 2, defaults remain valid and findable |
 
 ### 2.5 Implementation order
 
@@ -191,21 +219,33 @@ These are **forbidden** during the first implementation pass. Any of these would
 - **No link to `bs3d_game_support` from mesh registry code** if registries live in `src/render/`.
 - **No Windows-only coupling** in registry code.
 
-## 4) Decision points during implementation
+## 4) Stage 1 lessons learned
 
-These should be resolved during the first code pass (not before):
+These were confirmed by implementation:
 
-| Decision | Options | Guidance |
-|---|---|---|
-| Registry file location | `src/render/` or `src/game/` | Prefer `src/render/` if it compiles without game-layer dependencies. If registries need `WorldAssetRegistry` linkage, use `src/game/`. Keep them in the same directory as each other. |
-| Test target | Reuse `bs3d_core_tests` or new `bs3d_render_tests` | Prefer adding to `bs3d_core_tests` if registries link into `bs3d_core`. If they need `bs3d_game_support`, they go in `bs3d_game_support_tests`. |
-| Header-only vs compiled | Class size and template use | Both registries are small single-class types. Compiled `.cpp` is fine; inline in header is also acceptable. Match existing project convention. |
-| BuiltInUnitCubeMeshId in registry | Should registry know about id=1? | No. `BuiltInUnitCubeMeshId` remains a `RenderFrame.h` constant. The registry starts real handles at id=2 and treats id=1 as "not mine." |
+- **Registries remain data-only.** Both `MeshRegistry` and `MaterialRegistry` are simple index-by-string containers with no I/O, no GPU work, and no dependency beyond `bs3d_core` headers. They compile into `bs3d_render_tests` cleanly.
+- **No D3D11/GPU/asset loading added.** The registry code is fully backend-neutral. No `windows.h`, `d3d11.h`, or raylib includes.
+- **Test coverage added in `bs3d_render_tests`.** 23 new test cases run alongside existing render tests. No separate test binary was needed — tests were added inline.
+- **The "data-only registry first" strategy works.** Having handle allocation semantics solidly tested before any GPU work eliminates an entire class of bugs from future stages.
+- **Default material permanence is the right call.** Silently ignoring `release()` on defaultOpaque/defaultAlpha prevents accidental removal of required fallback materials. Tests enforce this.
+- **BuiltInUnitCubeMeshId remains outside MeshRegistry.** The registry does not own id=1 and starts real handles at id=2. This keeps the smoke/testing escape hatch separate from production asset management.
 
-## 5) After stage 1 — what's next
+## 5) Stage 2 entry criteria
 
-Once Stage 1 is complete and all CI passes:
-- Review the implementation against this checklist and the plan doc.
-- Update this checklist with lessons learned.
-- Proceed to Stage 2 (`D3D11MeshCache` GPU upload).
-- Do NOT skip stages or combine Stage 1 + Stage 2 in a single pass.
+Before starting Stage 2 (`D3D11MeshCache` GPU upload), verify:
+
+- [ ] Full CI passes: `cmake --preset ci-core && cmake --build --preset ci-core && ctest --preset ci-core && cmake --preset ci && cmake --build --preset ci && ctest --preset ci`
+- [ ] Capture/replay passes: `.\tools\renderframe_capture_replay.ps1 -Preset ci -Build`
+- [ ] No registry regressions (all 23 tests pass)
+- [ ] `--renderer d3d11` still inactive (returns clear error)
+- [ ] GameApp raylib runtime unchanged
+- [ ] No D3D11/GPU/asset loading introduced
+- [ ] `.\tools\d3d11_shadow_smoke.ps1 -Preset ci -Build` passes
+
+## 6) After stage 1 — what's next
+
+Stage 1 and cleanup are complete. Next:
+
+- **Stage 2** — `D3D11MeshCache` private GPU mesh cache inside `D3D11Renderer`. One uploaded mesh, drawn through existing per-primitive pipeline (shared VS/PS/constant buffer, different VB/IB/indexCount).
+- Do NOT skip stages or combine Stage 2 + Stage 3 in a single pass.
+- See `docs/d3d11-mesh-material-pipeline-plan.md` Section 3 for the full staged plan.

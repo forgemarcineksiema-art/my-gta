@@ -227,7 +227,7 @@ Runtime renderer nadal jest raylibowy.
 `GameApp` nadal nie jest podłączony do D3D11.
 `RendererFactory`/`BackendKinds` nadal nie są podłączone.
 
-Backend prep status update: `MeshRegistry` and `MaterialRegistry` data-only skeletons exist (`src/render/MeshRegistry.h/.cpp`, `src/render/MaterialRegistry.h/.cpp`). Both are backend-neutral, data-only classes with no D3D11, no GPU work, and no asset loading. Tests added to `bs3d_render_frame_tests`. Runtime renderer is still raylib. `--renderer d3d11` is still NOT active.
+Backend prep status update: `MeshRegistry` and `MaterialRegistry` data-only registries are implemented (`src/render/MeshRegistry.h/.cpp`, `src/render/MaterialRegistry.h/.cpp`) with full test coverage (23 tests in `bs3d_render_tests`). Stage 1 and cleanup are complete. Both are backend-neutral, data-only classes with `count()`/`empty()` inspection helpers and no D3D11, GPU, or asset loading. MaterialRegistry defaults (`defaultOpaque`, `defaultAlpha`) are permanent (non-releasable). `BuiltInUnitCubeMeshId` remains a `RenderFrame.h` smoke constant, not owned by `MeshRegistry`. Runtime renderer is still raylib. `--renderer d3d11` is still NOT active.
 
 Backend prep status update: istnieje teraz backend-neutralny interfejs `IRenderer`, który konsumuje `RenderFrame`.
 Testowy `RecordingRenderer` istnieje tylko w testach i zapisuje wyłącznie liczniki komend.
