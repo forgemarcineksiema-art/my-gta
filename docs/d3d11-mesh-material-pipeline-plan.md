@@ -322,27 +322,58 @@ Implemented. See section 2.3 above for actual API. `D3D11MeshCache` integrates i
 
 **Runtime behavior:** No change to GameApp. `D3D11GameShell` only.
 
-### Stage 4 — RenderFrameDump v2 may serialize Mesh commands
+### Stage 4 — RenderFrameDump v2 serializing Mesh commands — NEXT
 
 **Goal:** `RenderFrameDump` format gains support for serializing `RenderPrimitiveKind::Mesh` commands.
 
-**Scope:**
-- New dump version: `"RenderFrameDump v2"`.
-- v2 serializes all primitive kinds (Box, Mesh, Sphere, CylinderX, QuadPanel), including `MeshHandle.id` and `MaterialHandle.id`.
-- v1 remains the default write format until explicitly opted-in. Both v1 and v2 can be read.
-- `RenderFrameDump` gains a `setVersion(int)` or `WriteOptions` parameter.
-- v2 format decisions:
-  - Mesh command line: `Mesh <bucket> <pos> <scale> <yaw> <size> <tint> <meshId> <materialId> <sourceId>`
-  - Sphere command: similar but with radius instead of size.
-  - CylinderX/QuadPanel: TBD during implementation (may only serialize Mesh initially).
-- Tests updated: round-trip for Mesh commands, backward compatibility with v1.
+**Design:**
+
+v1 behavior (unchanged):
+- `RenderFrameDump v1` remains the default write format.
+- v1 intentionally skips non-Box primitives on write. Mesh commands are NOT serialized in v1.
+- v1 reader behavior unchanged.
+
+v2 behavior (opt-in):
+- New dump version header: `"RenderFrameDump v2"`.
+- v2 serializes Mesh commands in addition to Box and debug lines.
+- v2 preserves existing Box and debug line serialization format.
+- v2 reader accepts both v1 and v2 headers (backward compatible).
+- v2 writer is opt-in — callers must explicitly request v2.
+
+v2 Mesh command format:
+```
+Mesh <bucket> <pos.x> <pos.y> <pos.z> <scale.x> <scale.y> <scale.z> <yaw> <pitch> <roll> <size.x> <size.y> <size.z> <tint.r> <tint.g> <tint.b> <tint.a> <meshId> <materialId> <sourceId>
+```
+- Each field separated by whitespace.
+- `bucket` uses the same enum names as v1 (Opaque, Vehicle, etc.).
+- `meshId` and `materialId` are plain uint32 integers.
+- `sourceId` is a string token (may contain underscores, hyphens, alphanumeric — no spaces).
+- Box commands remain unchanged (`Box <bucket> <pos.x> <pos.y> <pos.z> <size.x> <size.y> <size.z> <tint.r> <tint.g> <tint.b> <tint.a>`).
+- Debug lines unchanged.
+
+**v2 non-goals (Stage 4 only):**
+- No geometry data serialization (no vertex/index arrays in dump files).
+- No texture serialization.
+- No material definitions (material handles are just uint32 tokens).
+- No Sphere/CylinderX/QuadPanel serialization yet (add later if needed).
+- No asset loading via dump files.
+- No GameApp renderer switch via dump format.
+
+**First Stage 4 code pass:**
+- Add `RenderFrameDumpVersion` enum: `V1` (default), `V2`.
+- Add `struct RenderFrameDumpWriteOptions { RenderFrameDumpVersion version = V1; };`.
+- New function: `writeRenderFrameDump(const RenderFrame&, const std::string& path, const RenderFrameDumpWriteOptions&, std::string* error)`.
+- v2 writer emits v2 header and serializes Mesh commands alongside Box + debug lines.
+- v1 writer behavior unchanged (non-Box primitives skipped).
+- v2 reader accepts either v1 or v2 headers; v1 reader rejects v2 (unchanged).
+- Tests: Mesh command v2 round-trip (write-read-write produces same output), v1 backward compatibility, non-Box skip still works.
 
 **Verification:**
 - `.\tools\renderframe_capture_replay.ps1 -Preset ci -Build` (v1 still works)
-- New dump round-trip test with Mesh commands.
-- Game shell loads v2 dumps with Mesh commands.
+- New dump round-trip tests with Mesh commands.
+- Game shell can load v2 dumps with Mesh commands (after Stage 4 implementation).
 
-**Runtime behavior:** Existing v1 consumers unaffected. v2 is opt-in for capture.
+**Runtime behavior:** Existing v1 consumers unaffected. v2 is opt-in for write. Readers accept both.
 
 ### Stage 5 — GameApp shadow extraction may emit Mesh commands (only when safe)
 
