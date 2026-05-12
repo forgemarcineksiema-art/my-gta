@@ -385,14 +385,6 @@ std::vector<std::string> selectShadowMeshSeedAssetIds(
         return result;
     }
 
-    const RenderBucket bucketOrder[] = {
-        RenderBucket::Opaque,
-        RenderBucket::Vehicle,
-        RenderBucket::Decal,
-        RenderBucket::Glass,
-        RenderBucket::Translucent,
-    };
-
     using BucketSources = std::vector<const WorldObject*>;
     BucketSources opaque;
     BucketSources vehicle;
