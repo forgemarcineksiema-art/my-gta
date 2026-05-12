@@ -90,6 +90,8 @@ Output: `artifacts\shadow_frame.txt` (dump file with `RenderFrameDump v1` header
 
 Standalone D3D11 main-window shell that loads a `RenderFrameDump v1` file and renders it through `D3D11Renderer` in its own Win32 window (1280x720). This is NOT GameApp integration — it does not use raylib, does not link `bs3d_game_support`, and does not activate `--renderer d3d11`.
 
+Note: `RenderFrameDump v2` exists for Mesh command metadata round-trip, but current capture/replay tooling still uses v1. v2 has tests in `bs3d_render_frame_tests`; CLI/tooling exposure is pending.
+
 ```powershell
 .\build\ci\Debug\bs3d_d3d11_game_shell.exe --frames 3 --load-frame artifacts\shadow_frame.txt
 ```

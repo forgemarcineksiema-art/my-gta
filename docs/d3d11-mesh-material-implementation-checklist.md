@@ -1,16 +1,11 @@
 # D3D11 mesh/material implementation checklist
 
-Status: LIVE (Stage 3 complete)
+Status: LIVE (Stage 4 in progress)
 Created: 2026-05-12
-First code pass: completed 2026-05-12
-Stage 1 cleanup: completed 2026-05-12
-Stage 2 skeleton: completed 2026-05-12
-Stage 2 rendering integration: completed 2026-05-12
-Stage 3 CpuMeshData + adapter: completed 2026-05-12
-Stage 3b shell test mesh: completed 2026-05-12
 Stage 1 status: DONE
-Stage 2 status: DONE — D3D11MeshCache integrated into D3D11Renderer.
-Stage 3 status: DONE — CpuMeshData + adapter exist; built-in cube upload uses them; shell renders procedural triangle via uploadTestMesh; diagnostics show drawnMeshes=2.
+Stage 2 status: DONE — D3D11MeshCache + renderer integration.
+Stage 3 status: DONE — CpuMeshData + adapter + shell procedural mesh.
+Stage 4 status: IN PROGRESS — RenderFrameDump v2 Mesh command round-trip implemented; tooling/CLI exposure pending.
 
 See also:
 - `docs/d3d11-mesh-material-pipeline-plan.md` — full architecture plan
@@ -269,7 +264,21 @@ Stage 1 and cleanup are complete. Stage 2 is DONE (`D3D11MeshCache` integrated i
 - 6 GPU-free tests for CpuMeshData + adapter (all passing).
 - `--renderer d3d11` still inactive. No asset loading. No GameApp integration.
 
-**Stage 3 next pass (future):**
-- Stage 4 — `RenderFrameDump v2` serializing Mesh commands, or pre-Stage-4 cleanup.
+**Stage 4 status (in progress):**
+- `RenderFrameDump v2` implemented (`src/render/RenderFrameDump.h/.cpp`).
+- `RenderFrameDumpVersion` enum (`V1`, `V2`), `RenderFrameDumpWriteOptions` struct.
+- Overloaded `writeRenderFrameDump(frame, path, options, error)`.
+- v1 remains default write format and unchanged — still skips Mesh on write.
+- v2 header: `"RenderFrameDump v2"`. Writes all primitives with `meshId`/`materialId` tokens.
+- Reader accepts both v1 and v2 headers; unknown versions rejected.
+- Mesh command metadata round-trip: `mesh.id`, `material.id`, `sourceId`, transform, tint all preserved.
+- **No geometry data, no textures, no material definitions, no asset loading.**
+- 5 new dump tests (v2 round-trip, v1 skip, mixed, unsupported version, debug lines).
+- Tooling/CLI exposure (e.g. `--renderframe-shadow-dump-version v2`) not yet implemented.
+- `--renderer d3d11` remains inactive.
+
+**Stage 4 next pass:**
+- Expose v2 via GameApp CLI flag or shell option for capture/replay tooling.
+- Or proceed to Stage 5 (shadow extraction Mesh commands).
 
 Do NOT skip stages. See `docs/d3d11-mesh-material-pipeline-plan.md` Section 3 for the full staged plan.
