@@ -737,7 +737,12 @@ bool D3D11Renderer::initialize(const D3D11RendererConfig& config, std::string* e
     {
         const auto cubeCpu = makeCpuMeshUnitCube("builtin_unit_cube");
         const auto cubeUpload = makeD3D11MeshUpload(cubeCpu);
-        meshCache_.upload(device_, MeshHandle{BuiltInUnitCubeMeshId}, cubeUpload);
+        std::string uploadError;
+        if (!meshCache_.upload(device_, MeshHandle{BuiltInUnitCubeMeshId}, cubeUpload, &uploadError)) {
+            shutdown();
+            assignError(error, "D3D11Renderer failed to upload BuiltInUnitCubeMeshId: " + uploadError);
+            return false;
+        }
     }
 
     if (error != nullptr) {
