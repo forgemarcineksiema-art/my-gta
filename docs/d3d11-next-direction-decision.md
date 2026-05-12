@@ -38,22 +38,20 @@ Stages 1–6c are fully implemented:
 - No textures, no materials, no GLTF, no animation
 - `WorldModelCache` unchanged — raylib `Model` loading is the production path
 
-## Option A — Broader WorldAssetRegistry integration
+## Option A — Broader WorldAssetRegistry integration — IMPLEMENTED
 
 **Scope:**
 - Populate `MeshRegistry` for more/all active asset definitions
 - Still dev/shadow only — no GameApp main renderer change
 - Still no material/texture system
 
-**Pros:**
-- Natural extension of Stages 5-6
-- Better coverage diagnostics (more `drawnMeshes`, less procedural fallback)
-- Launches directly from completed infrastructure
-
-**Cons:**
-- Still OBJ-only until GLTF added
-- Risk of premature registry expansion without clear use case
-- More assets → more sidecar GPU memory (mitigated by `IMMUTABLE` buffers, limited scope)
+**Implemented (after Stages 6a-6c):**
+- `selectShadowMeshSeedAssetIdsFromDefinitions` helper extends the Stage 5d seed selector
+- Prefers assetIds with non-empty `modelPath` so real OBJ meshes are prioritized
+- Skips `renderInGameplay=false`, skips missing definitions
+- Seeding limit raised from 3 to 16 (`ShadowMeshSeedLimit`)
+- Diagnostics: `seedCount=16 loadedMeshFiles=16 drawnMeshes=36` (up from drawnMeshes=5)
+- No `WorldModelCache` changes, no GLTF, no material system
 
 ## Option B — GLTF support
 

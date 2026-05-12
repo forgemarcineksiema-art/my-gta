@@ -58,4 +58,9 @@ std::vector<std::string> selectShadowMeshSeedAssetIds(
     const std::vector<WorldAssetDefinition>& definitions,
     int maxCount);
 
+std::vector<std::string> selectShadowMeshSeedAssetIdsFromDefinitions(
+    const WorldRenderList& renderList,
+    const std::vector<WorldAssetDefinition>& definitions,
+    int maxCount);
+
 } // namespace bs3d

@@ -16,6 +16,7 @@ Stage 6 status: DONE — Stage 6c completes the initial asset-loading pipeline.
   - Stage 6a (DONE): CpuMeshLoader minimal OBJ parser to CpuMeshData
   - Stage 6b (DONE): D3D11GameShell --load-mesh <path>
   - Stage 6c (DONE): Dev-only shadow sidecar modelPath upload via assetsRoot resolution
+  - Option A (DONE): Broader WorldAssetRegistry integration. `selectShadowMeshSeedAssetIdsFromDefinitions` with modelPath preference, `renderInGameplay` filtering, seed limit 16. `drawnMeshes=36` with sidecar.
 
 See also:
 - `docs/d3d11-mesh-material-pipeline-plan.md` — full architecture plan

@@ -2597,7 +2597,8 @@ void GameApp::run(const GameRunOptions& options) {
                 if (options.renderFrameShadowMeshes) {
                     if (!shadowMeshRegistrySeeded) {
                         shadowMeshRegistrySeeded = true;
-                        const auto seedIds = selectShadowMeshSeedAssetIds(renderList, assetDefs, 3);
+                        constexpr int ShadowMeshSeedLimit = 16;
+                        const auto seedIds = selectShadowMeshSeedAssetIdsFromDefinitions(renderList, assetDefs, ShadowMeshSeedLimit);
                         for (const auto& assetId : seedIds) {
                             const auto handle = shadowMeshRegistry.allocate(assetId);
                             shadowSeededMeshHandles.push_back(handle);
@@ -2662,8 +2663,9 @@ void GameApp::run(const GameRunOptions& options) {
 
                         const int totalUploaded = loadedMeshFiles + proceduralFallbackUploads;
                         if (totalUploaded > 0) {
-                            TraceLog(LOG_INFO, "D3D11 shadow sidecar: uploaded %d mesh handles"
+                            TraceLog(LOG_INFO, "D3D11 shadow sidecar: seedCount=%d uploaded %d mesh handles"
                                      " (loadedMeshFiles=%d proceduralFallback=%d loadFailures=%d)",
+                                     static_cast<int>(shadowSeededMeshHandles.size()),
                                      totalUploaded, loadedMeshFiles, proceduralFallbackUploads, meshLoadFailures);
                         }
                     }

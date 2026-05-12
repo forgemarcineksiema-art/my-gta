@@ -2748,6 +2748,180 @@ void seedSkipsNullObjects() {
     expect(result[0] == "asset_a", "selects non-null object");
 }
 
+// ---------- Broader seed selection tests ----------
+
+void broadSeedPrefersModelPathFirst() {
+    bs3d::WorldObject objA;
+    objA.id = "obj_a";
+    objA.assetId = "asset_a";
+    objA.position = {0.0f, 0.0f, 0.0f};
+
+    bs3d::WorldObject objB;
+    objB.id = "obj_b";
+    objB.assetId = "asset_b";
+    objB.position = {1.0f, 0.0f, 0.0f};
+
+    bs3d::WorldAssetDefinition defA;
+    defA.id = "asset_a";
+    defA.modelPath = "models/a.obj";
+    defA.renderBucket = "Opaque";
+
+    bs3d::WorldAssetDefinition defB;
+    defB.id = "asset_b";
+    defB.modelPath = "";
+    defB.renderBucket = "Opaque";
+
+    // Put asset_b (no modelPath) before asset_a (has modelPath) in render list.
+    bs3d::WorldRenderList renderList;
+    renderList.opaque = {&objB, &objA};
+
+    const auto result = bs3d::selectShadowMeshSeedAssetIdsFromDefinitions(renderList, {defA, defB}, 2);
+    expect(result.size() == 2, "selects 2 assetIds");
+    expect(result[0] == "asset_a", "prefers asset with modelPath first");
+    expect(result[1] == "asset_b", "asset without modelPath selected second");
+}
+
+void broadSeedSkipsRenderInGameplayFalse() {
+    bs3d::WorldObject objA;
+    objA.id = "obj_a";
+    objA.assetId = "asset_a";
+    objA.position = {0.0f, 0.0f, 0.0f};
+
+    bs3d::WorldObject objB;
+    objB.id = "obj_b";
+    objB.assetId = "asset_b";
+    objB.position = {1.0f, 0.0f, 0.0f};
+
+    bs3d::WorldAssetDefinition defA;
+    defA.id = "asset_a";
+    defA.renderBucket = "Opaque";
+    defA.renderInGameplay = false;
+
+    bs3d::WorldAssetDefinition defB;
+    defB.id = "asset_b";
+    defB.renderBucket = "Opaque";
+    defB.renderInGameplay = true;
+
+    bs3d::WorldRenderList renderList;
+    renderList.opaque = {&objA, &objB};
+
+    const auto result = bs3d::selectShadowMeshSeedAssetIdsFromDefinitions(renderList, {defA, defB}, 3);
+    expect(result.size() == 1, "skips renderInGameplay=false");
+    expect(result[0] == "asset_b", "selects renderInGameplay=true asset");
+}
+
+void broadSeedDeduplicates() {
+    bs3d::WorldObject objA1;
+    objA1.id = "obj_a1";
+    objA1.assetId = "asset_a";
+    objA1.position = {0.0f, 0.0f, 0.0f};
+
+    bs3d::WorldObject objA2;
+    objA2.id = "obj_a2";
+    objA2.assetId = "asset_a";
+    objA2.position = {1.0f, 0.0f, 0.0f};
+
+    bs3d::WorldAssetDefinition def;
+    def.id = "asset_a";
+    def.modelPath = "models/a.obj";
+    def.renderBucket = "Opaque";
+
+    bs3d::WorldRenderList renderList;
+    renderList.opaque = {&objA1, &objA2};
+
+    const auto result = bs3d::selectShadowMeshSeedAssetIdsFromDefinitions(renderList, {def}, 5);
+    expect(result.size() == 1, "deduplicates same assetId");
+}
+
+void broadSeedRespectsMaxCount() {
+    bs3d::WorldObject objA;
+    objA.id = "obj_a";
+    objA.assetId = "asset_a";
+    objA.position = {0.0f, 0.0f, 0.0f};
+
+    bs3d::WorldObject objB;
+    objB.id = "obj_b";
+    objB.assetId = "asset_b";
+    objB.position = {1.0f, 0.0f, 0.0f};
+
+    bs3d::WorldAssetDefinition defA;
+    defA.id = "asset_a";
+    defA.modelPath = "models/a.obj";
+    defA.renderBucket = "Opaque";
+
+    bs3d::WorldAssetDefinition defB;
+    defB.id = "asset_b";
+    defB.modelPath = "models/b.obj";
+    defB.renderBucket = "Opaque";
+
+    bs3d::WorldRenderList renderList;
+    renderList.opaque = {&objA, &objB};
+
+    auto result = bs3d::selectShadowMeshSeedAssetIdsFromDefinitions(renderList, {defA, defB}, 1);
+    expect(result.size() == 1, "respects maxCount=1");
+
+    result = bs3d::selectShadowMeshSeedAssetIdsFromDefinitions(renderList, {defA, defB}, 0);
+    expect(result.empty(), "maxCount=0 returns empty");
+
+    result = bs3d::selectShadowMeshSeedAssetIdsFromDefinitions(renderList, {defA, defB}, -1);
+    expect(result.empty(), "negative maxCount returns empty");
+}
+
+void broadSeedKeepsBucketOrder() {
+    bs3d::WorldObject objO;
+    objO.id = "obj_o";
+    objO.assetId = "asset_o";
+    objO.position = {0.0f, 0.0f, 0.0f};
+
+    bs3d::WorldObject objV;
+    objV.id = "obj_v";
+    objV.assetId = "asset_v";
+    objV.position = {1.0f, 0.0f, 0.0f};
+
+    bs3d::WorldAssetDefinition defO;
+    defO.id = "asset_o";
+    defO.modelPath = "models/o.obj";
+    defO.renderBucket = "Opaque";
+
+    bs3d::WorldAssetDefinition defV;
+    defV.id = "asset_v";
+    defV.renderBucket = "Vehicle";
+
+    // Scrambled: vehicle object in opaque list field, opaque in transparent
+    bs3d::WorldRenderList renderList;
+    renderList.opaque = {&objV};
+    renderList.transparent = {&objO};
+
+    const auto result = bs3d::selectShadowMeshSeedAssetIdsFromDefinitions(renderList, {defO, defV}, 3);
+    expect(result.size() == 2, "selects 2 assets from scrambled input");
+    expect(result[0] == "asset_o", "Opaque first");
+    expect(result[1] == "asset_v", "Vehicle second");
+}
+
+void broadSeedSkipsMissingDefinitions() {
+    bs3d::WorldObject objA;
+    objA.id = "obj_a";
+    objA.assetId = "asset_a";
+    objA.position = {0.0f, 0.0f, 0.0f};
+
+    bs3d::WorldObject objB;
+    objB.id = "obj_b";
+    objB.assetId = "missing_def";
+    objB.position = {1.0f, 0.0f, 0.0f};
+
+    bs3d::WorldAssetDefinition defA;
+    defA.id = "asset_a";
+    defA.modelPath = "models/a.obj";
+    defA.renderBucket = "Opaque";
+
+    bs3d::WorldRenderList renderList;
+    renderList.opaque = {&objB, &objA};
+
+    const auto result = bs3d::selectShadowMeshSeedAssetIdsFromDefinitions(renderList, {defA}, 3);
+    expect(result.size() == 1, "skips missing definitions");
+    expect(result[0] == "asset_a", "selects valid definition");
+}
+
 // ---------- CpuMeshLoader OBJ tests ----------
 
 void objLoaderTriangleLoads() {
@@ -2970,6 +3144,12 @@ int main() {
     seedFallsBackToOtherBuckets();
     seedDeterministicOrderFromScrambledInput();
     seedSkipsNullObjects();
+    broadSeedPrefersModelPathFirst();
+    broadSeedSkipsRenderInGameplayFalse();
+    broadSeedDeduplicates();
+    broadSeedRespectsMaxCount();
+    broadSeedKeepsBucketOrder();
+    broadSeedSkipsMissingDefinitions();
     objLoaderTriangleLoads();
     objLoaderQuadTriangulates();
     objLoaderIgnoresCommentsAndEmptyLines();

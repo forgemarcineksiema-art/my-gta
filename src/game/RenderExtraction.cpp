@@ -451,4 +451,98 @@ std::vector<std::string> selectShadowMeshSeedAssetIds(
     return result;
 }
 
+std::vector<std::string> selectShadowMeshSeedAssetIdsFromDefinitions(
+    const WorldRenderList& renderList,
+    const std::vector<WorldAssetDefinition>& definitions,
+    int maxCount) {
+    std::vector<std::string> result;
+    if (maxCount <= 0) {
+        return result;
+    }
+
+    using BucketSources = std::vector<const WorldObject*>;
+    BucketSources opaque;
+    BucketSources vehicle;
+    BucketSources decal;
+    BucketSources glass;
+    BucketSources translucent;
+
+    WorldRenderExtractionStats stats;
+    std::vector<const WorldObject*> seen;
+
+    auto collectFrom = [&](const std::vector<const WorldObject*>& objects) {
+        for (const WorldObject* obj : objects) {
+            if (obj == nullptr || alreadySeen(seen, obj)) {
+                continue;
+            }
+            seen.push_back(obj);
+
+            const WorldAssetDefinition* def = findDefinition(definitions, obj->assetId);
+            if (def == nullptr) {
+                continue;
+            }
+
+            if (!def->renderInGameplay) {
+                continue;
+            }
+
+            RenderBucket bucket = RenderBucket::Opaque;
+            if (!tryMapRenderBucket(*def, bucket, stats)) {
+                continue;
+            }
+
+            switch (bucket) {
+            case RenderBucket::Opaque:   opaque.push_back(obj); break;
+            case RenderBucket::Vehicle:  vehicle.push_back(obj); break;
+            case RenderBucket::Decal:    decal.push_back(obj); break;
+            case RenderBucket::Glass:    glass.push_back(obj); break;
+            case RenderBucket::Translucent: translucent.push_back(obj); break;
+            default: break;
+            }
+        }
+    };
+
+    collectFrom(renderList.opaque);
+    collectFrom(renderList.translucent);
+    collectFrom(renderList.glass);
+    collectFrom(renderList.transparent);
+
+    auto emitFromBucket = [&](const BucketSources& sources) {
+        // First pass: emit assetIds with non-empty modelPath
+        for (const WorldObject* obj : sources) {
+            if (static_cast<int>(result.size()) >= maxCount) {
+                return;
+            }
+            const auto& assetId = obj->assetId;
+            if (std::find(result.begin(), result.end(), assetId) != result.end()) {
+                continue;
+            }
+            const WorldAssetDefinition* def = findDefinition(definitions, assetId);
+            if (def != nullptr && !def->modelPath.empty()) {
+                result.push_back(assetId);
+            }
+        }
+
+        // Second pass: emit remaining assetIds (no modelPath, use procedural fallback)
+        for (const WorldObject* obj : sources) {
+            if (static_cast<int>(result.size()) >= maxCount) {
+                return;
+            }
+            const auto& assetId = obj->assetId;
+            if (std::find(result.begin(), result.end(), assetId) != result.end()) {
+                continue;
+            }
+            result.push_back(assetId);
+        }
+    };
+
+    emitFromBucket(opaque);
+    emitFromBucket(vehicle);
+    emitFromBucket(decal);
+    emitFromBucket(glass);
+    emitFromBucket(translucent);
+
+    return result;
+}
+
 } // namespace bs3d
