@@ -47,8 +47,16 @@ void writePrimitive(std::ostream& out, const RenderPrimitiveCommand& command) {
         << " yaw " << command.transform.yawRadians
         << " size " << command.size.x << ' ' << command.size.y << ' ' << command.size.z
         << " tint " << static_cast<int>(command.tint.r) << ' ' << static_cast<int>(command.tint.g)
-        << ' ' << static_cast<int>(command.tint.b) << ' ' << static_cast<int>(command.tint.a)
-        << " sourceId " << command.sourceId << '\n';
+        << ' ' << static_cast<int>(command.tint.b) << ' ' << static_cast<int>(command.tint.a);
+}
+
+void writePrimitiveMeshIds(std::ostream& out, const RenderPrimitiveCommand& command) {
+    out << " meshId " << command.mesh.id
+        << " materialId " << command.material.id;
+}
+
+void writePrimitiveSourceId(std::ostream& out, const RenderPrimitiveCommand& command) {
+    out << " sourceId " << command.sourceId << '\n';
 }
 
 void writeDebugLine(std::ostream& out, const RenderLineCommand& line) {
@@ -113,7 +121,26 @@ bool readPrimitive(std::istringstream& stream, int lineNumber, RenderPrimitiveCo
     command.tint.b = static_cast<std::uint8_t>(b);
     command.tint.a = static_cast<std::uint8_t>(a);
 
-    if (!(stream >> token) || token != "sourceId") return false;
+    {
+        std::string nextToken;
+        if (stream >> nextToken) {
+            if (nextToken == "meshId") {
+                std::uint32_t mid = 0;
+                if (!(stream >> mid)) return false;
+                command.mesh.id = mid;
+                if (!(stream >> nextToken) || nextToken != "materialId") return false;
+                std::uint32_t matId = 0;
+                if (!(stream >> matId)) return false;
+                command.material.id = matId;
+                if (!(stream >> nextToken) || nextToken != "sourceId") return false;
+            } else if (nextToken != "sourceId") {
+                return false;
+            }
+        } else {
+            return false;
+        }
+    }
+
     std::getline(stream, command.sourceId);
     if (!command.sourceId.empty() && command.sourceId[0] == ' ') {
         command.sourceId.erase(0, 1);
@@ -140,21 +167,41 @@ bool readDebugLine(std::istringstream& stream, RenderLineCommand& line) {
 } // namespace
 
 bool writeRenderFrameDump(const RenderFrame& frame, const std::string& path, std::string* error) {
+    RenderFrameDumpWriteOptions options;
+    options.version = RenderFrameDumpVersion::V1;
+    return writeRenderFrameDump(frame, path, options, error);
+}
+
+bool writeRenderFrameDump(const RenderFrame& frame,
+                          const std::string& path,
+                          const RenderFrameDumpWriteOptions& options,
+                          std::string* error) {
     std::ofstream file(path);
     if (!file.is_open()) {
         if (error) *error = "failed to open file for writing: " + path;
         return false;
     }
 
-    file << "RenderFrameDump v1\n";
+    if (options.version == RenderFrameDumpVersion::V2) {
+        file << "RenderFrameDump v2\n";
+    } else {
+        file << "RenderFrameDump v1\n";
+    }
 
     writeCamera(file, frame.camera);
 
     for (const RenderPrimitiveCommand& command : frame.primitives) {
-        if (command.kind != RenderPrimitiveKind::Box) {
-            continue;
+        if (options.version == RenderFrameDumpVersion::V2) {
+            writePrimitive(file, command);
+            writePrimitiveMeshIds(file, command);
+            writePrimitiveSourceId(file, command);
+        } else {
+            if (command.kind != RenderPrimitiveKind::Box) {
+                continue;
+            }
+            writePrimitive(file, command);
+            file << " sourceId " << command.sourceId << '\n';
         }
-        writePrimitive(file, command);
     }
 
     for (const RenderLineCommand& line : frame.debugLines) {
@@ -185,13 +232,13 @@ bool readRenderFrameDump(const std::string& path, RenderFrame& frame, std::strin
             if (error) *error = "missing or invalid RenderFrameDump header in: " + path;
             return false;
         }
-        if (!(headerStream >> version) || version != "v1") {
+        if (!(headerStream >> version)) {
+            if (error) *error = "missing RenderFrameDump version in header in: " + path;
+            return false;
+        }
+        if (version != "v1" && version != "v2") {
             if (error) {
-                if (version.empty()) {
-                    *error = "missing RenderFrameDump version in header in: " + path;
-                } else {
-                    *error = "unsupported RenderFrameDump version '" + version + "' in: " + path;
-                }
+                *error = "unsupported RenderFrameDump version '" + version + "' in: " + path;
             }
             return false;
         }

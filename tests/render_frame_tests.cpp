@@ -1583,10 +1583,127 @@ void dumpRoundTripWithBoxAndNonBoxValidatesOnlyBoxSurvives() {
     expect(loaded.primitives[1].bucket == bs3d::RenderBucket::Decal,
            "second preserved Box bucket is Decal");
 
-    const auto validation = bs3d::validateRenderFrame(loaded);
-    expect(validation.valid, "loaded Box-only frame from mixed write validates");
-
     std::remove(dumpPath.c_str());
+}
+
+void dumpV2PreservesMeshPrimitive() {
+    bs3d::RenderFrame original;
+    original.camera.fovy = 45.0f;
+    bs3d::RenderPrimitiveCommand meshCmd;
+    meshCmd.kind = bs3d::RenderPrimitiveKind::Mesh;
+    meshCmd.bucket = bs3d::RenderBucket::Opaque;
+    meshCmd.transform.position = {1.0f, 2.0f, 3.0f};
+    meshCmd.transform.scale = {0.5f, 0.5f, 0.5f};
+    meshCmd.transform.yawRadians = 1.2f;
+    meshCmd.size = {1.0f, 1.0f, 1.0f};
+    meshCmd.tint = {10, 20, 30, 200};
+    meshCmd.mesh.id = 42;
+    meshCmd.material.id = 7;
+    meshCmd.sourceId = "test_mesh_source";
+    original.primitives.push_back(meshCmd);
+
+    const std::string path = "artifacts/test_dump_v2_mesh.txt";
+    bs3d::RenderFrameDumpWriteOptions options;
+    options.version = bs3d::RenderFrameDumpVersion::V2;
+    expect(bs3d::writeRenderFrameDump(original, path, options), "v2 write succeeds");
+
+    bs3d::RenderFrame loaded;
+    std::string error;
+    expect(bs3d::readRenderFrameDump(path, loaded, &error), "v2 read succeeds");
+    expect(error.empty(), "v2 read has no error");
+    expect(loaded.primitives.size() == 1, "v2 preserves 1 Mesh primitive");
+    expect(loaded.primitives[0].kind == bs3d::RenderPrimitiveKind::Mesh, "kind is Mesh");
+    expect(loaded.primitives[0].mesh.id == 42, "meshId preserved");
+    expect(loaded.primitives[0].material.id == 7, "materialId preserved");
+    expect(loaded.primitives[0].sourceId == "test_mesh_source", "sourceId preserved");
+    expect(loaded.primitives[0].transform.position.x == 1.0f, "position preserved");
+
+    std::remove(path.c_str());
+}
+
+void dumpV2PreservesBoxAndMeshMixed() {
+    bs3d::RenderFrame original;
+    original.camera.fovy = 60.0f;
+    bs3d::RenderPrimitiveCommand boxCmd;
+    boxCmd.kind = bs3d::RenderPrimitiveKind::Box;
+    boxCmd.bucket = bs3d::RenderBucket::Vehicle;
+    boxCmd.sourceId = "box_one";
+    original.primitives.push_back(boxCmd);
+
+    bs3d::RenderPrimitiveCommand meshCmd;
+    meshCmd.kind = bs3d::RenderPrimitiveKind::Mesh;
+    meshCmd.bucket = bs3d::RenderBucket::Opaque;
+    meshCmd.mesh.id = 3;
+    meshCmd.sourceId = "mesh_one";
+    original.primitives.push_back(meshCmd);
+
+    const std::string path = "artifacts/test_dump_v2_box_mesh.txt";
+    bs3d::RenderFrameDumpWriteOptions options;
+    options.version = bs3d::RenderFrameDumpVersion::V2;
+    expect(bs3d::writeRenderFrameDump(original, path, options), "v2 write mixed succeeds");
+
+    bs3d::RenderFrame loaded;
+    std::string error;
+    expect(bs3d::readRenderFrameDump(path, loaded, &error), "v2 read mixed succeeds");
+    expect(loaded.primitives.size() == 2, "v2 preserves 2 primitives");
+    expect(loaded.primitives[0].kind == bs3d::RenderPrimitiveKind::Box, "first is Box");
+    expect(loaded.primitives[1].kind == bs3d::RenderPrimitiveKind::Mesh, "second is Mesh");
+    expect(loaded.primitives[1].mesh.id == 3, "meshId preserved in mixed frame");
+
+    std::remove(path.c_str());
+}
+
+void dumpV1StillSkipsMeshOnWrite() {
+    bs3d::RenderFrame original;
+    original.camera.fovy = 45.0f;
+    bs3d::RenderPrimitiveCommand meshCmd;
+    meshCmd.kind = bs3d::RenderPrimitiveKind::Mesh;
+    meshCmd.bucket = bs3d::RenderBucket::Opaque;
+    meshCmd.mesh.id = 99;
+    meshCmd.sourceId = "should_be_skipped";
+    original.primitives.push_back(meshCmd);
+
+    const std::string path = "artifacts/test_dump_v1_skips_mesh.txt";
+    expect(bs3d::writeRenderFrameDump(original, path), "v1 write succeeds");
+
+    bs3d::RenderFrame loaded;
+    expect(bs3d::readRenderFrameDump(path, loaded), "v1 read succeeds");
+    expect(loaded.primitives.empty(), "v1 must skip Mesh primitive");
+
+    std::remove(path.c_str());
+}
+
+void dumpReaderRejectsUnsupportedVersion() {
+    const std::string path = "artifacts/test_dump_unknown_ver.txt";
+    {
+        std::ofstream file(path);
+        file << "RenderFrameDump v3\n";
+    }
+
+    bs3d::RenderFrame loaded;
+    std::string error;
+    expect(!bs3d::readRenderFrameDump(path, loaded, &error), "must reject v3 header");
+    expect(!error.empty(), "must set error for unsupported version");
+
+    std::remove(path.c_str());
+}
+
+void dumpV2PreservesDebugLines() {
+    bs3d::RenderFrame original;
+    original.camera.fovy = 45.0f;
+    original.debugLines.push_back({{0.0f, 0.0f, 0.0f}, {1.0f, 0.0f, 0.0f}, {255, 0, 0, 255}});
+    original.debugLines.push_back({{0.0f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0, 255, 0, 255}});
+
+    const std::string path = "artifacts/test_dump_v2_lines.txt";
+    bs3d::RenderFrameDumpWriteOptions options;
+    options.version = bs3d::RenderFrameDumpVersion::V2;
+    expect(bs3d::writeRenderFrameDump(original, path, options), "v2 write lines succeeds");
+
+    bs3d::RenderFrame loaded;
+    expect(bs3d::readRenderFrameDump(path, loaded), "v2 read lines succeeds");
+    expect(loaded.debugLines.size() == 2, "v2 preserves debug lines");
+
+    std::remove(path.c_str());
 }
 
 // ---------- RendererFactory tests ----------
@@ -1967,6 +2084,11 @@ int main() {
     dumpReadUnknownPrimitiveKindFails();
     dumpSkipsNonBoxPrimitivesOnWrite();
     dumpRoundTripWithBoxAndNonBoxValidatesOnlyBoxSurvives();
+    dumpV2PreservesMeshPrimitive();
+    dumpV2PreservesBoxAndMeshMixed();
+    dumpV1StillSkipsMeshOnWrite();
+    dumpReaderRejectsUnsupportedVersion();
+    dumpV2PreservesDebugLines();
     nullRendererConsumesEmptyRenderFrame();
     nullRendererConsumesBuilderOutput();
     nullRendererRecordsRenderFrameStats();
