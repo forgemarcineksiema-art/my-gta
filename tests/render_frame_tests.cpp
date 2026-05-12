@@ -1,3 +1,4 @@
+#include "CpuMeshData.h"
 #include "MaterialRegistry.h"
 #include "MeshRegistry.h"
 #include "RenderExtraction.h"
@@ -20,6 +21,7 @@
 #include <vector>
 
 #if defined(BS3D_HAS_D3D11_RENDERER)
+#include "D3D11MeshUploadAdapter.h"
 #include "D3D11Renderer.h"
 #include "D3D11MeshCache.h"
 #endif
@@ -1488,6 +1490,22 @@ void d3d11MeshCacheFindReturnsFalseAfterFailedUpload() {
     expect(cache.count() == 0, "count must be 0 after failed upload");
 }
 
+void d3d11MeshUploadAdapterPreservesVertexIndexCounts() {
+    const auto cube = bs3d::makeCpuMeshUnitCube("test_cube");
+    const auto upload = bs3d::makeD3D11MeshUpload(cube);
+    expect(upload.vertices.size() == cube.vertices.size(), "adapter must preserve vertex count");
+    expect(upload.indices.size() == cube.indices.size(), "adapter must preserve index count");
+}
+
+void d3d11MeshUploadAdapterPreservesFirstVertexPosition() {
+    const auto tri = bs3d::makeCpuMeshTriangle("test_tri");
+    const auto upload = bs3d::makeD3D11MeshUpload(tri);
+    expect(upload.vertices.size() >= 3, "triangle upload must have at least 3 vertices");
+    expect(upload.vertices[0].position[0] == tri.vertices[0].position.x, "x must match");
+    expect(upload.vertices[0].position[1] == tri.vertices[0].position.y, "y must match");
+    expect(upload.vertices[0].position[2] == tri.vertices[0].position.z, "z must match");
+}
+
 #endif
 
 // ---------- RenderFrameDump v1 unsupported-kind tests ----------
@@ -1791,6 +1809,37 @@ void materialRegistryDefaultsAreNotReleased() {
     expect(found.id == registry.defaultOpaque().id, "defaultOpaque must remain findable after release attempt");
 }
 
+// CpuMeshData tests
+
+void cpuMeshDataEmptyIsInvalid() {
+    bs3d::CpuMeshData mesh;
+    expect(!bs3d::isValidCpuMeshData(mesh), "empty mesh must be invalid");
+    mesh.vertices.push_back({{0.0f, 0.0f, 0.0f}});
+    expect(!bs3d::isValidCpuMeshData(mesh), "mesh with vertices but no indices must be invalid");
+}
+
+void cpuMeshDataUnitCubeIsValid() {
+    const auto cube = bs3d::makeCpuMeshUnitCube("test_cube");
+    expect(bs3d::isValidCpuMeshData(cube), "unit cube must be valid");
+    expect(cube.debugName == "test_cube", "debugName must be set");
+    expect(cube.vertices.size() == 8, "unit cube must have 8 vertices");
+    expect(cube.indices.size() == 36, "unit cube must have 36 indices");
+}
+
+void cpuMeshDataTriangleIsValid() {
+    const auto tri = bs3d::makeCpuMeshTriangle("test_tri");
+    expect(bs3d::isValidCpuMeshData(tri), "triangle must be valid");
+    expect(tri.debugName == "test_tri", "debugName must be set");
+    expect(tri.vertices.size() == 3, "triangle must have 3 vertices");
+    expect(tri.indices.size() == 3, "triangle must have 3 indices");
+}
+
+void cpuMeshDataUnitCubeHasNonZeroCounts() {
+    const auto cube = bs3d::makeCpuMeshUnitCube("cube");
+    expect(cube.vertices.size() > 0, "unit cube vertex count must be non-zero");
+    expect(cube.indices.size() > 0, "unit cube index count must be non-zero");
+}
+
 void factoryCreatesNullRenderer() {
     bs3d::RendererFactoryRequest request;
     request.useNullRenderer = true;
@@ -1947,6 +1996,8 @@ int main() {
     d3d11MeshCacheFindReturnsFalseForMissingHandle();
     d3d11MeshCacheFindReturnsFalseForZeroHandle();
     d3d11MeshCacheFindReturnsFalseAfterFailedUpload();
+    d3d11MeshUploadAdapterPreservesVertexIndexCounts();
+    d3d11MeshUploadAdapterPreservesFirstVertexPosition();
 #endif
     meshRegistryHandleZeroIsInvalid();
     meshRegistryAllocateReturnsValidHandle();
@@ -1971,6 +2022,10 @@ int main() {
     materialRegistryStartsWithDefaultsCount();
     materialRegistryUserAllocationChangesCount();
     materialRegistryDefaultsAreNotReleased();
+    cpuMeshDataEmptyIsInvalid();
+    cpuMeshDataUnitCubeIsValid();
+    cpuMeshDataTriangleIsValid();
+    cpuMeshDataUnitCubeHasNonZeroCounts();
     factoryCreatesNullRenderer();
     factoryReturnsErrorForRaylibBackend();
     factoryDoesNotPretendRaylibAdapterExists();

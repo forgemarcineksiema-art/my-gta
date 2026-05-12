@@ -58,10 +58,11 @@ if(WIN32)
     add_library(bs3d_renderer_d3d11 STATIC
         src/render_d3d11/D3D11Renderer.cpp
         src/render_d3d11/D3D11MeshCache.cpp
+        src/render_d3d11/D3D11MeshUploadAdapter.cpp
     )
 
     target_link_libraries(bs3d_renderer_d3d11 PUBLIC bs3d_core PRIVATE d3d11 dxgi d3dcompiler)
-    target_include_directories(bs3d_renderer_d3d11 PUBLIC include PRIVATE src/render_d3d11)
+    target_include_directories(bs3d_renderer_d3d11 PUBLIC include PRIVATE src/render_d3d11 src/render)
     bs3d_enable_warnings(bs3d_renderer_d3d11)
 endif()
 
@@ -79,6 +80,7 @@ add_test(NAME bs3d_core_tests COMMAND bs3d_tests)
 add_executable(bs3d_render_tests
     tests/render_frame_tests.cpp
     src/game/RenderExtraction.cpp
+    src/render/CpuMeshData.cpp
     src/render/MeshRegistry.cpp
     src/render/MaterialRegistry.cpp
     src/render/RendererFactory.cpp
