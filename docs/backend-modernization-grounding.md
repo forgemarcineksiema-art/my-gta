@@ -1,7 +1,9 @@
 # Backend modernization grounding (anti-hallucination)
 
 Status: LIVE (for modernization prep)
-Last verified against implementation evidence: 2026-05-11
+Last verified against implementation evidence: 2026-05-12
+
+See also: `docs/d3d11-modernization-milestone.md` for a concise D3D11 renderer modernization milestone summary.
 
 Cel tego dokumentu: uziemić przyszłe prace modernizacyjne backendu tak, żeby nie „dopisywać” systemów, które nie istnieją, i żeby nie psuć aktualnego workflow build/test/smoke.
 

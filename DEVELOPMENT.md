@@ -1,8 +1,10 @@
 # Development Workflow
 
 Status: LIVE
-Last verified against code: 2026-05-10
+Last verified against code: 2026-05-12
 Owner: project workflow
+
+See also: `docs/d3d11-modernization-milestone.md` for D3D11 renderer modernization status and boundaries.
 
 Do not run random `blokowa_satyra.exe` files from Explorer.
 
