@@ -1,6 +1,5 @@
 #pragma once
 
-#include "CpuMeshData.h"
 #include "D3D11MeshCache.h"
 #include "bs3d/render/IRenderer.h"
 #include "bs3d/render/RenderFrameValidation.h"
@@ -31,6 +30,8 @@ struct ID3D11VertexShader;
 struct IDXGISwapChain;
 
 namespace bs3d {
+
+struct CpuMeshData;
 
 struct D3D11RendererFrameStats {
     int drawnBoxes = 0;
