@@ -7,6 +7,7 @@ namespace bs3d {
 MissionController::MissionController(DialogueSystem& dialogue) : dialogue_(dialogue) {}
 
 void MissionController::start() {
+    // Only start from WaitingForStart — prevents double-start.
     if (phase_ != MissionPhase::WaitingForStart) {
         return;
     }
@@ -152,6 +153,7 @@ void MissionController::onDropoffReached() {
 }
 
 void MissionController::fail(std::string reason) {
+    // Cannot fail before start or after completion — prevents ghost failures.
     if (phase_ == MissionPhase::Completed || phase_ == MissionPhase::WaitingForStart) {
         return;
     }
@@ -186,6 +188,7 @@ void MissionController::retryToCheckpoint(MissionPhase checkpointPhase) {
 
 void MissionController::restoreForSave(MissionPhase phase, float phaseSeconds) {
     phase_ = phase;
+    // Repair: if saved in Failed, restart from ReachVehicle checkpoint.
     if (phase_ == MissionPhase::Failed) {
         phase_ = MissionPhase::ReachVehicle;
     }

@@ -33,7 +33,7 @@ The following are the runtime systems that most affect gameplay feel and stabili
 | Camera | `CameraRig.cpp` | **Reviewed** — code is solid, collapse smoothing safe, boom occlusion correct, recenter handled. Minor improvements: clamped `smoothAlpha` exponent, added phase comments. |
 | Vehicle handling | `VehicleController.cpp` | **Reviewed** — dt-safe, surface-response guarded, gear/RPM math correct, steering authority speed-dependent, drift entry/sustain/counter-steer/exit system solid, lateral slip integration guarded, collision impact handled. Added phase comments (decay, accel/brake, steering, drift, slip/position). |
 | World collision / props | `WorldCollision*`, `PropSimulation*` | Hit detection accuracy, support platform velocity |
-| Mission flow | `MissionRuntimeBridge*`, `MissionOutcomeTrigger*` | Phase transitions, save/load consistency |
+| Mission flow | `MissionController.cpp`, `MissionRuntimeBridge.cpp` | **Reviewed** — phase guards prevent double-trigger, `fail()` blocked before start/after completion, `retryToCheckpoint()` only from Failed with invalid phase fallback, `restoreForSave()` repairs Failed→ReachVehicle, `consumeChaseWanted()` one-shot, objective overrides support empty-string deletion, dialogue queues scoped per-phase. Added guard comments. |
 | Editor / dev tools | `RuntimeMapEditor*`, `DevTools*` | ImGui integration, isolation modes, asset preview |
 | Smoke / CI hygiene | `tools/*.ps1`, `CMakeLists.txt` | Script reliability, test coverage gaps |
 | Save / load | `SaveGame*`, `WorldDataLoader*` | Round-trip integrity, edge cases |
@@ -61,11 +61,11 @@ Each pass is small, testable, avoids huge rewrites, and does not touch D3D11.
 **Checked:** `simulate()` is a pure function (excellent for testing). dt clamped, surface multipliers guarded with `std::max(min, ...)`. Gear upshift immediate, downshift after shift timer (0.26s). Acceleration curve anti-stall (`std::max(0.22f, 1.0f - speedRatio * 0.68f)`). RPM: `(speed - gearLow) / max(0.1f, gearHigh - gearLow)` — division safety applied. Steering authority speed-dependent with minimum floor (`minimumSteeringAuthority = 0.62f`). Turn angle capped at `Pi * 0.95f`. Drift: entry via handbrake+steer+speed, sustain with `driftSustainFactor`, counter-steer with `driftCounterSteerRate`, exit with `driftExitRate`. Lateral slip target uses grip-to-power (`pow(grip, 3)`) for low-grip surface amplification — protected with `std::max(0.22f, grip)`. Position integration: `forward * speed * dt + right * lateralSlip * dt`. Collision impact: condition decay, instability/slip/suspension set, speed reduction (0.35x for >8m/s, 0.62x otherwise). Added phase comments (1: decay, 2: accel/brake/drag, 3: steering, 4: drift, 5: slip/position/visual).
 **Remaining risks:** None at current smoke scope. Gear/RPM display consistent. Drift entry/exit predictable.
 
-### Pass 4: Mission flow consistency
+### Pass 4: Mission flow consistency — REVIEWED
 
-**Scope:** `MissionRuntimeBridge`, phase transitions, save/load round-trip.
-**Check:** Does skipping through phases break state? Does save/load restore missions correctly?
-**Test:** `--smoke-frames` with save/load cycle, verify mission phase unchanged.
+**Scope:** `MissionController.cpp`, `MissionRuntimeBridge.cpp`.
+**Checked:** All phase transitions use explicit current-phase guards (no double-trigger). `fail()` blocked before `start()` and after `Completed`. `retryToCheckpoint()` only from Failed phase; invalid checkpoint phases (Failed/Completed/WaitingForStart) fall back to ReachVehicle. `restoreForSave()` repairs Failed→ReachVehicle and correctly sets `chaseWanted_` for ChaseActive phase. `consumeChaseWanted()` one-shot consumption prevents stale chase triggers. Objective overrides support empty-string deletion (`erase`). Dialogue queues scoped per-phase with three separate channels (mission, NPC reaction, cutscene). `MissionRuntimeBridge` dispatches triggers cleanly with event cooldowns (`consume()`). Added guard comments. Existing mission validator tests pass (ci includes `bs3d_mission_validation`).
+**Remaining risks:** None at current smoke scope. Phase transitions are deterministic and guarded.
 
 ### Pass 5: Prop simulation / world collision edge cases
 
