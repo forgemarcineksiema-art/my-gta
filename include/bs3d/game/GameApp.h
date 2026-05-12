@@ -16,6 +16,7 @@ struct GameRunOptions {
     int renderFrameShadowInterval = 120;
     std::string renderFrameShadowDumpPath;
     int renderFrameShadowDumpVersion = 1; // 1 = V1, 2 = V2
+    bool renderFrameShadowMeshes = false;
     std::string dataRoot = "data";
     std::string savePath = "artifacts/savegame_intro.sav";
     std::string executablePath;

@@ -8,6 +8,8 @@
 #include "D3D11ShadowSidecar.h"
 #include "DevTools.h"
 
+#include "MaterialRegistry.h"
+#include "MeshRegistry.h"
 #include "RenderFrameDump.h"
 #include "IntroLevelBuilder.h"
 #include "IntroLevelPresentation.h"
@@ -2546,6 +2548,10 @@ void GameApp::run(const GameRunOptions& options) {
             }
         }
 
+        MeshRegistry shadowMeshRegistry;
+        MaterialRegistry shadowMaterialRegistry;
+        bool shadowMeshRegistrySeeded = false;
+
         while (!platform.shouldClose()) {
             RawInputState frameRawInput = runtime.readRawInput();
             runtime.handleFrameInput(frameRawInput);
@@ -2580,7 +2586,27 @@ void GameApp::run(const GameRunOptions& options) {
                 RenderFrameBuilder builder;
                 builder.setCamera(toRenderCamera(renderSnapshot.camera));
 
-                addWorldRenderListFallbackBoxes(builder, renderList, runtime.assetRegistry.definitions());
+                const auto& assetDefs = runtime.assetRegistry.definitions();
+
+                WorldRenderExtractionStats extractionStats;
+                if (options.renderFrameShadowMeshes) {
+                    if (!shadowMeshRegistrySeeded) {
+                        shadowMeshRegistrySeeded = true;
+                        int seeded = 0;
+                        for (const auto& obj : renderList.opaque) {
+                            if (seeded >= 3) break;
+                            if (obj && shadowMeshRegistry.find(obj->assetId).id == 0) {
+                                shadowMeshRegistry.allocate(obj->assetId);
+                                ++seeded;
+                            }
+                        }
+                    }
+                    extractionStats = addWorldRenderListMeshCommands(
+                        builder, renderList, assetDefs,
+                        shadowMeshRegistry, shadowMaterialRegistry);
+                } else {
+                    extractionStats = addWorldRenderListFallbackBoxes(builder, renderList, assetDefs);
+                }
 
                 builder.addDebugLine({0.0f, 0.0f, 0.0f}, {3.0f, 0.0f, 0.0f}, renderColor(255, 0, 0));
                 builder.addDebugLine({0.0f, 0.0f, 0.0f}, {0.0f, 3.0f, 0.0f}, renderColor(0, 255, 0));
@@ -2617,11 +2643,15 @@ void GameApp::run(const GameRunOptions& options) {
                 ++shadowFramesBuilt;
 
                 TraceLog(LOG_INFO,
-                         "RenderFrame shadow: primitives=%d debugLines=%d valid=%s nullCalls=%d",
+                         "RenderFrame shadow: primitives=%d debugLines=%d valid=%s nullCalls=%d"
+                         " emittedMeshes=%d meshFallbacks=%d missingDefs=%d",
                          stats.totalPrimitives,
                          stats.debugLines,
                          validation.valid ? "true" : "false",
-                         nullRenderer.renderCalls());
+                         nullRenderer.renderCalls(),
+                         extractionStats.emittedMeshes,
+                         extractionStats.meshFallbacks,
+                         extractionStats.missingDefinitions);
 
                 if (sidecar.isInitialized()) {
                     sidecar.submit(shadowFrame);
@@ -2645,7 +2675,7 @@ void GameApp::run(const GameRunOptions& options) {
                         }
                         if (prim.kind == RenderPrimitiveKind::Box) {
                             ++supportedBoxes;
-                        } else if (prim.kind == RenderPrimitiveKind::Mesh && isBuiltInUnitCubeMesh(prim.mesh)) {
+                        } else if (prim.kind == RenderPrimitiveKind::Mesh) {
                             ++supportedMeshes;
                         }
                     }
@@ -2669,7 +2699,8 @@ void GameApp::run(const GameRunOptions& options) {
                               "drawnBoxes=%d drawnMeshes=%d skipMissMesh=%d skipKinds=%d skipBuckets=%d skipPrims=%d "
                               "drawnLines=%d skipLines=%d "
                               "supportedBoxes=%d supportedMeshes=%d supportedPrims=%d "
-                              "boxCoveragePct=%d meshCoveragePct=%d primitiveCoveragePct=%d lineCoveragePct=%d",
+                              "boxCoveragePct=%d meshCoveragePct=%d primitiveCoveragePct=%d lineCoveragePct=%d "
+                              "meshEmitted=%d meshFallbacks=%d meshMissingDefs=%d",
                               shadowFramesBuilt,
                               shadowFramesSubmitted,
                               stats.totalPrimitives,
@@ -2698,7 +2729,10 @@ void GameApp::run(const GameRunOptions& options) {
                               boxCoveragePct,
                               meshCoveragePct,
                               primitiveCoveragePct,
-                              lineCoveragePct);
+                              lineCoveragePct,
+                              extractionStats.emittedMeshes,
+                              extractionStats.meshFallbacks,
+                              extractionStats.missingDefinitions);
                     if (!sidecar.isInitialized() && options.d3d11ShadowWindow) {
                         TraceLog(LOG_WARNING, "RenderFrame shadow diag: sidecar error: %s", sidecar.lastError());
                     }

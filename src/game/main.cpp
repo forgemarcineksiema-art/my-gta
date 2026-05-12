@@ -37,6 +37,7 @@ void printHelp(std::ostream& out) {
         << "  --physics <custom>       Physics backend (planned: physx, not implemented)\n"
         << "  --smoke-frames <count>   Exit after count rendered frames\n"
         << "  --renderframe-shadow     Build/validate a shadow RenderFrame from world data each frame (dev/tool)\n"
+        << "  --renderframe-shadow-meshes  Emit Mesh commands in shadow frame via MeshRegistry (dev only, implies --renderframe-shadow)\n"
         << "  --d3d11-shadow-window    Open a sidecar D3D11 window rendering the shadow RenderFrame (dev only)\n"
         << "  --d3d11-shadow-diagnostics  Log detailed sidecar/shadow bucket stats (dev only)\n"
         << "  --renderframe-shadow-interval <count>  Shadow frame build interval, default 120 (min 1)\n"
@@ -118,6 +119,9 @@ int main(int argc, char** argv) {
                     throw std::runtime_error(arg + " requires a value >= 1");
                 }
                 options.renderFrameShadowInterval = value;
+            } else if (arg == "--renderframe-shadow-meshes") {
+                options.renderFrameShadow = true;
+                options.renderFrameShadowMeshes = true;
             } else {
                 throw std::runtime_error("unknown option: " + arg);
             }
