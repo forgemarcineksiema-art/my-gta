@@ -60,6 +60,11 @@ if ($Build) {
     if ($LASTEXITCODE -ne 0) {
         throw "Build of bs3d_d3d11_renderer_smoke failed with exit code $LASTEXITCODE"
     }
+    Write-Host "Building bs3d_d3d11_game_shell (preset $Preset)..."
+    cmake --build --preset $Preset --target bs3d_d3d11_game_shell
+    if ($LASTEXITCODE -ne 0) {
+        throw "Build of bs3d_d3d11_game_shell failed with exit code $LASTEXITCODE"
+    }
     Write-Host "Build completed"
 }
 
@@ -119,6 +124,15 @@ if ($headerLine -ne $expectedHeader) {
 
 Write-Host "CAPTURE OK ($fileSize bytes, $DumpVersion header)" -ForegroundColor Green
 
+# --- Generate test OBJ ---
+$TestObj = (Join-Path $SourceRoot "artifacts\test_triangle.obj")
+@"
+v 0 1 0
+v -1 -1 0
+v 1 -1 0
+f 1 2 3
+"@ | Set-Content -Path $TestObj
+
 # --- Replay (direct) ---
 Write-Host ""
 Write-Host "--- REPLAY: D3D11 smoke (direct) ---"
@@ -172,6 +186,17 @@ if ($LASTEXITCODE -eq 0) {
     Write-Host "REPLAY (game shell add-test-mesh) OK" -ForegroundColor Green
 } else {
     Write-Host "REPLAY (game shell add-test-mesh) FAILED (exit code $LASTEXITCODE)" -ForegroundColor Red
+    exit 1
+}
+
+# --- Replay (game shell load-mesh) ---
+Write-Host ""
+Write-Host "--- REPLAY: D3D11 game shell (load-mesh) ---"
+& $ShellExe --frames 3 --load-frame $OutputFull --diagnostics --load-mesh $TestObj
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "REPLAY (game shell load-mesh) OK" -ForegroundColor Green
+} else {
+    Write-Host "REPLAY (game shell load-mesh) FAILED (exit code $LASTEXITCODE)" -ForegroundColor Red
     exit 1
 }
 

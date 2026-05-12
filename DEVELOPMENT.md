@@ -167,6 +167,11 @@ Add `--load-mesh <path>` to load a minimal OBJ file through CpuMeshLoader and re
 
 - Diagnostics should show `drawnMeshes=1` (or `drawnMeshes=3` when used with `--add-test-mesh`)
 
+The capture/replay script (`.\tools\renderframe_capture_replay.ps1`) now validates `--load-mesh` with a generated OBJ file:
+- Script creates `artifacts\test_triangle.obj` after capture
+- Runs `bs3d_d3d11_game_shell --load-mesh artifacts\test_triangle.obj`
+- Minimal OBJ only, no textures/materials
+
 Or build and run through the capture/replay script:
 
 ```powershell
