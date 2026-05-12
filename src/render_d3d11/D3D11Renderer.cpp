@@ -1,5 +1,8 @@
 #include "D3D11Renderer.h"
 
+#include "D3D11MeshUploadAdapter.h"
+#include "CpuMeshData.h"
+
 #include <d3d11.h>
 #include <d3dcompiler.h>
 #include <dxgi.h>
@@ -732,25 +735,9 @@ bool D3D11Renderer::initialize(const D3D11RendererConfig& config, std::string* e
     height_ = config.height;
 
     {
-        D3D11MeshUpload cube;
-        cube.vertices.push_back({{-0.5f, -0.5f, -0.5f}});
-        cube.vertices.push_back({{-0.5f,  0.5f, -0.5f}});
-        cube.vertices.push_back({{ 0.5f,  0.5f, -0.5f}});
-        cube.vertices.push_back({{ 0.5f, -0.5f, -0.5f}});
-        cube.vertices.push_back({{-0.5f, -0.5f,  0.5f}});
-        cube.vertices.push_back({{-0.5f,  0.5f,  0.5f}});
-        cube.vertices.push_back({{ 0.5f,  0.5f,  0.5f}});
-        cube.vertices.push_back({{ 0.5f, -0.5f,  0.5f}});
-        const std::uint16_t indices[] = {
-            0, 1, 2, 0, 2, 3,
-            4, 6, 5, 4, 7, 6,
-            4, 5, 1, 4, 1, 0,
-            3, 2, 6, 3, 6, 7,
-            1, 5, 6, 1, 6, 2,
-            4, 0, 3, 4, 3, 7,
-        };
-        cube.indices.insert(cube.indices.end(), std::begin(indices), std::end(indices));
-        meshCache_.upload(device_, MeshHandle{BuiltInUnitCubeMeshId}, cube);
+        const auto cubeCpu = makeCpuMeshUnitCube("builtin_unit_cube");
+        const auto cubeUpload = makeD3D11MeshUpload(cubeCpu);
+        meshCache_.upload(device_, MeshHandle{BuiltInUnitCubeMeshId}, cubeUpload);
     }
 
     if (error != nullptr) {

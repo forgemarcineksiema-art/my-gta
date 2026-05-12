@@ -59,6 +59,7 @@ if(WIN32)
         src/render_d3d11/D3D11Renderer.cpp
         src/render_d3d11/D3D11MeshCache.cpp
         src/render_d3d11/D3D11MeshUploadAdapter.cpp
+        src/render/CpuMeshData.cpp
     )
 
     target_link_libraries(bs3d_renderer_d3d11 PUBLIC bs3d_core PRIVATE d3d11 dxgi d3dcompiler)
