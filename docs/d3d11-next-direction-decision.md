@@ -1,6 +1,6 @@
 # D3D11 renderer modernization — next direction decision
 
-Status: PLANNING
+Status: DECIDED (Option A implemented, now paused via Option E)
 Created: 2026-05-12
 After: Stages 1–6c complete
 
@@ -135,6 +135,8 @@ Stages 1–6c are fully implemented:
 - **Option E** makes sense if the priority should shift back to gameplay features.
 
 **Do not recommend jumping to Options B/C/D yet** — GLTF, materials, textures, and dump v3 are higher-complexity efforts that should be driven by a concrete, well-defined need. All can be planned later from the current documented state.
+
+**Current status:** Option A implemented, D3D11 pipeline parked via Option E. See `docs/runtime-gameplay-systems-checkpoint.md` for next gameplay-focused passes.
 
 ## Next prompt suggestions
 

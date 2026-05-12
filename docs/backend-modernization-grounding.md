@@ -233,7 +233,7 @@ Backend prep status update: Stage 3b complete — `D3D11GameShell` can upload a 
 
 Backend prep status update: Stage 4 DONE — `RenderFrameDump v2` is implemented and exposed through GameApp CLI (`--renderframe-shadow-dump-version v2`) and capture/replay script (`-DumpVersion v2`). v1 remains default. v2 is metadata-only — no geometry, textures, material definitions, or asset loading. Reader accepts both v1 and v2 headers.
 
-Backend prep status update: Option A implemented — broader `WorldAssetRegistry` integration. `selectShadowMeshSeedAssetIdsFromDefinitions` extends the seed selector: prefers assetIds with non-empty `modelPath`, skips `renderInGameplay=false`, seed limit 16 (one-time shadow snapshot, not dynamic streaming). Sample smoke: `seedCount=16 loadedMeshFiles=16` (up from 3/3). Dev/shadow-only, no GLTF/materials/textures. `--renderer d3d11` still inactive. WorldModelCache unchanged.
+Backend prep status update: D3D11 Stages 1–6c + Option A are **parked** — dev tooling is stable, all smokes pass. Resume only when there is a concrete driving need for GLTF, materials, textures, or main-renderer D3D11. Next focus: runtime/gameplay systems quality checkpoint. See `docs/runtime-gameplay-systems-checkpoint.md` for proposed passes (camera, player movement, vehicle handling, mission flow, prop simulation). Raylib remains main renderer. `--renderer d3d11` still inactive. WorldModelCache unchanged.
 
 Next direction: see `docs/d3d11-next-direction-decision.md` for Stage 6d+ options (broader integration, GLTF, material pipeline, pause renderer work).
 
