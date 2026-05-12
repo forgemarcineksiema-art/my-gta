@@ -130,10 +130,13 @@ void PlayerMotor::syncAfterVehicleExit(Vec3 position, float yawRadians) {
 void PlayerMotor::update(const PlayerInputIntent& inputIntent, const WorldCollision& collision, float deltaSeconds) {
     const float dt = std::max(0.0f, deltaSeconds);
     PlayerInputIntent intent = inputIntent;
+    // Re-normalize to protect against unnormalized input from external callers.
     intent.moveDirection = normalizeXZ(intent.moveDirection);
     state_.hitWallThisFrame = false;
     state_.hitOwnerIdThisFrame = 0;
     state_.hitSpeedThisFrame = 0.0f;
+
+    // Decay temporary state: impact intensity, stagger, bump cooldown, platform grace.
     state_.impactIntensity = std::max(0.0f, state_.impactIntensity - dt * 3.0f);
     state_.staggerSeconds = std::max(0.0f, state_.staggerSeconds - dt);
     bumpCooldownSeconds_ = std::max(0.0f, bumpCooldownSeconds_ - dt);
@@ -155,6 +158,7 @@ void PlayerMotor::update(const PlayerInputIntent& inputIntent, const WorldCollis
     }
 
     const bool wasGrounded = state_.grounded;
+    // Phase 1 — ground detection and platform handling.
     const GroundHit currentGround = collision.probeGround(
         state_.position,
         config_.groundSnapDistance,
@@ -205,6 +209,7 @@ void PlayerMotor::update(const PlayerInputIntent& inputIntent, const WorldCollis
         }
     }
 
+    // Phase 2 — speed, acceleration, and facing.
     const bool hasMove = lengthSquaredXZ(intent.moveDirection) > 0.0001f;
     float targetSpeed = hasMove ? (intent.sprint ? config_.sprintSpeed : (intent.walk ? config_.walkSpeed : config_.jogSpeed)) : 0.0f;
     float acceleration = config_.acceleration;
@@ -241,6 +246,7 @@ void PlayerMotor::update(const PlayerInputIntent& inputIntent, const WorldCollis
         state_.velocity.z = clamped.z;
     }
 
+    // Phase 3 — jump (with coyote time window).
     const bool canCoyoteJump = timeSinceGrounded_ <= config_.coyoteTime;
     if (jumpBufferSeconds_ > 0.0f && !jumpConsumed_ && (state_.grounded || canCoyoteJump)) {
         state_.velocity.y = config_.jumpVelocity;
@@ -262,6 +268,7 @@ void PlayerMotor::update(const PlayerInputIntent& inputIntent, const WorldCollis
             config_.rotationRadiansPerSecond * dt);
     }
 
+    // Phase 4 — collision resolve, wall bump, ground snap.
     Vec3 desired = state_.position + state_.velocity * dt;
     const CharacterCollisionConfig collisionConfig =
         makeCharacterCollisionConfig(config_, supportOwnerGraceSeconds_ > 0.0f ? supportOwnerId_ : 0);

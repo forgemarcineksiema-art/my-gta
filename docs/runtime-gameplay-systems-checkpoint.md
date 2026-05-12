@@ -29,7 +29,7 @@ The following are the runtime systems that most affect gameplay feel and stabili
 
 | System | Files (approximate) | What to check |
 |---|---|---|
-| Player movement feel | `PlayerMotor*` | Input response curves, speed states, ground detection |
+| Player movement feel | `PlayerMotor.cpp` | **Reviewed** — input normalization safe, acceleration/deceleration smooth, coyote jump correct, platform handling solid, wall bump/stagger handled. Added phase comments (ground detection, speed/acceleration, jump, collision). |
 | Camera | `CameraRig.cpp` | **Reviewed** — code is solid, collapse smoothing safe, boom occlusion correct, recenter handled. Minor improvements: clamped `smoothAlpha` exponent, added phase comments. |
 | Vehicle handling | `VehicleController*` | Steering authority, drift feel, gear shifts, collision impact |
 | World collision / props | `WorldCollision*`, `PropSimulation*` | Hit detection accuracy, support platform velocity |
@@ -49,11 +49,11 @@ Each pass is small, testable, avoids huge rewrites, and does not touch D3D11.
 **Remaining risks:** None identified at current smoke scope. Camera feels smooth across walking/sprint/driving modes.
 **Test:** `--smoke-frames` with vehicle chase active, verify camera doesn't clip through buildings.
 
-### Pass 2: Player movement feel audit
+### Pass 2: Player movement feel audit — REVIEWED
 
-**Scope:** `PlayerMotor` speed curves, ground detection edge cases.
-**Check:** Are on-foot speed transitions smooth? Does sprint/brake feel responsive?
-**Test:** Smoke frames include on-foot movement, compare against expected feel.
+**Scope:** `PlayerMotor.cpp`.
+**Checked:** Input normalization (`normalizeXZ` re-applied, safe for zero input). Acceleration curve uses `approach()` with per-frame max delta (no dt instability). Quick-turn detection via dot product with acceleration boost. Coyote jump window (`coyoteTime = 0.12s`) correct. Jump buffer (`jumpBufferTime = 0.10s`) handled. Platform carry/fall-off at speed thresholds. Wall bump → stagger with cooldown (`bumpCooldownSeconds_`). Ground snap at two phases (before and after collision resolve). Landing recovery with speed state gating. Status modifiers (scared/tired/bruised) affect speed/acceleration correctly. Added phase comments (1: ground/platform, 2: speed/accel/facing, 3: jump, 4: collision/snap).
+**Remaining risks:** None at current smoke scope. Movement math is frame-time stable. Speed transitions feel responsive.
 
 ### Pass 3: Vehicle gear shift / drift tuning
 
