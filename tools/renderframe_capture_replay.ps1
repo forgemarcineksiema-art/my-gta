@@ -73,6 +73,10 @@ $SmokeExe = Resolve-Executable -BinaryDir $BinaryDir -Configuration $Configurati
 
 $OutputFull = Join-Path $SourceRoot $Output
 
+# Ensure artifact directory exists before writing dump or test OBJ files.
+$ArtifactDir = Join-Path $SourceRoot "artifacts"
+New-Item -ItemType Directory -Force -Path $ArtifactDir | Out-Null
+
 Write-Host "== RenderFrame Capture/Replay Smoke =="
 Write-Host "Root: $SourceRoot"
 Write-Host "Preset: $Preset"
