@@ -125,6 +125,7 @@ if(WIN32)
 
     add_executable(bs3d_d3d11_game_shell
         src/render_d3d11/D3D11GameShell.cpp
+        src/render/CpuMeshLoader.cpp
         src/render/RenderFrameDump.cpp
     )
 

@@ -1,6 +1,7 @@
 #include "D3D11Renderer.h"
 
 #include "CpuMeshData.h"
+#include "CpuMeshLoader.h"
 #include "RenderFrameDump.h"
 #include "bs3d/render/RenderFrame.h"
 #include "bs3d/render/RenderFrameValidation.h"
@@ -25,6 +26,7 @@ namespace {
 
 struct ShellOptions {
     std::string loadFramePath;
+    std::string loadMeshPath;
     int frames = 120;
     bool diagnostics = false;
     bool orbitCamera = false;
@@ -93,6 +95,8 @@ ShellOptions parseOptions(int argc, char** argv) {
             options.wireBoxes = true;
         } else if (arg == "--add-test-mesh") {
             options.addTestMesh = true;
+        } else if (arg == "--load-mesh") {
+            options.loadMeshPath = requireValue(index, argc, argv, arg);
         } else if (arg == "--help") {
             std::cout << "Usage: bs3d_d3d11_game_shell --load-frame <path> [--frames <count>] [--diagnostics]\n"
                       << "                                [--orbit-camera] [--auto-orbit] [--wire-boxes]\n"
@@ -107,6 +111,7 @@ ShellOptions parseOptions(int argc, char** argv) {
                       << "  --auto-orbit          imply --orbit-camera and slowly auto-rotate\n"
                       << "  --wire-boxes          draw wireframe overlay on Box primitives\n"
                       << "  --add-test-mesh       append built-in Mesh (id=1) test primitive\n"
+                      << "  --load-mesh <path>    load OBJ mesh via CpuMeshLoader and render as Mesh (id=3)\n"
                       << "\n"
                       << "Orbit camera controls:\n"
                       << "  Left/Right arrows  rotate yaw\n"
@@ -318,6 +323,38 @@ int runShell(const ShellOptions& options) {
         triCmd.tint = {0, 200, 100, 255};
         triCmd.sourceId = "d3d11_shell_cpu_mesh_triangle_test";
         frame.primitives.push_back(triCmd);
+    }
+
+    if (!options.loadMeshPath.empty()) {
+        const auto loadResult = bs3d::loadCpuMeshFromObjFile(options.loadMeshPath);
+        if (!loadResult.ok) {
+            std::cerr << "D3D11 game shell: failed to load mesh " << options.loadMeshPath << ": " << loadResult.error << '\n';
+            renderer.shutdown();
+            if (IsWindow(window) != FALSE) {
+                DestroyWindow(window);
+            }
+            return 1;
+        }
+
+        std::string uploadError;
+        if (!renderer.uploadTestMesh(bs3d::MeshHandle{3}, loadResult.mesh, &uploadError)) {
+            std::cerr << "D3D11 game shell: failed to upload loaded mesh: " << uploadError << '\n';
+            renderer.shutdown();
+            if (IsWindow(window) != FALSE) {
+                DestroyWindow(window);
+            }
+            return 1;
+        }
+
+        bs3d::RenderPrimitiveCommand loadedCmd;
+        loadedCmd.kind = bs3d::RenderPrimitiveKind::Mesh;
+        loadedCmd.bucket = bs3d::RenderBucket::Opaque;
+        loadedCmd.mesh.id = 3;
+        loadedCmd.transform.position = {4.0f, 2.0f, 0.0f};
+        loadedCmd.transform.scale = {1.0f, 1.0f, 1.0f};
+        loadedCmd.tint = {100, 100, 255, 255};
+        loadedCmd.sourceId = "d3d11_shell_loaded_mesh_test";
+        frame.primitives.push_back(loadedCmd);
     }
 
     OrbitCameraState orbit = makeOrbitCameraState(frame);

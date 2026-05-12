@@ -12,7 +12,7 @@ Stage 5 status: DONE
   - Stage 5c (DONE): D3D11 sidecar uploads procedural meshes for emitted MeshHandle ids
   - Stage 5d (DONE): selectShadowMeshSeedAssetIds deterministic seed helper
 
-Stage 6 status: IN PROGRESS — Stage 6a CpuMeshLoader implemented.
+Stage 6 status: IN PROGRESS — Stage 6b D3D11GameShell --load-mesh implemented.
 
 See also:
 - `docs/d3d11-mesh-material-pipeline-plan.md` — full architecture plan
@@ -294,7 +294,7 @@ Stage 1 and cleanup are complete. Stage 2 is DONE (`D3D11MeshCache` integrated i
 
 **Stage 6 plan (PLANNED):**
 - Stage 6a: `CpuMeshLoader` — backend-neutral loader producing `CpuMeshData` from file paths. Minimal OBJ subset (positions + triangulated faces). Test data using tiny inline OBJ strings. No D3D11, no GPU. Linked into `bs3d_render_tests`.
-- Stage 6b: `D3D11GameShell --load-mesh <path>` uploads loaded `CpuMeshData` to `D3D11MeshCache`.
+- Stage 6b (DONE): `D3D11GameShell --load-mesh <path>` loads OBJ via `CpuMeshLoader`. Uploads to `D3D11MeshCache` as `MeshHandle{3}`, appends Opaque Mesh primitive with blue tint. `--diagnostics` shows `drawnMeshes` includes the loaded mesh. No GameApp integration. No textures/materials.
 - Stage 6c: Optional dev-only shadow sidecar upload from selected `WorldAssetDefinition.modelPath` files for seeded MeshHandle ids.
 - No texture loading, no material system, no GameApp main renderer, no `--renderer d3d11`.
 

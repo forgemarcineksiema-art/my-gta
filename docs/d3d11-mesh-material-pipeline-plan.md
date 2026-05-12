@@ -1,6 +1,6 @@
 # D3D11 mesh/material pipeline plan
 
-Status: LIVE (Stages 1-5 implemented, Stage 6a done, 6b next)
+Status: LIVE (Stages 1-6b implemented, 6c next)
 Created: 2026-05-12
 Stage 1: DONE — MeshRegistry + MaterialRegistry data-only registries
 Stage 2: DONE — D3D11MeshCache integrated into D3D11Renderer
@@ -12,7 +12,8 @@ Stage 5b: DONE — --renderframe-shadow-meshes wired to GameApp shadow path
 Stage 5c: DONE — D3D11 sidecar procedural mesh upload for emitted MeshHandle ids
 Stage 5d: DONE — selectShadowMeshSeedAssetIds deterministic seed helper
 Stage 6a: DONE — CpuMeshLoader minimal OBJ parser to CpuMeshData
-Next code pass: Stage 6b — D3D11GameShell --load-mesh <path>
+Stage 6b: DONE — D3D11GameShell --load-mesh <path>
+Next code pass: Stage 6c — dev-only shadow sidecar upload from selected modelPath files
 
 See also:
 - `docs/backend-modernization-grounding.md` — truth hierarchy, protected systems, non-goals

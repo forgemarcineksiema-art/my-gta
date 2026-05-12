@@ -159,6 +159,14 @@ Add `--add-test-mesh` to append test primitives:
 .\build\ci\Debug\bs3d_d3d11_game_shell.exe --frames 3 --load-frame artifacts\shadow_frame.txt --diagnostics --add-test-mesh
 ```
 
+Add `--load-mesh <path>` to load a minimal OBJ file through CpuMeshLoader and render it as Mesh (id=3, blue tint):
+
+```powershell
+.\build\ci\Debug\bs3d_d3d11_game_shell.exe --frames 3 --load-frame artifacts\shadow_frame.txt --diagnostics --load-mesh artifacts\test_triangle.obj
+```
+
+- Diagnostics should show `drawnMeshes=1` (or `drawnMeshes=3` when used with `--add-test-mesh`)
+
 Or build and run through the capture/replay script:
 
 ```powershell
