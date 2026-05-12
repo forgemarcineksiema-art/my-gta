@@ -2650,7 +2650,8 @@ void GameApp::run(const GameRunOptions& options) {
                              "opaque=%d vehicle=%d decal=%d glass=%d transl=%d debug=%d "
                              "sidecarInit=%d sidecarCalls=%d sidecarValid=%d "
                               "drawnBoxes=%d drawnMeshes=%d skipMissMesh=%d skipKinds=%d skipBuckets=%d skipPrims=%d "
-                              "drawnLines=%d skipLines=%d ",
+                              "drawnLines=%d skipLines=%d "
+                              "supportedBoxes=%d boxCoveragePct=%d lineCoveragePct=%d",
                               shadowFramesBuilt,
                               shadowFramesSubmitted,
                               stats.totalPrimitives,
