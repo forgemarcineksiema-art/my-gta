@@ -116,6 +116,12 @@ Add `--auto-orbit` (implies `--orbit-camera`) for slow automatic yaw rotation:
 - Q/E — lower/raise height
 - R — reset camera defaults (yaw=0, radius=8, height=4)
 
+Use `--frames 0` to run until closed (Escape or window X) instead of auto-exiting after a fixed frame count:
+
+```powershell
+.\build\ci\Debug\bs3d_d3d11_game_shell.exe --frames 0 --load-frame artifacts\shadow_frame.txt --diagnostics --orbit-camera
+```
+
 Or build and run through the capture/replay script:
 
 ```powershell

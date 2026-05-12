@@ -93,7 +93,7 @@ ShellOptions parseOptions(int argc, char** argv) {
                       << "and renders it through D3D11Renderer.\n"
                       << "\n"
                       << "  --load-frame <path>   required: path to RenderFrameDump v1 text file\n"
-                      << "  --frames <count>      frame count before exit (default 120)\n"
+                      << "  --frames <count>      frame count before exit (default 120; 0 = run until closed)\n"
                       << "  --diagnostics         print frame stats and D3D11 draw coverage\n"
                       << "  --orbit-camera        enable orbit inspection camera controls\n"
                       << "  --auto-orbit          imply --orbit-camera and slowly auto-rotate\n"
@@ -209,6 +209,10 @@ int runShell(const ShellOptions& options) {
     }
     const float autoOrbitSpeed = 0.02f;
 
+    if (options.orbitCamera) {
+        std::cout << "Orbit controls: Left/Right or A/D yaw, W/S zoom, Q/E height, R reset, Esc quit\n";
+    }
+
     if (options.orbitCamera && options.diagnostics) {
         std::cout << "orbit camera: enabled"
                   << " auto-orbit=" << (options.autoOrbit ? "enabled" : "disabled")
@@ -238,7 +242,7 @@ int runShell(const ShellOptions& options) {
     bool diagnosticsCoveragePrinted = false;
     bool running = true;
     MSG message{};
-    while (running && renderedFrames < options.frames) {
+    while (running && (options.frames == 0 || renderedFrames < options.frames)) {
         while (PeekMessageW(&message, nullptr, 0, 0, PM_REMOVE) != FALSE) {
             if (message.message == WM_QUIT) {
                 running = false;
