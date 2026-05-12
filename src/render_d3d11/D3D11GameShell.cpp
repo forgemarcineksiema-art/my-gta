@@ -375,11 +375,10 @@ int runShell(const ShellOptions& options) {
             const bool currentRDown = (GetAsyncKeyState(0x52) & 0x8000) != 0;
             if (currentRDown && !wasRDown) {
                 resetOrbitCameraState(orbit, frame);
-            } else if (!currentRDown) {
-                updateOrbitCameraStateFromKeyboard(orbit, options.autoOrbit, deltaSeconds);
             }
             wasRDown = currentRDown;
 
+            updateOrbitCameraStateFromKeyboard(orbit, options.autoOrbit, deltaSeconds);
             applyOrbitCameraToFrame(orbit, frame);
         }
 
