@@ -1,6 +1,6 @@
 # Runtime / gameplay systems quality checkpoint
 
-Status: COMPLETE (all 5 passes reviewed, no critical bugs found)
+Status: COMPLETE (all 6 passes reviewed, no critical bugs found)
 Created: 2026-05-12
 After: D3D11 Stages 1–6c + Option A (parked)
 
@@ -36,7 +36,7 @@ The following are the runtime systems that most affect gameplay feel and stabili
 | Mission flow | `MissionController.cpp`, `MissionRuntimeBridge.cpp` | **Reviewed** — phase guards prevent double-trigger, `fail()` blocked before start/after completion, `retryToCheckpoint()` only from Failed with invalid phase fallback, `restoreForSave()` repairs Failed→ReachVehicle, `consumeChaseWanted()` one-shot, objective overrides support empty-string deletion, dialogue queues scoped per-phase. Added guard comments. |
 | Editor / dev tools | `RuntimeMapEditor*`, `DevTools*` | ImGui integration, isolation modes, asset preview |
 | Smoke / CI hygiene | `tools/*.ps1`, `CMakeLists.txt` | Script reliability, test coverage gaps |
-| Save / load | `SaveGame*`, `WorldDataLoader*` | Round-trip integrity, edge cases |
+| Save / load | `SaveGame.cpp` | **Reviewed** — atomic temp-write/rename, pre-write validation, post-load re-validation, version lock, all Vec3 checked `finite()`, all enums validated, array counts capped (`std::clamp`, max 64 each), NaN returned on parse failure for catch by validator, fallback defaults on every field, newline injection prevented. Added guard comments. |
 
 ## Proposed next passes (outside renderer)
 
@@ -73,6 +73,12 @@ Each pass is small, testable, avoids huge rewrites, and does not touch D3D11.
 **Checked — PropSimulation:** dt clamped to `[0, 0.10]` preventing large jumps. FakeDynamic mode: spring-back to base via `pow(0.10, dt)`, velocity damped via `pow(0.18, dt)`. All modes: velocity zeroed below 0.02f threshold. Impulse strength clamped via `std::clamp(..., 0, 9.0f)`. Player contact: speed threshold 0.15f, softness 0.18f/0.58f for hard/soft blockers, division guard `std::max(maxImpulse, 0.001f)`. Carry: one-at-a-time, size limit 1.10f, forward normalization via `normalizeXZSafe()`. Drop: resets to basePosition.y.
 **Checked — WorldCollision:** Ground probe: `surface.size.z <= 0.0001f` zero-divide guard, `std::max(surface.size.z, 0.0001f)` at slope calc, `std::clamp(t)` safe. Character resolve: steps clamped 1–32, maxStepDistance protected `std::max(0.05f, ...)`. Collision profiles typed and consistent (no collision layering gaps). Added dt safety comment to PropSimulation update.
 **Remaining risks:** None at current smoke scope. Prop carry/drop stable. Ground detection solid at all tested positions.
+
+### Pass 6: Save / load consistency — REVIEWED
+
+**Scope:** `SaveGame.cpp`.
+**Checked:** Serialization: key-value text format with array index prefixes. Deserialization: fallback defaults on every field (`asInt/asFloat/asBool/asText`). Array counts capped via `std::clamp(count, 0, Max*)` — prevents allocation bombs from corrupt files. Validation: version lock (v1 only), all enums validated via switch-exhaustive `valid*()` functions, all Vec3 values checked `finite()`, ranges checked (condition 0-100, intensity 0-3, stackCount 1-5), newline injection prevented in source strings, favor IDs validated against known list. File I/O: atomic via temp file + rename, directory creation with error handling, stream error check, pre-write validation, post-load re-validation. `parseVec3` returns NaN on malformed input to be caught by `finite()` check.
+**Remaining risks:** None at current scope. Save format is self-validating. Atomic write prevents partial saves.
 
 ## Pre-pass verification
 

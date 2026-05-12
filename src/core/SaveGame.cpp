@@ -254,6 +254,7 @@ SaveGame deserializeSaveGame(const std::string& text) {
     save.przypalBandPulseAvailable = asBool(values, "przypal.bandPulseAvailable", false);
     const int contributorCount =
         std::clamp(asInt(values, "przypal.contributors.count", 0), 0, MaxSavedPrzypalContributors);
+    // Cap parsed count to prevent excessive allocation from tampered/corrupt files.
     save.przypalContributors.reserve(static_cast<std::size_t>(contributorCount));
     for (int index = 0; index < contributorCount; ++index) {
         const std::string prefix = "przypal.contributor." + std::to_string(index) + ".";
@@ -303,6 +304,7 @@ SaveGame deserializeSaveGame(const std::string& text) {
 
 SaveGameValidation validateSaveGame(const SaveGame& save) {
     SaveGameValidation validation;
+    // Version lock: reject unknown format versions to prevent misparse.
     if (save.version != 1) {
         addError(validation, "unsupported save version: " + std::to_string(save.version));
     }
@@ -423,6 +425,7 @@ SaveGameValidation validateSaveGame(const SaveGame& save) {
 }
 
 bool saveGameToFile(const SaveGame& save, const std::string& path) {
+    // Validate before writing to prevent corrupt saves on disk.
     if (!validateSaveGame(save).ok) {
         return false;
     }
@@ -466,6 +469,7 @@ bool loadSaveGameFromFile(const std::string& path, SaveGame& out) {
     std::ostringstream buffer;
     buffer << in.rdbuf();
     out = deserializeSaveGame(buffer.str());
+    // Re-validate after deserialization to catch corrupted or tampered files.
     return validateSaveGame(out).ok;
 }
 
