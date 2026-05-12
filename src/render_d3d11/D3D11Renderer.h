@@ -1,5 +1,6 @@
 #pragma once
 
+#include "D3D11MeshCache.h"
 #include "bs3d/render/IRenderer.h"
 #include "bs3d/render/RenderFrameValidation.h"
 
@@ -103,6 +104,8 @@ private:
 
     bool drawBoxWireOverlay_ = false;
     ID3D11RasterizerState* wireframeRasterizer_ = nullptr;
+
+    D3D11MeshCache meshCache_;
 };
 
 } // namespace bs3d

@@ -246,22 +246,21 @@ Before starting Stage 2 (`D3D11MeshCache` GPU upload), verify:
 
 ## 6) After stage 1 — what's next
 
-Stage 1 and cleanup are complete. Stage 2 skeleton is done (`D3D11MeshCache`):
+Stage 1 and cleanup are complete. Stage 2 is DONE (`D3D11MeshCache` integrated into `D3D11Renderer`):
 
-**Stage 2 skeleton status:**
-- `src/render_d3d11/D3D11MeshCache.h/.cpp` exist — private D3D11 GPU mesh cache.
-- `D3D11MeshUpload` / `D3D11MeshVertex` types defined (positions-only, matching existing `Vertex` struct).
-- `D3D11CachedMeshView` non-owning view struct with `find()` read-only lookup accessor.
-- `upload()` validates null device, zero handle, empty vertices/indices before GPU work.
-- Cache owns all GPU buffers; `D3D11CachedMeshView` is non-owning (read-only pointers).
+**Stage 2 status (completed):**
+- `D3D11MeshCache` integrated as private `meshCache_` member in `D3D11Renderer`.
+- Procedural unit cube (8 vertices, 36 indices) uploaded during `initialize()` as `MeshHandle{BuiltInUnitCubeMeshId}`.
+- `renderFrame()` routes `RenderPrimitiveKind::Mesh` commands through `meshCache_.find()`, binding cached VB/IB/indexCount.
+- Box rendering uses hardcoded cube VB/IB (unchanged).
+- Wireframe overlay supports cached meshes via `meshCache_.find()`.
+- `shutdown()` calls `meshCache_.clear()` before releasing D3D11 resources.
+- Diagnostics confirmed: `drawnMeshes=1` with `--add-test-mesh`, `skippedMissingMeshes` for uncached handles.
 - GPU-free tests in `bs3d_render_tests` (11 tests under `BS3D_HAS_D3D11_RENDERER` guard).
-- No rendering integration yet — `D3D11Renderer::renderFrame()` unchanged.
 - No asset loading, no GameApp integration, no material pipeline.
 
-**Stage 2 next pass:**
-- Integrate `D3D11MeshCache` into `D3D11Renderer` (add a private cache member).
-- When rendering a `RenderPrimitiveCommand` with `kind == Mesh` and a cached handle, bind the mesh's VB/IB and draw.
-- Smoke verification through `bs3d_d3d11_game_shell` with a procedurally-uploaded triangle.
+**Stage 2 next pass (future):**
+- Stage 3 — Game shell uploads test mesh through `D3D11MeshCache` API directly (beyond BuiltInUnitCubeMeshId).
 
 Do NOT skip stages or combine Stage 2 rendering with Stage 3 in a single pass.
 See `docs/d3d11-mesh-material-pipeline-plan.md` Section 3 for the full staged plan.

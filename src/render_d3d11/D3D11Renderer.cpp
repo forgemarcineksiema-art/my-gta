@@ -731,6 +731,28 @@ bool D3D11Renderer::initialize(const D3D11RendererConfig& config, std::string* e
     width_ = config.width;
     height_ = config.height;
 
+    {
+        D3D11MeshUpload cube;
+        cube.vertices.push_back({{-0.5f, -0.5f, -0.5f}});
+        cube.vertices.push_back({{-0.5f,  0.5f, -0.5f}});
+        cube.vertices.push_back({{ 0.5f,  0.5f, -0.5f}});
+        cube.vertices.push_back({{ 0.5f, -0.5f, -0.5f}});
+        cube.vertices.push_back({{-0.5f, -0.5f,  0.5f}});
+        cube.vertices.push_back({{-0.5f,  0.5f,  0.5f}});
+        cube.vertices.push_back({{ 0.5f,  0.5f,  0.5f}});
+        cube.vertices.push_back({{ 0.5f, -0.5f,  0.5f}});
+        const std::uint16_t indices[] = {
+            0, 1, 2, 0, 2, 3,
+            4, 6, 5, 4, 7, 6,
+            4, 5, 1, 4, 1, 0,
+            3, 2, 6, 3, 6, 7,
+            1, 5, 6, 1, 6, 2,
+            4, 0, 3, 4, 3, 7,
+        };
+        cube.indices.insert(cube.indices.end(), std::begin(indices), std::end(indices));
+        meshCache_.upload(device_, MeshHandle{BuiltInUnitCubeMeshId}, cube);
+    }
+
     if (error != nullptr) {
         error->clear();
     }
@@ -748,6 +770,7 @@ bool D3D11Renderer::isInitialized() const {
 }
 
 void D3D11Renderer::shutdown() {
+    meshCache_.clear();
     releaseAndNull(wireframeRasterizer_);
     releaseAndNull(lineVertexBuffer_);
     releaseAndNull(lineInputLayout_);
@@ -817,14 +840,8 @@ void D3D11Renderer::renderFrame(const RenderFrame& frame) {
     context_->OMSetBlendState(opaqueBlendState_, nullptr, 0xFFFFFFFF);
 
     for (const RenderPrimitiveCommand& command : frame.primitives) {
-        const bool isSupportedKind = (command.kind == RenderPrimitiveKind::Box) ||
-            (command.kind == RenderPrimitiveKind::Mesh && isBuiltInUnitCubeMesh(command.mesh));
-        if (!isSupportedKind) {
-            if (command.kind != RenderPrimitiveKind::Box && command.kind != RenderPrimitiveKind::Mesh) {
-                ++lastD3D11Stats_.skippedUnsupportedKinds;
-            } else if (command.kind == RenderPrimitiveKind::Mesh) {
-                ++lastD3D11Stats_.skippedMissingMeshes;
-            }
+        if (command.kind != RenderPrimitiveKind::Box && command.kind != RenderPrimitiveKind::Mesh) {
+            ++lastD3D11Stats_.skippedUnsupportedKinds;
             ++lastD3D11Stats_.skippedPrimitives;
             continue;
         }
@@ -834,10 +851,17 @@ void D3D11Renderer::renderFrame(const RenderFrame& frame) {
             continue;
         }
 
-        if (command.kind == RenderPrimitiveKind::Box) {
-            ++lastD3D11Stats_.drawnBoxes;
-        } else {
+        D3D11CachedMeshView cachedView;
+        const bool isMesh = command.kind == RenderPrimitiveKind::Mesh;
+        if (isMesh) {
+            if (!meshCache_.find(command.mesh, cachedView)) {
+                ++lastD3D11Stats_.skippedMissingMeshes;
+                ++lastD3D11Stats_.skippedPrimitives;
+                continue;
+            }
             ++lastD3D11Stats_.drawnMeshes;
+        } else {
+            ++lastD3D11Stats_.drawnBoxes;
         }
 
         if (isAlphaBlendBucket(command.bucket)) {
@@ -850,6 +874,16 @@ void D3D11Renderer::renderFrame(const RenderFrame& frame) {
                 context_->OMSetBlendState(opaqueBlendState_, nullptr, 0xFFFFFFFF);
                 usingAlphaBlend = false;
             }
+        }
+
+        if (isMesh) {
+            ID3D11Buffer* cachedVB = cachedView.vertexBuffer;
+            context_->IASetVertexBuffers(0, 1, &cachedVB, &stride, &offset);
+            context_->IASetIndexBuffer(cachedView.indexBuffer, DXGI_FORMAT_R16_UINT, 0);
+        } else {
+            ID3D11Buffer* boxVertexBuffer = vertexBuffer_;
+            context_->IASetVertexBuffers(0, 1, &boxVertexBuffer, &stride, &offset);
+            context_->IASetIndexBuffer(indexBuffer_, DXGI_FORMAT_R16_UINT, 0);
         }
 
         PrimitiveConstants constants{};
@@ -875,7 +909,7 @@ void D3D11Renderer::renderFrame(const RenderFrame& frame) {
         }
         std::memcpy(mapped.pData, &constants, sizeof(constants));
         context_->Unmap(constantBuffer_, 0);
-        context_->DrawIndexed(36, 0, 0);
+        context_->DrawIndexed(isMesh ? cachedView.indexCount : 36, 0, 0);
     }
 
     if (usingAlphaBlend) {
@@ -951,13 +985,27 @@ void D3D11Renderer::renderFrame(const RenderFrame& frame) {
         context_->PSSetConstantBuffers(0, 1, &constBuffer);
 
         for (const RenderPrimitiveCommand& command : frame.primitives) {
-            const bool isWireKind = (command.kind == RenderPrimitiveKind::Box) ||
-                (command.kind == RenderPrimitiveKind::Mesh && isBuiltInUnitCubeMesh(command.mesh));
-            if (!isWireKind) {
+            D3D11CachedMeshView wireView;
+            if (command.kind == RenderPrimitiveKind::Box) {
+                // Box always uses hardcoded geometry.
+            } else if (command.kind == RenderPrimitiveKind::Mesh) {
+                if (!meshCache_.find(command.mesh, wireView)) {
+                    continue;
+                }
+            } else {
                 continue;
             }
             if (!isSupportedBoxBucket(command.bucket)) {
                 continue;
+            }
+
+            if (command.kind == RenderPrimitiveKind::Mesh) {
+                ID3D11Buffer* wireVB = wireView.vertexBuffer;
+                context_->IASetVertexBuffers(0, 1, &wireVB, &boxStride, &boxOffset);
+                context_->IASetIndexBuffer(wireView.indexBuffer, DXGI_FORMAT_R16_UINT, 0);
+            } else {
+                context_->IASetVertexBuffers(0, 1, &vertexBuffer_, &boxStride, &boxOffset);
+                context_->IASetIndexBuffer(indexBuffer_, DXGI_FORMAT_R16_UINT, 0);
             }
 
             PrimitiveConstants constants{};
@@ -983,7 +1031,7 @@ void D3D11Renderer::renderFrame(const RenderFrame& frame) {
             }
             std::memcpy(mapped.pData, &constants, sizeof(constants));
             context_->Unmap(constantBuffer_, 0);
-            context_->DrawIndexed(36, 0, 0);
+            context_->DrawIndexed(command.kind == RenderPrimitiveKind::Mesh ? wireView.indexCount : 36, 0, 0);
         }
 
         context_->RSSetState(nullptr);
