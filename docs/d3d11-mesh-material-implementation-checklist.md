@@ -1,12 +1,13 @@
 # D3D11 mesh/material implementation checklist
 
-Status: LIVE (Stage 2 started)
+Status: LIVE (Stage 2 complete)
 Created: 2026-05-12
 First code pass: completed 2026-05-12
 Stage 1 cleanup: completed 2026-05-12
 Stage 2 skeleton: completed 2026-05-12
+Stage 2 rendering integration: completed 2026-05-12
 Stage 1 status: DONE
-Stage 2 status: IN PROGRESS — D3D11MeshCache skeleton exists, GPU-free tests pass.
+Stage 2 status: DONE — D3D11MeshCache integrated into D3D11Renderer, cached mesh rendering verified.
 
 See also:
 - `docs/d3d11-mesh-material-pipeline-plan.md` — full architecture plan

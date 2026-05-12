@@ -160,5 +160,16 @@ if ($LASTEXITCODE -eq 0) {
     exit 1
 }
 
+# --- Replay (game shell add-test-mesh) ---
+Write-Host ""
+Write-Host "--- REPLAY: D3D11 game shell (add-test-mesh) ---"
+& $ShellExe --frames 3 --load-frame $OutputFull --diagnostics --add-test-mesh
+if ($LASTEXITCODE -eq 0) {
+    Write-Host "REPLAY (game shell add-test-mesh) OK" -ForegroundColor Green
+} else {
+    Write-Host "REPLAY (game shell add-test-mesh) FAILED (exit code $LASTEXITCODE)" -ForegroundColor Red
+    exit 1
+}
+
 Write-Host ""
 Write-Host "All passes OK" -ForegroundColor Green
