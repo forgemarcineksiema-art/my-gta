@@ -57,6 +57,7 @@ target_include_directories(bs3d_core PUBLIC include)
 if(WIN32)
     add_library(bs3d_renderer_d3d11 STATIC
         src/render_d3d11/D3D11Renderer.cpp
+        src/render_d3d11/D3D11MeshCache.cpp
     )
 
     target_link_libraries(bs3d_renderer_d3d11 PUBLIC bs3d_core PRIVATE d3d11 dxgi d3dcompiler)

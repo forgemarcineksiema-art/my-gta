@@ -1,10 +1,12 @@
 # D3D11 mesh/material implementation checklist
 
-Status: LIVE (Stage 1 + cleanup complete)
+Status: LIVE (Stage 2 started)
 Created: 2026-05-12
 First code pass: completed 2026-05-12
 Stage 1 cleanup: completed 2026-05-12
-Stage 1 status: DONE — **all implementation and cleanup tasks finished.**
+Stage 2 skeleton: completed 2026-05-12
+Stage 1 status: DONE
+Stage 2 status: IN PROGRESS — D3D11MeshCache skeleton exists, GPU-free tests pass.
 
 See also:
 - `docs/d3d11-mesh-material-pipeline-plan.md` — full architecture plan
@@ -244,8 +246,20 @@ Before starting Stage 2 (`D3D11MeshCache` GPU upload), verify:
 
 ## 6) After stage 1 — what's next
 
-Stage 1 and cleanup are complete. Next:
+Stage 1 and cleanup are complete. Stage 2 skeleton is done (`D3D11MeshCache`):
 
-- **Stage 2** — `D3D11MeshCache` private GPU mesh cache inside `D3D11Renderer`. One uploaded mesh, drawn through existing per-primitive pipeline (shared VS/PS/constant buffer, different VB/IB/indexCount).
-- Do NOT skip stages or combine Stage 2 + Stage 3 in a single pass.
-- See `docs/d3d11-mesh-material-pipeline-plan.md` Section 3 for the full staged plan.
+**Stage 2 skeleton status:**
+- `src/render_d3d11/D3D11MeshCache.h/.cpp` exist — private D3D11 GPU mesh cache.
+- `D3D11MeshUpload` / `D3D11MeshVertex` types defined (positions-only, matching existing `Vertex` struct).
+- `upload()` validates null device, zero handle, empty vertices/indices before GPU work.
+- GPU-free tests in `bs3d_render_tests` (8 tests under `BS3D_HAS_D3D11_RENDERER` guard).
+- No rendering integration yet — `D3D11Renderer::renderFrame()` unchanged.
+- No asset loading, no GameApp integration, no material pipeline.
+
+**Stage 2 next pass:**
+- Integrate `D3D11MeshCache` into `D3D11Renderer` (add a private cache member).
+- When rendering a `RenderPrimitiveCommand` with `kind == Mesh` and a cached handle, bind the mesh's VB/IB and draw.
+- Smoke verification through `bs3d_d3d11_game_shell` with a procedurally-uploaded triangle.
+
+Do NOT skip stages or combine Stage 2 rendering with Stage 3 in a single pass.
+See `docs/d3d11-mesh-material-pipeline-plan.md` Section 3 for the full staged plan.

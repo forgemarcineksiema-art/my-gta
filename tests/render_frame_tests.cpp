@@ -21,6 +21,7 @@
 
 #if defined(BS3D_HAS_D3D11_RENDERER)
 #include "D3D11Renderer.h"
+#include "D3D11MeshCache.h"
 #endif
 
 namespace {
@@ -1377,6 +1378,85 @@ void d3d11RendererFrameStatsCountUnsupportedKinds() {
 }
 #endif
 
+// ---------- D3D11MeshCache GPU-free tests ----------
+
+#if defined(BS3D_HAS_D3D11_RENDERER)
+
+void d3d11MeshCacheDefaultCountIsZero() {
+    bs3d::D3D11MeshCache cache;
+    expect(cache.count() == 0, "fresh cache count must be 0");
+}
+
+void d3d11MeshCacheContainsReturnsFalseForUnknownHandle() {
+    bs3d::D3D11MeshCache cache;
+    expect(!cache.contains(bs3d::MeshHandle{0}), "cache must not contain MeshHandle{0}");
+    expect(!cache.contains(bs3d::MeshHandle{42}), "cache must not contain unknown handle");
+}
+
+void d3d11MeshCacheReleaseUnknownHandleIsSafe() {
+    bs3d::D3D11MeshCache cache;
+    cache.release(bs3d::MeshHandle{0});
+    cache.release(bs3d::MeshHandle{99});
+    expect(cache.count() == 0, "releasing unknown handles must not change count");
+}
+
+void d3d11MeshCacheUploadRejectsNullDevice() {
+    bs3d::D3D11MeshCache cache;
+    bs3d::D3D11MeshUpload mesh;
+    mesh.vertices.push_back({{0.0f, 0.0f, 0.0f}});
+    mesh.vertices.push_back({{1.0f, 0.0f, 0.0f}});
+    mesh.vertices.push_back({{0.0f, 1.0f, 0.0f}});
+    mesh.indices.push_back(0);
+    mesh.indices.push_back(1);
+    mesh.indices.push_back(2);
+
+    std::string error;
+    expect(!cache.upload(nullptr, bs3d::MeshHandle{2}, mesh, &error),
+           "upload with null device must fail");
+    expect(!error.empty(), "upload with null device must set error");
+    expect(cache.count() == 0, "failed upload must not increase count");
+}
+
+void d3d11MeshCacheUploadRejectsZeroHandle() {
+    bs3d::D3D11MeshCache cache;
+    bs3d::D3D11MeshUpload mesh;
+    mesh.vertices.push_back({{0.0f, 0.0f, 0.0f}});
+    mesh.indices.push_back(0);
+
+    std::string error;
+    expect(!cache.upload(nullptr, bs3d::MeshHandle{0}, mesh, &error),
+           "upload with MeshHandle{0} must fail");
+}
+
+void d3d11MeshCacheUploadRejectsEmptyVertices() {
+    bs3d::D3D11MeshCache cache;
+    bs3d::D3D11MeshUpload mesh;
+    mesh.indices.push_back(0);
+
+    std::string error;
+    expect(!cache.upload(nullptr, bs3d::MeshHandle{2}, mesh, &error),
+           "upload with empty vertices must fail");
+}
+
+void d3d11MeshCacheUploadRejectsEmptyIndices() {
+    bs3d::D3D11MeshCache cache;
+    bs3d::D3D11MeshUpload mesh;
+    mesh.vertices.push_back({{0.0f, 0.0f, 0.0f}});
+
+    std::string error;
+    expect(!cache.upload(nullptr, bs3d::MeshHandle{2}, mesh, &error),
+           "upload with empty indices must fail");
+}
+
+void d3d11MeshCacheClearEmptiesCache() {
+    bs3d::D3D11MeshCache cache;
+    expect(cache.count() == 0, "count must be 0 before clear");
+    cache.clear();
+    expect(cache.count() == 0, "clear on empty cache must keep count 0");
+}
+
+#endif
+
 // ---------- RenderFrameDump v1 unsupported-kind tests ----------
 
 void dumpSkipsNonBoxPrimitivesOnWrite() {
@@ -1823,6 +1903,14 @@ int main() {
     d3d11RendererRecordsStatsForDecalGlassTranslucentWhenUninitialized();
     d3d11RendererDrawCoverageIsZeroWhenUninitialized();
     d3d11RendererFrameStatsCountUnsupportedKinds();
+    d3d11MeshCacheDefaultCountIsZero();
+    d3d11MeshCacheContainsReturnsFalseForUnknownHandle();
+    d3d11MeshCacheReleaseUnknownHandleIsSafe();
+    d3d11MeshCacheUploadRejectsNullDevice();
+    d3d11MeshCacheUploadRejectsZeroHandle();
+    d3d11MeshCacheUploadRejectsEmptyVertices();
+    d3d11MeshCacheUploadRejectsEmptyIndices();
+    d3d11MeshCacheClearEmptiesCache();
 #endif
     meshRegistryHandleZeroIsInvalid();
     meshRegistryAllocateReturnsValidHandle();
