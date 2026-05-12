@@ -1404,7 +1404,10 @@ void dumpSkipsNonBoxPrimitivesOnWrite() {
            "dump read succeeds after non-Box primitive write");
     expect(error.empty(), "dump read has no error");
 
-    // v1 dump only serializes Box primitives; non-Box kinds are silently skipped.
+    // v1 dump only serializes Box primitives and debug lines.
+    // Mesh (including built-in MeshHandle id=1), Sphere, CylinderX, and QuadPanel
+    // are intentionally skipped in v1. The D3D11Renderer built-in MeshHandle id=1
+    // path is smoke/shell-only and does not imply dump v1 serializes mesh commands.
     expect(loaded.primitives.size() == 1,
            "v1 dump preserves only the Box primitive (1), skipped Sphere/Mesh/CylinderX/QuadPanel (4)");
     expect(loaded.primitives[0].kind == bs3d::RenderPrimitiveKind::Box,
