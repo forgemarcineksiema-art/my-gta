@@ -9,6 +9,8 @@ namespace bs3d {
 
 struct RenderFrame;
 struct D3D11RendererFrameStats;
+struct CpuMeshData;
+struct MeshHandle;
 
 /// D3D11 draw coverage stats reported by the shadow sidecar.
 /// Mirrors the struct in src/render_d3d11/D3D11Renderer.h.
@@ -49,6 +51,8 @@ public:
     D3D11ShadowFrameStats lastD3D11Stats() const;
 
     void pumpMessages();
+
+    bool uploadTestMesh(MeshHandle handle, const CpuMeshData& mesh, std::string* error = nullptr);
 
 private:
     struct Impl;

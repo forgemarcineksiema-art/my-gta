@@ -11,6 +11,8 @@
 #include "MaterialRegistry.h"
 #include "MeshRegistry.h"
 #include "RenderFrameDump.h"
+
+#include "CpuMeshData.h"
 #include "IntroLevelBuilder.h"
 #include "IntroLevelPresentation.h"
 #include "MissionOutcomeTrigger.h"
@@ -2551,6 +2553,8 @@ void GameApp::run(const GameRunOptions& options) {
         MeshRegistry shadowMeshRegistry;
         MaterialRegistry shadowMaterialRegistry;
         bool shadowMeshRegistrySeeded = false;
+        bool shadowSidecarTestMeshesUploaded = false;
+        std::vector<MeshHandle> shadowSeededMeshHandles;
 
         while (!platform.shouldClose()) {
             RawInputState frameRawInput = runtime.readRawInput();
@@ -2596,11 +2600,31 @@ void GameApp::run(const GameRunOptions& options) {
                         for (const auto& obj : renderList.opaque) {
                             if (seeded >= 3) break;
                             if (obj && shadowMeshRegistry.find(obj->assetId).id == 0) {
-                                shadowMeshRegistry.allocate(obj->assetId);
+                                const auto handle = shadowMeshRegistry.allocate(obj->assetId);
+                                shadowSeededMeshHandles.push_back(handle);
                                 ++seeded;
                             }
                         }
                     }
+
+                    if (!shadowSidecarTestMeshesUploaded && sidecar.isInitialized()) {
+                        shadowSidecarTestMeshesUploaded = true;
+                        int uploadedCount = 0;
+                        for (const auto& handle : shadowSeededMeshHandles) {
+                            std::string uploadError;
+                            if (sidecar.uploadTestMesh(handle, makeCpuMeshUnitCube("shadow_" + std::to_string(handle.id)), &uploadError)) {
+                                ++uploadedCount;
+                            } else {
+                                TraceLog(LOG_WARNING, "D3D11 shadow sidecar: mesh upload failed for id=%u: %s",
+                                         handle.id, uploadError.c_str());
+                            }
+                        }
+                        if (uploadedCount > 0) {
+                            TraceLog(LOG_INFO, "D3D11 shadow sidecar: uploaded %d procedural mesh handles",
+                                     uploadedCount);
+                        }
+                    }
+
                     extractionStats = addWorldRenderListMeshCommands(
                         builder, renderList, assetDefs,
                         shadowMeshRegistry, shadowMaterialRegistry);

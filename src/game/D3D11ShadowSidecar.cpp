@@ -11,6 +11,7 @@
 
 #include <windows.h>
 
+#include "CpuMeshData.h"
 #include "D3D11Renderer.h"
 #include "bs3d/render/RendererFactory.h"
 
@@ -248,6 +249,16 @@ D3D11ShadowFrameStats D3D11ShadowSidecar::lastD3D11Stats() const {
     return result;
 }
 
+bool D3D11ShadowSidecar::uploadTestMesh(MeshHandle handle, const CpuMeshData& mesh, std::string* error) {
+    if (!impl_->initialized || impl_->renderer == nullptr) {
+        if (error != nullptr) {
+            *error = "D3D11 shadow sidecar: not initialized";
+        }
+        return false;
+    }
+    return impl_->renderer->uploadTestMesh(handle, mesh, error);
+}
+
 } // namespace bs3d
 
 #else // _WIN32
@@ -278,6 +289,12 @@ int D3D11ShadowSidecar::renderCalls() const { return 0; }
 RenderFrameStats D3D11ShadowSidecar::lastStats() const { return {}; }
 bool D3D11ShadowSidecar::lastFrameValid() const { return true; }
 D3D11ShadowFrameStats D3D11ShadowSidecar::lastD3D11Stats() const { return {}; }
+bool D3D11ShadowSidecar::uploadTestMesh(MeshHandle, const CpuMeshData&, std::string* error) {
+    if (error != nullptr) {
+        *error = "D3D11 shadow sidecar is Windows-only";
+    }
+    return false;
+}
 
 } // namespace bs3d
 
