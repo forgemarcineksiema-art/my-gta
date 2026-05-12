@@ -120,6 +120,12 @@ Add `--auto-orbit` (implies `--orbit-camera`) for slow automatic yaw rotation:
 
 Use `--frames 0` to run until closed (Escape or window X) instead of auto-exiting after a fixed frame count:
 
+Add `--wire-boxes` for a wireframe overlay on Box primitives:
+
+```powershell
+.\build\ci\Debug\bs3d_d3d11_game_shell.exe --frames 0 --load-frame artifacts\shadow_frame.txt --diagnostics --orbit-camera --wire-boxes
+```
+
 ```powershell
 .\build\ci\Debug\bs3d_d3d11_game_shell.exe --frames 0 --load-frame artifacts\shadow_frame.txt --diagnostics --orbit-camera
 ```

@@ -28,6 +28,7 @@ struct ShellOptions {
     bool diagnostics = false;
     bool orbitCamera = false;
     bool autoOrbit = false;
+    bool wireBoxes = false;
 };
 
 LRESULT CALLBACK shellWindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam) {
@@ -86,9 +87,11 @@ ShellOptions parseOptions(int argc, char** argv) {
         } else if (arg == "--auto-orbit") {
             options.orbitCamera = true;
             options.autoOrbit = true;
+        } else if (arg == "--wire-boxes") {
+            options.wireBoxes = true;
         } else if (arg == "--help") {
             std::cout << "Usage: bs3d_d3d11_game_shell --load-frame <path> [--frames <count>] [--diagnostics]\n"
-                      << "                                [--orbit-camera] [--auto-orbit]\n"
+                      << "                                [--orbit-camera] [--auto-orbit] [--wire-boxes]\n"
                       << "\n"
                       << "Standalone D3D11 main-window shell that loads a RenderFrameDump v1 file\n"
                       << "and renders it through D3D11Renderer.\n"
@@ -98,6 +101,7 @@ ShellOptions parseOptions(int argc, char** argv) {
                       << "  --diagnostics         print frame stats and D3D11 draw coverage\n"
                       << "  --orbit-camera        enable orbit inspection camera controls\n"
                       << "  --auto-orbit          imply --orbit-camera and slowly auto-rotate\n"
+                      << "  --wire-boxes          draw wireframe overlay on Box primitives\n"
                       << "\n"
                       << "Orbit camera controls:\n"
                       << "  Left/Right arrows  rotate yaw\n"
@@ -271,6 +275,10 @@ int runShell(const ShellOptions& options) {
     }
     std::cout << "D3D11Renderer initialized\n";
 
+    if (options.wireBoxes) {
+        renderer.setDrawBoxWireOverlay(true);
+    }
+
     bs3d::RenderFrame frame = loadFrame(options.loadFramePath);
     std::cout << "loaded frame from " << options.loadFramePath << '\n';
 
@@ -287,6 +295,10 @@ int runShell(const ShellOptions& options) {
                   << " height=" << orbit.height
                   << " fovy=" << orbit.fovy
                   << " yawSpeed=2.4 zoomSpeed=6.0 heightSpeed=6.0 autoOrbitSpeed=1.2\n";
+    }
+
+    if (options.diagnostics && options.wireBoxes) {
+        std::cout << "wireBoxes=true\n";
     }
 
     if (options.diagnostics) {

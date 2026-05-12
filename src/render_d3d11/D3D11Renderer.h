@@ -22,6 +22,7 @@ struct ID3D11DepthStencilState;
 struct ID3D11DepthStencilView;
 struct ID3D11InputLayout;
 struct ID3D11PixelShader;
+struct ID3D11RasterizerState;
 struct ID3D11RenderTargetView;
 struct ID3D11Texture2D;
 struct ID3D11VertexShader;
@@ -67,6 +68,9 @@ public:
 
     const D3D11RendererFrameStats& lastD3D11Stats() const { return lastD3D11Stats_; }
 
+    void setDrawBoxWireOverlay(bool enabled) { drawBoxWireOverlay_ = enabled; }
+    bool drawBoxWireOverlayEnabled() const { return drawBoxWireOverlay_; }
+
 private:
     int renderCalls_ = 0;
     RenderFrameStats lastStats_{};
@@ -94,6 +98,9 @@ private:
     ID3D11PixelShader* linePixelShader_ = nullptr;
     ID3D11InputLayout* lineInputLayout_ = nullptr;
     ID3D11Buffer* lineVertexBuffer_ = nullptr;
+
+    bool drawBoxWireOverlay_ = false;
+    ID3D11RasterizerState* wireframeRasterizer_ = nullptr;
 };
 
 } // namespace bs3d

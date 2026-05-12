@@ -706,6 +706,28 @@ bool D3D11Renderer::initialize(const D3D11RendererConfig& config, std::string* e
         return false;
     }
 
+    {
+        D3D11_RASTERIZER_DESC wireframeDesc{};
+        wireframeDesc.FillMode = D3D11_FILL_WIREFRAME;
+        wireframeDesc.CullMode = D3D11_CULL_NONE;
+        wireframeDesc.FrontCounterClockwise = FALSE;
+        wireframeDesc.DepthBias = 0;
+        wireframeDesc.DepthBiasClamp = 0.0f;
+        wireframeDesc.SlopeScaledDepthBias = 0.0f;
+        wireframeDesc.DepthClipEnable = TRUE;
+        wireframeDesc.ScissorEnable = FALSE;
+        wireframeDesc.MultisampleEnable = FALSE;
+        wireframeDesc.AntialiasedLineEnable = FALSE;
+
+        const HRESULT rasterizerHr = device_->CreateRasterizerState(&wireframeDesc, &wireframeRasterizer_);
+        if (FAILED(rasterizerHr)) {
+            shutdown();
+            assignError(error, "ID3D11Device::CreateRasterizerState failed for wireframe with HRESULT " +
+                                   formatHresult(rasterizerHr));
+            return false;
+        }
+    }
+
     width_ = config.width;
     height_ = config.height;
 
@@ -726,6 +748,7 @@ bool D3D11Renderer::isInitialized() const {
 }
 
 void D3D11Renderer::shutdown() {
+    releaseAndNull(wireframeRasterizer_);
     releaseAndNull(lineVertexBuffer_);
     releaseAndNull(lineInputLayout_);
     releaseAndNull(linePixelShader_);
@@ -899,6 +922,59 @@ void D3D11Renderer::renderFrame(const RenderFrame& frame) {
                 }
             }
         }
+    }
+
+    if (drawBoxWireOverlay_ && wireframeRasterizer_ != nullptr) {
+        context_->RSSetState(wireframeRasterizer_);
+
+        const UINT boxStride = sizeof(Vertex);
+        const UINT boxOffset = 0;
+        ID3D11Buffer* boxVertexBuf = vertexBuffer_;
+        context_->IASetInputLayout(inputLayout_);
+        context_->IASetVertexBuffers(0, 1, &boxVertexBuf, &boxStride, &boxOffset);
+        context_->IASetIndexBuffer(indexBuffer_, DXGI_FORMAT_R16_UINT, 0);
+        context_->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        context_->VSSetShader(vertexShader_, nullptr, 0);
+        context_->PSSetShader(pixelShader_, nullptr, 0);
+        ID3D11Buffer* constBuffer = constantBuffer_;
+        context_->VSSetConstantBuffers(0, 1, &constBuffer);
+        context_->PSSetConstantBuffers(0, 1, &constBuffer);
+
+        for (const RenderPrimitiveCommand& command : frame.primitives) {
+            if (command.kind != RenderPrimitiveKind::Box) {
+                continue;
+            }
+            if (!isSupportedBoxBucket(command.bucket)) {
+                continue;
+            }
+
+            PrimitiveConstants constants{};
+            const Matrix4 scale = scaleMatrix(command.size.x * command.transform.scale.x,
+                                              command.size.y * command.transform.scale.y,
+                                              command.size.z * command.transform.scale.z);
+            const Matrix4 rotation = yRotationMatrix(command.transform.yawRadians);
+            const Matrix4 translation = translationMatrix(command.transform.position.x,
+                                                          command.transform.position.y,
+                                                          command.transform.position.z);
+            const Matrix4 model = multiplyMatrix(multiplyMatrix(scale, rotation), translation);
+            const Matrix4 mvp = multiplyMatrix(multiplyMatrix(model, view), projection);
+            std::memcpy(constants.mvp, mvp.values, sizeof(constants.mvp));
+            constants.color[0] = colorChannel(command.tint.r);
+            constants.color[1] = colorChannel(command.tint.g);
+            constants.color[2] = colorChannel(command.tint.b);
+            constants.color[3] = colorChannel(command.tint.a);
+
+            D3D11_MAPPED_SUBRESOURCE mapped{};
+            const HRESULT mapHr = context_->Map(constantBuffer_, 0, D3D11_MAP_WRITE_DISCARD, 0, &mapped);
+            if (FAILED(mapHr)) {
+                continue;
+            }
+            std::memcpy(mapped.pData, &constants, sizeof(constants));
+            context_->Unmap(constantBuffer_, 0);
+            context_->DrawIndexed(36, 0, 0);
+        }
+
+        context_->RSSetState(nullptr);
     }
 
     swapChain_->Present(1, 0);
