@@ -1,6 +1,6 @@
 # D3D11 mesh/material pipeline plan
 
-Status: LIVE (Stages 1-6c implemented)
+Status: LIVE (Stages 1-6c complete, next TBD)
 Created: 2026-05-12
 Stage 1: DONE — MeshRegistry + MaterialRegistry data-only registries
 Stage 2: DONE — D3D11MeshCache integrated into D3D11Renderer
@@ -14,7 +14,7 @@ Stage 5d: DONE — selectShadowMeshSeedAssetIds deterministic seed helper
 Stage 6a: DONE — CpuMeshLoader minimal OBJ parser to CpuMeshData
 Stage 6b: DONE — D3D11GameShell --load-mesh <path> (scripted smoke via renderframe_capture_replay.ps1)
 Stage 6c: DONE — Dev-only shadow sidecar modelPath upload for seeded MeshHandle ids
-Next code pass: Stage 6d or Stage 7 planning (broader asset integration, GLTF, material system)
+Next code pass: TBD — planning-only; see checklist "Next decisions" section
 
 See also:
 - `docs/backend-modernization-grounding.md` — truth hierarchy, protected systems, non-goals
@@ -443,10 +443,12 @@ ctest --preset ci
 
 ## 7) Recommended next code pass
 
-**Stage 6d or Stage 7 — Broader integration planning.**
+**Planning-only.** All planned stages (1-6c) are implemented. Next direction should be decided explicitly:
 
-- Broader `WorldAssetRegistry` integration — MeshRegistry populated for all active assets
-- GLTF support (positions-first, minimal subset)
-- Material system or texture pipeline — deferred design
-- `RenderFrameDump v3` or geometry embedding — deferred design
-- No GameApp main renderer, no `--renderer d3d11` activation
+- **Option A**: Broader `WorldAssetRegistry` integration (MeshRegistry populated for all active assets)
+- **Option B**: GLTF support (positions-first, minimal subset)
+- **Option C**: Material/texture pipeline planning
+- **Option D**: `RenderFrameDump v3` or geometry embedding
+- **Option E**: Shift to non-render priorities
+
+Do not jump into full asset/material pipeline without explicit direction.

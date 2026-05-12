@@ -94,13 +94,13 @@ Output: `artifacts\shadow_frame.txt` (dump file with `RenderFrameDump v1` or `Re
 
 ### Mesh shadow extraction + sidecar (dev-only, Windows)
 
-Emits Mesh commands from live WorldRenderList via `--renderframe-shadow-meshes`, uploads procedural unit cubes for seeded MeshHandle ids into the D3D11 sidecar, and renders through `D3D11Renderer`. Raylib remains the main runtime renderer. Does not activate `--renderer d3d11`.
+Emits Mesh commands from live WorldRenderList via `--renderframe-shadow-meshes`, seeds MeshRegistry deterministically, loads CpuMeshData from `WorldAssetDefinition.modelPath` files via asset-root resolution (`dataRoot/assets/modelPath`), uploads to D3D11 sidecar (with procedural unit-cube fallback on load failure), and renders through `D3D11Renderer`. Raylib remains the main runtime renderer. Does not activate `--renderer d3d11`.
 
 ```powershell
 .\build\ci\Debug\blokowa_satyra.exe --smoke-frames 3 --renderframe-shadow --renderframe-shadow-meshes --d3d11-shadow-window --d3d11-shadow-diagnostics --renderframe-shadow-interval 1 --no-audio --no-save --no-load-save
 ```
 
-Expected diagnostics should include `emittedMeshes > 0` and `drawnMeshes > 0` when test handles upload correctly to the D3D11MeshCache.
+Expected diagnostics should include `emittedMeshes > 0`, `drawnMeshes > 0`, `loadedMeshFiles`, `proceduralFallbackUploads`, and `meshLoadFailures` when test handles upload correctly to the D3D11MeshCache.
 
 ### D3D11 game shell (standalone, Windows-only)
 

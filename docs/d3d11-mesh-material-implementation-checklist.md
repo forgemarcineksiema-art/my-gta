@@ -1,6 +1,6 @@
 # D3D11 mesh/material implementation checklist
 
-Status: LIVE (Stage 5 complete, Stage 6 deferred)
+Status: LIVE (Stages 1-6c implemented, 6d planning deferred)
 Created: 2026-05-12
 Stage 1 status: DONE
 Stage 2 status: DONE — D3D11MeshCache + renderer integration.
@@ -12,7 +12,10 @@ Stage 5 status: DONE
   - Stage 5c (DONE): D3D11 sidecar uploads procedural meshes for emitted MeshHandle ids
   - Stage 5d (DONE): selectShadowMeshSeedAssetIds deterministic seed helper
 
-Stage 6 status: IN PROGRESS — Stage 6c dev-only sidecar modelPath upload implemented.
+Stage 6 status: DONE — Stage 6c completes the initial asset-loading pipeline.
+  - Stage 6a (DONE): CpuMeshLoader minimal OBJ parser to CpuMeshData
+  - Stage 6b (DONE): D3D11GameShell --load-mesh <path>
+  - Stage 6c (DONE): Dev-only shadow sidecar modelPath upload via assetsRoot resolution
 
 See also:
 - `docs/d3d11-mesh-material-pipeline-plan.md` — full architecture plan
@@ -292,11 +295,14 @@ Stage 1 and cleanup are complete. Stage 2 is DONE (`D3D11MeshCache` integrated i
 - Stage 5c (DONE): D3D11 sidecar procedural mesh upload. `D3D11ShadowSidecar::uploadTestMesh` bridges to `D3D11Renderer::uploadTestMesh`. GameApp uploads `makeCpuMeshUnitCube` for each seeded MeshHandle once after seeding, when sidecar is initialized. Diagnostics show `drawnMeshes=5` (3 seeded handles appear multiple times in render list). No real asset loading. No GameApp main renderer. `--renderer d3d11` remains inactive.
 - Stage 5d (DONE): `selectShadowMeshSeedAssetIds` deterministic helper replaces ad-hoc opaque-only loop. Iterates buckets in production order, deduplicates, skips missing definitions. 7 new data-only tests. Seed IDs logged in diagnostics when `--d3d11-shadow-diagnostics` is active.
 
-**Stage 6 plan (PLANNED):**
-- Stage 6a: `CpuMeshLoader` — backend-neutral loader producing `CpuMeshData` from file paths. Minimal OBJ subset (positions + triangulated faces). Test data using tiny inline OBJ strings. No D3D11, no GPU. Linked into `bs3d_render_tests`.
-- Stage 6b (DONE): `D3D11GameShell --load-mesh <path>` loads OBJ via `CpuMeshLoader`. Uploads to `D3D11MeshCache` as `MeshHandle{3}`, appends Opaque Mesh primitive with blue tint. `--diagnostics` shows `drawnMeshes` includes the loaded mesh. No GameApp integration. No textures/materials.
-- Stage 6c (DONE): Dev-only shadow sidecar modelPath upload. When `--renderframe-shadow-meshes` and `--d3d11-shadow-window` are both active, GameApp loads `CpuMeshData` from `WorldAssetDefinition.modelPath` for seeded handles, uploads to sidecar. Falls back to procedural unit cube on load failure/empty path. Diagnostics: `loadedMeshFiles`/`proceduralFallbackUploads`/`meshLoadFailures`. Minimal OBJ only. No GameApp main renderer. `--renderer d3d11` inactive. WorldModelCache unchanged.
-- Stage 6c: Optional dev-only shadow sidecar upload from selected `WorldAssetDefinition.modelPath` files for seeded MeshHandle ids.
-- No texture loading, no material system, no GameApp main renderer, no `--renderer d3d11`.
+**Stage 6 plan (Stages 6a/6b/6c DONE):**
+- Stage 6a (DONE): `CpuMeshLoader` — backend-neutral loader producing `CpuMeshData` from file paths. Minimal OBJ subset (positions + triangulated faces). 14 data-only tests. No D3D11, no GPU.
+- Stage 6b (DONE): `D3D11GameShell --load-mesh <path>` loads OBJ via `CpuMeshLoader`. Uploads to `D3D11MeshCache` as `MeshHandle{3}`, appends Opaque Mesh primitive with blue tint. Scripted smoke via `renderframe_capture_replay.ps1`.
+- Stage 6c (DONE): Dev-only shadow sidecar modelPath upload via asset-root resolution (`dataRoot/assets/modelPath`). Falls back to procedural unit cube on load failure/empty path. Diagnostics: `loadedMeshFiles`/`proceduralFallbackUploads`/`meshLoadFailures`. WorldModelCache unchanged. `--renderer d3d11` inactive.
+
+**Next decisions (planning-only, no code):**
+- No GLTF / material system / texture pipeline until explicitly planned
+- Possible directions: broader WorldAssetRegistry integration, RenderFrameDump v3 planning, or shift to non-render priorities
+- Do not jump into full asset pipeline without explicit user decision
 
 Do NOT skip stages. See `docs/d3d11-mesh-material-pipeline-plan.md` Section 3 for the full staged plan.
