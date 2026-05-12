@@ -82,6 +82,7 @@ add_executable(bs3d_render_tests
     tests/render_frame_tests.cpp
     src/game/RenderExtraction.cpp
     src/render/CpuMeshData.cpp
+    src/render/CpuMeshLoader.cpp
     src/render/MeshRegistry.cpp
     src/render/MaterialRegistry.cpp
     src/render/RendererFactory.cpp

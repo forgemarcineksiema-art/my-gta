@@ -12,7 +12,7 @@ Stage 5 status: DONE
   - Stage 5c (DONE): D3D11 sidecar uploads procedural meshes for emitted MeshHandle ids
   - Stage 5d (DONE): selectShadowMeshSeedAssetIds deterministic seed helper
 
-Stage 6 status: PLANNED — see `docs/d3d11-mesh-material-pipeline-plan.md` §3 Sixth stage for details.
+Stage 6 status: IN PROGRESS — Stage 6a CpuMeshLoader implemented.
 
 See also:
 - `docs/d3d11-mesh-material-pipeline-plan.md` — full architecture plan

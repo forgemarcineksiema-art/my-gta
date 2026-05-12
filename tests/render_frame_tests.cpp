@@ -1,4 +1,5 @@
 #include "CpuMeshData.h"
+#include "CpuMeshLoader.h"
 #include "MaterialRegistry.h"
 #include "MeshRegistry.h"
 #include "RenderExtraction.h"
@@ -2747,6 +2748,154 @@ void seedSkipsNullObjects() {
     expect(result[0] == "asset_a", "selects non-null object");
 }
 
+// ---------- CpuMeshLoader OBJ tests ----------
+
+void objLoaderTriangleLoads() {
+    const std::string obj =
+        "v 0 1 0\n"
+        "v -1 -1 0\n"
+        "v 1 -1 0\n"
+        "f 1 2 3\n";
+
+    const auto result = bs3d::loadCpuMeshFromObjText(obj, "test_tri");
+    expect(result.ok, "triangle OBJ loads successfully");
+    expect(result.mesh.vertices.size() == 3, "triangle has 3 vertices");
+    expect(result.mesh.indices.size() == 3, "triangle has 3 indices");
+    expect(result.mesh.indices[0] == 0, "first index is 0");
+    expect(result.mesh.indices[1] == 1, "second index is 1");
+    expect(result.mesh.indices[2] == 2, "third index is 2");
+}
+
+void objLoaderQuadTriangulates() {
+    const std::string obj =
+        "v 0 0 0\n"
+        "v 1 0 0\n"
+        "v 1 1 0\n"
+        "v 0 1 0\n"
+        "f 1 2 3 4\n";
+
+    const auto result = bs3d::loadCpuMeshFromObjText(obj, "test_quad");
+    expect(result.ok, "quad OBJ loads and triangulates");
+    expect(result.mesh.vertices.size() == 4, "quad has 4 vertices");
+    expect(result.mesh.indices.size() == 6, "quad triangulates to 6 indices");
+    expect(result.mesh.indices[0] == 0, "first tri: i0");
+    expect(result.mesh.indices[1] == 1, "first tri: i1");
+    expect(result.mesh.indices[2] == 2, "first tri: i2");
+    expect(result.mesh.indices[3] == 0, "second tri: i0");
+    expect(result.mesh.indices[4] == 2, "second tri: i2");
+    expect(result.mesh.indices[5] == 3, "second tri: i3");
+}
+
+void objLoaderIgnoresCommentsAndEmptyLines() {
+    const std::string obj =
+        "# OBJ file\n"
+        "\n"
+        "v 0 0 0\n"
+        "# another comment\n"
+        "v 1 0 0\n"
+        "v 0 1 0\n"
+        "\n"
+        "f 1 2 3\n";
+
+    const auto result = bs3d::loadCpuMeshFromObjText(obj, "test_comments");
+    expect(result.ok, "OBJ with comments loads successfully");
+    expect(result.mesh.vertices.size() == 3, "parses 3 vertices");
+    expect(result.mesh.indices.size() == 3, "parses 3 indices");
+}
+
+void objLoaderHandlesSlashTokens() {
+    const std::string obj =
+        "v 0 1 0\n"
+        "v -1 -1 0\n"
+        "v 1 -1 0\n"
+        "f 1/1/1 2/2/2 3/3/3\n"
+        "f 1//1 2//2 3//3\n"
+        "f 1/1 2/2 3/3\n";
+
+    const auto result = bs3d::loadCpuMeshFromObjText(obj, "test_slash");
+    expect(result.ok, "OBJ with slash tokens loads successfully");
+    expect(result.mesh.indices.size() == 9, "all three face lines parsed");
+}
+
+void objLoaderRejectsNoVertices() {
+    const std::string obj = "f 1 2 3\n";
+    const auto result = bs3d::loadCpuMeshFromObjText(obj, "no_verts");
+    expect(!result.ok, "OBJ with no vertices fails");
+    expect(result.error.find("out-of-range") != std::string::npos, "error mentions out-of-range when no vertices exist");
+}
+
+void objLoaderRejectsNoFaces() {
+    const std::string obj = "v 0 0 0\nv 1 0 0\nv 0 1 0\n";
+    const auto result = bs3d::loadCpuMeshFromObjText(obj, "no_faces");
+    expect(!result.ok, "OBJ with no faces fails");
+    expect(result.error.find("no faces") != std::string::npos, "error mentions no faces");
+}
+
+void objLoaderRejectsOutOfRangeIndex() {
+    const std::string obj =
+        "v 0 0 0\n"
+        "v 1 0 0\n"
+        "v 0 1 0\n"
+        "f 1 2 5\n";
+
+    const auto result = bs3d::loadCpuMeshFromObjText(obj, "oor_idx");
+    expect(!result.ok, "OBJ with out-of-range index fails");
+    expect(result.error.find("out-of-range") != std::string::npos, "error mentions out-of-range");
+}
+
+void objLoaderRejectsNegativeIndex() {
+    const std::string obj =
+        "v 0 0 0\n"
+        "v 1 0 0\n"
+        "v 0 1 0\n"
+        "f 1 2 -1\n";
+
+    const auto result = bs3d::loadCpuMeshFromObjText(obj, "neg_idx");
+    expect(!result.ok, "OBJ with negative index fails");
+    expect(result.error.find("negative") != std::string::npos, "error mentions negative");
+}
+
+void objLoaderRejectsIndexZero() {
+    const std::string obj =
+        "v 0 0 0\n"
+        "v 1 0 0\n"
+        "v 0 1 0\n"
+        "f 0 1 2\n";
+
+    const auto result = bs3d::loadCpuMeshFromObjText(obj, "zero_idx");
+    expect(!result.ok, "OBJ with index 0 fails");
+    expect(result.error.find("index 0") != std::string::npos, "error mentions index 0");
+}
+
+void objLoaderRejectsTwoVertexFace() {
+    const std::string obj =
+        "v 0 0 0\n"
+        "v 1 0 0\n"
+        "f 1 2\n";
+
+    const auto result = bs3d::loadCpuMeshFromObjText(obj, "two_vert");
+    expect(!result.ok, "OBJ with 2-vertex face fails");
+}
+
+void objLoaderRejectsFiveVertexFace() {
+    const std::string obj =
+        "v 0 0 0\n"
+        "v 1 0 0\n"
+        "v 0 1 0\n"
+        "v 1 1 0\n"
+        "v 0.5 0.5 0\n"
+        "f 1 2 3 4 5\n";
+
+    const auto result = bs3d::loadCpuMeshFromObjText(obj, "five_vert");
+    expect(!result.ok, "OBJ with 5-vertex face fails");
+}
+
+void objLoaderRejectsMissingFile() {
+    const auto result = bs3d::loadCpuMeshFromObjFile("nonexistent_path_xyz.obj");
+    expect(!result.ok, "missing file fails");
+    expect(result.error.find("cannot open") != std::string::npos, "error mentions cannot open");
+}
+
 } // namespace
 
 int main() {
@@ -2801,6 +2950,18 @@ int main() {
     seedFallsBackToOtherBuckets();
     seedDeterministicOrderFromScrambledInput();
     seedSkipsNullObjects();
+    objLoaderTriangleLoads();
+    objLoaderQuadTriangulates();
+    objLoaderIgnoresCommentsAndEmptyLines();
+    objLoaderHandlesSlashTokens();
+    objLoaderRejectsNoVertices();
+    objLoaderRejectsNoFaces();
+    objLoaderRejectsOutOfRangeIndex();
+    objLoaderRejectsNegativeIndex();
+    objLoaderRejectsIndexZero();
+    objLoaderRejectsTwoVertexFace();
+    objLoaderRejectsFiveVertexFace();
+    objLoaderRejectsMissingFile();
     dumpWriteAndReadRoundTrip();
     dumpReadMissingFileReturnsError();
     dumpReadMissingHeaderFails();
