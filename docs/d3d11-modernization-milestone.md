@@ -72,7 +72,7 @@ Last verified against implementation: 2026-05-12
 
 ## Recommended next passes
 
-1. **Mesh/material pipeline planning** — design how `RenderPrimitiveKind::Mesh` commands flow through extraction → RenderFrame → D3D11Renderer
+1. **Mesh/material pipeline planning** — design how `RenderPrimitiveKind::Mesh` commands flow through extraction → RenderFrame → D3D11Renderer. See `docs/d3d11-mesh-material-pipeline-plan.md`.
 2. **Explicit dev-only main renderer experiment** — a gated `--renderer d3d11` that replaces raylib rendering in GameApp for a single frame or limited smoke session
 3. **Do not** silently activate `--renderer d3d11` without explicit gate, verification scripts, and coverage diagnostics
 
@@ -80,4 +80,5 @@ Last verified against implementation: 2026-05-12
 
 - `DEVELOPMENT.md` — daily dev workflow and tooling
 - `docs/backend-modernization-grounding.md` — full backend modernization grounding document
+- `docs/d3d11-mesh-material-pipeline-plan.md` — mesh/material pipeline architecture plan (next step)
 - `docs/d3d11-renderer-smoke.md` — D3D11Renderer smoke executable details
