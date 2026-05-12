@@ -1,15 +1,16 @@
 # D3D11 mesh/material implementation checklist
 
-Status: LIVE (Stage 3 in progress)
+Status: LIVE (Stage 3 complete)
 Created: 2026-05-12
 First code pass: completed 2026-05-12
 Stage 1 cleanup: completed 2026-05-12
 Stage 2 skeleton: completed 2026-05-12
 Stage 2 rendering integration: completed 2026-05-12
 Stage 3 CpuMeshData + adapter: completed 2026-05-12
+Stage 3b shell test mesh: completed 2026-05-12
 Stage 1 status: DONE
 Stage 2 status: DONE — D3D11MeshCache integrated into D3D11Renderer.
-Stage 3 status: IN PROGRESS — CpuMeshData + adapter exist; built-in cube upload uses them; shell test mesh pending.
+Stage 3 status: DONE — CpuMeshData + adapter exist; built-in cube upload uses them; shell renders procedural triangle via uploadTestMesh; diagnostics show drawnMeshes=2.
 
 See also:
 - `docs/d3d11-mesh-material-pipeline-plan.md` — full architecture plan
@@ -258,16 +259,17 @@ Stage 1 and cleanup are complete. Stage 2 is DONE (`D3D11MeshCache` integrated i
 - Box/wireframe/debug-lines paths unchanged.
 - Diagnostics: `drawnMeshes=1` with `--add-test-mesh`.
 
-**Stage 3 status (in progress):**
+**Stage 3 status (completed):**
 - `CpuMeshData` / `CpuMeshVertex` (`src/render/CpuMeshData.h/.cpp`) — backend-neutral CPU mesh data with `isValidCpuMeshData()`, `makeCpuMeshUnitCube()`, `makeCpuMeshTriangle()`.
 - `D3D11MeshUploadAdapter` (`src/render_d3d11/D3D11MeshUploadAdapter.h/.cpp`) — converts `CpuMeshData` → `D3D11MeshUpload`.
-- `D3D11Renderer::initialize()` built-in unit cube upload now uses:
-  `makeCpuMeshUnitCube()` → `makeD3D11MeshUpload()` → `meshCache_.upload()`.
-- 6 tests for CpuMeshData + adapter (all GPU-free, passing).
-- No asset loading, no GameApp integration, no `--renderer d3d11` activation.
+- `D3D11Renderer::initialize()` built-in unit cube upload uses `makeCpuMeshUnitCube()` → `makeD3D11MeshUpload()` → `meshCache_.upload()`.
+- `D3D11Renderer::uploadTestMesh(MeshHandle, CpuMeshData)` shell/tooling method validates, converts, and uploads.
+- `D3D11GameShell --add-test-mesh` now uploads a procedural CpuMeshData triangle (handle id=2) via `uploadTestMesh()`, appends a Mesh command with tint `{0, 200, 100}`, position `{2, 2, 0}`.
+- Diagnostics: `drawnMeshes=2` (BuiltInUnitCubeMeshId + CpuMeshData triangle).
+- 6 GPU-free tests for CpuMeshData + adapter (all passing).
+- `--renderer d3d11` still inactive. No asset loading. No GameApp integration.
 
-**Stage 3 next pass:**
-- `D3D11GameShell` creates a procedural `CpuMeshData` test mesh (triangle) beyond `BuiltInUnitCubeMeshId`, uploads it through `D3D11Renderer`/`D3D11MeshCache`, and renders it.
-- Diagnostics show `drawnMeshes=2` (BuiltInUnitCube + custom mesh).
+**Stage 3 next pass (future):**
+- Stage 4 — `RenderFrameDump v2` serializing Mesh commands, or pre-Stage-4 cleanup.
 
 Do NOT skip stages. See `docs/d3d11-mesh-material-pipeline-plan.md` Section 3 for the full staged plan.
