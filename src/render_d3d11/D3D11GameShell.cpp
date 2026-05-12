@@ -1,5 +1,6 @@
 #include "D3D11Renderer.h"
 
+#include "CpuMeshData.h"
 #include "RenderFrameDump.h"
 #include "bs3d/render/RenderFrame.h"
 #include "bs3d/render/RenderFrameValidation.h"
@@ -296,6 +297,27 @@ int runShell(const ShellOptions& options) {
         meshCmd.tint = {255, 128, 0, 255};
         meshCmd.sourceId = "d3d11_shell_builtin_mesh_test";
         frame.primitives.push_back(meshCmd);
+
+        const auto triangleCpu = bs3d::makeCpuMeshTriangle("shell_triangle");
+        std::string uploadError;
+        if (!renderer.uploadTestMesh(bs3d::MeshHandle{2}, triangleCpu, &uploadError)) {
+            std::cerr << "D3D11 game shell: failed to upload test triangle mesh: " << uploadError << '\n';
+            renderer.shutdown();
+            if (IsWindow(window) != FALSE) {
+                DestroyWindow(window);
+            }
+            return 1;
+        }
+
+        bs3d::RenderPrimitiveCommand triCmd;
+        triCmd.kind = bs3d::RenderPrimitiveKind::Mesh;
+        triCmd.bucket = bs3d::RenderBucket::Opaque;
+        triCmd.mesh.id = 2;
+        triCmd.transform.position = {2.0f, 2.0f, 0.0f};
+        triCmd.transform.scale = {1.0f, 1.0f, 1.0f};
+        triCmd.tint = {0, 200, 100, 255};
+        triCmd.sourceId = "d3d11_shell_cpu_mesh_triangle_test";
+        frame.primitives.push_back(triCmd);
     }
 
     OrbitCameraState orbit = makeOrbitCameraState(frame);

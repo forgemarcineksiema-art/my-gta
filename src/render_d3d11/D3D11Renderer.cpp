@@ -787,6 +787,19 @@ void D3D11Renderer::shutdown() {
     height_ = 0;
 }
 
+bool D3D11Renderer::uploadTestMesh(MeshHandle handle, const CpuMeshData& mesh, std::string* error) {
+    if (!isInitialized()) {
+        assignError(error, "D3D11Renderer::uploadTestMesh requires an initialized renderer");
+        return false;
+    }
+    if (handle.id == 0) {
+        assignError(error, "D3D11Renderer::uploadTestMesh requires a non-zero MeshHandle");
+        return false;
+    }
+    const auto upload = makeD3D11MeshUpload(mesh);
+    return meshCache_.upload(device_, handle, upload, error);
+}
+
 void D3D11Renderer::renderFrame(const RenderFrame& frame) {
     ++renderCalls_;
     lastStats_ = summarizeRenderFrame(frame);

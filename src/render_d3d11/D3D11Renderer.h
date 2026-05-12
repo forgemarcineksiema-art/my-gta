@@ -1,5 +1,6 @@
 #pragma once
 
+#include "CpuMeshData.h"
 #include "D3D11MeshCache.h"
 #include "bs3d/render/IRenderer.h"
 #include "bs3d/render/RenderFrameValidation.h"
@@ -73,6 +74,8 @@ public:
 
     void setDrawBoxWireOverlay(bool enabled) { drawBoxWireOverlay_ = enabled; }
     bool drawBoxWireOverlayEnabled() const { return drawBoxWireOverlay_; }
+
+    bool uploadTestMesh(MeshHandle handle, const CpuMeshData& mesh, std::string* error = nullptr);
 
 private:
     int renderCalls_ = 0;
