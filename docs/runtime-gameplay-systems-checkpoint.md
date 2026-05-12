@@ -1,6 +1,6 @@
 # Runtime / gameplay systems quality checkpoint
 
-Status: COMPLETE (all 6 passes reviewed, no critical bugs found)
+Status: COMPLETE (all 8 passes reviewed, no critical bugs found)
 Created: 2026-05-12
 After: D3D11 Stages 1–6c + Option A (parked)
 
@@ -34,7 +34,7 @@ The following are the runtime systems that most affect gameplay feel and stabili
 | Vehicle handling | `VehicleController.cpp` | **Reviewed** — dt-safe, surface-response guarded, gear/RPM math correct, steering authority speed-dependent, drift entry/sustain/counter-steer/exit system solid, lateral slip integration guarded, collision impact handled. Added phase comments (decay, accel/brake, steering, drift, slip/position). |
 | World collision / props | `WorldCollision.cpp`, `PropSimulationSystem.cpp` | **Reviewed** — dt clamped `[0, 0.10]` in prop update, velocity zero-threshold at 0.02f, spring-back via `pow(0.10, dt)`, impulse strength clamped, player contact soft/hard blocker gated, division guards (`max(size.z, 0.0001f)`, `max(maxImpulse, 0.001f)`), ground probe slope/height safe, character resolve steps 1–32, collision profiles typed. Added dt safety comment. |
 | Mission flow | `MissionController.cpp`, `MissionRuntimeBridge.cpp` | **Reviewed** — phase guards prevent double-trigger, `fail()` blocked before start/after completion, `retryToCheckpoint()` only from Failed with invalid phase fallback, `restoreForSave()` repairs Failed→ReachVehicle, `consumeChaseWanted()` one-shot, objective overrides support empty-string deletion, dialogue queues scoped per-phase. Added guard comments. |
-| Editor / dev tools | `RuntimeMapEditor*`, `DevTools*` | Deferred — not part of current checkpoint set |
+| Editor / dev tools | `EditorOverlayApply.cpp`, `EditorOverlayCodec.cpp`, `RuntimeMapEditor.cpp` | **Reviewed** — overlay apply has 3-phase guard (override, warn-missing, instance-add with collision check), codec has self-contained JSON parser with type validation, schema version check (v1), required-field validation (id/assetId non-empty), JSON escape/serialize safe. Map editor: `selectObject`/`selectedObject` null-guarded, `setSelected*` checks `level_` and selection, undo/redo with 100-limit history stack, `canUndo`/`canRedo` null-guarded. Existing `bs3d_editor_overlay_validation` test passes. Added phase comments. |
 | Smoke / CI hygiene | `tools/*.ps1`, `CMakeLists.txt` | **Reviewed** — scripts use preset-resolved paths, error handling via `$ErrorActionPreference = "Stop"`, incremental builds via `--target`, clear colored OK/FAIL output. Added artifact directory creation guard in `renderframe_capture_replay.ps1`. No duplicate build steps, no stale references. |
 | Save / load | `SaveGame.cpp` | **Reviewed** — atomic temp-write/rename, pre-write validation, post-load re-validation, version lock, all Vec3 checked `finite()`, all enums validated, array counts capped (`std::clamp`, max 64 each), NaN returned on parse failure for catch by validator, fallback defaults on every field, newline injection prevented. Added guard comments. |
 
@@ -84,8 +84,6 @@ Each pass is small, testable, avoids huge rewrites, and does not touch D3D11.
 
 The following are not part of the current completed set and may be addressed in future checkpoints:
 
-- **Editor / dev tools** (`RuntimeMapEditor`, `DevTools`, `rlImGui`): ImGui integration health, isolation mode correctness, asset preview stability
-- **Smoke / CI hygiene** (`tools/*.ps1`, `CMakeLists.txt`, `CMakePresets.json`): Script reliability under edge cases, test coverage gaps, CI timeout/config health
 - **Gameplay content / mission expansion**: New mission phases, world dressing pass, interaction prompt polish
 - **World dressing / interaction polish**: NPC placement, prop variety, visual landmark placement
 

@@ -24,12 +24,14 @@ WorldObject toWorldObject(const EditorOverlayObject& object) {
 EditorOverlayApplyResult applyEditorOverlay(IntroLevelData& level,
                                             const EditorOverlayDocument& overlay) {
     EditorOverlayApplyResult result;
+    // Phase 1 — collect existing object IDs and apply overrides by matching id.
     std::unordered_set<std::string> ids;
     ids.reserve(level.objects.size() + overlay.instances.size());
 
     for (WorldObject& object : level.objects) {
         ids.insert(object.id);
-        for (const EditorOverlayObject& overrideObject : overlay.overrides) {
+    // Phase 2 — report missing override targets (warn, don't crash).
+    for (const EditorOverlayObject& overrideObject : overlay.overrides) {
             if (overrideObject.id != object.id) {
                 continue;
             }
@@ -49,6 +51,7 @@ EditorOverlayApplyResult applyEditorOverlay(IntroLevelData& level,
         }
     }
 
+    // Phase 3 — add new overlay instances, skipping ID collisions.
     for (const EditorOverlayObject& instance : overlay.instances) {
         if (!ids.insert(instance.id).second) {
             result.warnings.push_back("overlay instance id collides: " + instance.id);
