@@ -34,8 +34,8 @@ The following are the runtime systems that most affect gameplay feel and stabili
 | Vehicle handling | `VehicleController.cpp` | **Reviewed** — dt-safe, surface-response guarded, gear/RPM math correct, steering authority speed-dependent, drift entry/sustain/counter-steer/exit system solid, lateral slip integration guarded, collision impact handled. Added phase comments (decay, accel/brake, steering, drift, slip/position). |
 | World collision / props | `WorldCollision.cpp`, `PropSimulationSystem.cpp` | **Reviewed** — dt clamped `[0, 0.10]` in prop update, velocity zero-threshold at 0.02f, spring-back via `pow(0.10, dt)`, impulse strength clamped, player contact soft/hard blocker gated, division guards (`max(size.z, 0.0001f)`, `max(maxImpulse, 0.001f)`), ground probe slope/height safe, character resolve steps 1–32, collision profiles typed. Added dt safety comment. |
 | Mission flow | `MissionController.cpp`, `MissionRuntimeBridge.cpp` | **Reviewed** — phase guards prevent double-trigger, `fail()` blocked before start/after completion, `retryToCheckpoint()` only from Failed with invalid phase fallback, `restoreForSave()` repairs Failed→ReachVehicle, `consumeChaseWanted()` one-shot, objective overrides support empty-string deletion, dialogue queues scoped per-phase. Added guard comments. |
-| Editor / dev tools | `RuntimeMapEditor*`, `DevTools*` | ImGui integration, isolation modes, asset preview |
-| Smoke / CI hygiene | `tools/*.ps1`, `CMakeLists.txt` | Script reliability, test coverage gaps |
+| Editor / dev tools | `RuntimeMapEditor*`, `DevTools*` | Deferred — not part of current checkpoint set |
+| Smoke / CI hygiene | `tools/*.ps1`, `CMakeLists.txt` | Deferred — not part of current checkpoint set |
 | Save / load | `SaveGame.cpp` | **Reviewed** — atomic temp-write/rename, pre-write validation, post-load re-validation, version lock, all Vec3 checked `finite()`, all enums validated, array counts capped (`std::clamp`, max 64 each), NaN returned on parse failure for catch by validator, fallback defaults on every field, newline injection prevented. Added guard comments. |
 
 ## Proposed next passes (outside renderer)
@@ -79,6 +79,15 @@ Each pass is small, testable, avoids huge rewrites, and does not touch D3D11.
 **Scope:** `SaveGame.cpp`.
 **Checked:** Serialization: key-value text format with array index prefixes. Deserialization: fallback defaults on every field (`asInt/asFloat/asBool/asText`). Array counts capped via `std::clamp(count, 0, Max*)` — prevents allocation bombs from corrupt files. Validation: version lock (v1 only), all enums validated via switch-exhaustive `valid*()` functions, all Vec3 values checked `finite()`, ranges checked (condition 0-100, intensity 0-3, stackCount 1-5), newline injection prevented in source strings, favor IDs validated against known list. File I/O: atomic via temp file + rename, directory creation with error handling, stream error check, pre-write validation, post-load re-validation. `parseVec3` returns NaN on malformed input to be caught by `finite()` check.
 **Remaining risks:** None at current scope. Save format is self-validating. Atomic write prevents partial saves.
+
+## Next possible checkpoint areas
+
+The following are not part of the current completed set and may be addressed in future checkpoints:
+
+- **Editor / dev tools** (`RuntimeMapEditor`, `DevTools`, `rlImGui`): ImGui integration health, isolation mode correctness, asset preview stability
+- **Smoke / CI hygiene** (`tools/*.ps1`, `CMakeLists.txt`, `CMakePresets.json`): Script reliability under edge cases, test coverage gaps, CI timeout/config health
+- **Gameplay content / mission expansion**: New mission phases, world dressing pass, interaction prompt polish
+- **World dressing / interaction polish**: NPC placement, prop variety, visual landmark placement
 
 ## Pre-pass verification
 
