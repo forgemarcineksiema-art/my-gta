@@ -251,8 +251,10 @@ Stage 1 and cleanup are complete. Stage 2 skeleton is done (`D3D11MeshCache`):
 **Stage 2 skeleton status:**
 - `src/render_d3d11/D3D11MeshCache.h/.cpp` exist — private D3D11 GPU mesh cache.
 - `D3D11MeshUpload` / `D3D11MeshVertex` types defined (positions-only, matching existing `Vertex` struct).
+- `D3D11CachedMeshView` non-owning view struct with `find()` read-only lookup accessor.
 - `upload()` validates null device, zero handle, empty vertices/indices before GPU work.
-- GPU-free tests in `bs3d_render_tests` (8 tests under `BS3D_HAS_D3D11_RENDERER` guard).
+- Cache owns all GPU buffers; `D3D11CachedMeshView` is non-owning (read-only pointers).
+- GPU-free tests in `bs3d_render_tests` (11 tests under `BS3D_HAS_D3D11_RENDERER` guard).
 - No rendering integration yet — `D3D11Renderer::renderFrame()` unchanged.
 - No asset loading, no GameApp integration, no material pipeline.
 

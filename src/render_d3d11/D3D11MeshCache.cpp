@@ -81,6 +81,18 @@ bool D3D11MeshCache::contains(MeshHandle handle) const {
     return entries_.find(handle.id) != entries_.end();
 }
 
+bool D3D11MeshCache::find(MeshHandle handle, D3D11CachedMeshView& out) const {
+    out = {};
+    const auto found = entries_.find(handle.id);
+    if (found == entries_.end()) {
+        return false;
+    }
+    out.vertexBuffer = found->second.vertexBuffer;
+    out.indexBuffer = found->second.indexBuffer;
+    out.indexCount = found->second.indexCount;
+    return true;
+}
+
 void D3D11MeshCache::release(MeshHandle handle) {
     const auto found = entries_.find(handle.id);
     if (found == entries_.end()) {

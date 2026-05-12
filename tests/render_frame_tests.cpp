@@ -1455,6 +1455,39 @@ void d3d11MeshCacheClearEmptiesCache() {
     expect(cache.count() == 0, "clear on empty cache must keep count 0");
 }
 
+void d3d11MeshCacheFindReturnsFalseForMissingHandle() {
+    bs3d::D3D11MeshCache cache;
+    bs3d::D3D11CachedMeshView view;
+    view.indexCount = 999;
+    expect(!cache.find(bs3d::MeshHandle{42}, view), "find must return false for missing handle");
+    expect(view.vertexBuffer == nullptr, "view must have null vertexBuffer on miss");
+    expect(view.indexBuffer == nullptr, "view must have null indexBuffer on miss");
+    expect(view.indexCount == 0, "view must have zero indexCount on miss");
+}
+
+void d3d11MeshCacheFindReturnsFalseForZeroHandle() {
+    bs3d::D3D11MeshCache cache;
+    bs3d::D3D11CachedMeshView view;
+    expect(!cache.find(bs3d::MeshHandle{0}, view), "find must return false for MeshHandle{0}");
+    expect(view.vertexBuffer == nullptr, "view must be reset on miss");
+}
+
+void d3d11MeshCacheFindReturnsFalseAfterFailedUpload() {
+    bs3d::D3D11MeshCache cache;
+    bs3d::D3D11MeshUpload mesh;
+    mesh.vertices.push_back({{0.0f, 0.0f, 0.0f}});
+    mesh.vertices.push_back({{1.0f, 0.0f, 0.0f}});
+    mesh.vertices.push_back({{0.0f, 1.0f, 0.0f}});
+    mesh.indices.push_back(0);
+    mesh.indices.push_back(1);
+    mesh.indices.push_back(2);
+    cache.upload(nullptr, bs3d::MeshHandle{2}, mesh);
+
+    bs3d::D3D11CachedMeshView view;
+    expect(!cache.find(bs3d::MeshHandle{2}, view), "find must return false after failed upload");
+    expect(cache.count() == 0, "count must be 0 after failed upload");
+}
+
 #endif
 
 // ---------- RenderFrameDump v1 unsupported-kind tests ----------
@@ -1911,6 +1944,9 @@ int main() {
     d3d11MeshCacheUploadRejectsEmptyVertices();
     d3d11MeshCacheUploadRejectsEmptyIndices();
     d3d11MeshCacheClearEmptiesCache();
+    d3d11MeshCacheFindReturnsFalseForMissingHandle();
+    d3d11MeshCacheFindReturnsFalseForZeroHandle();
+    d3d11MeshCacheFindReturnsFalseAfterFailedUpload();
 #endif
     meshRegistryHandleZeroIsInvalid();
     meshRegistryAllocateReturnsValidHandle();

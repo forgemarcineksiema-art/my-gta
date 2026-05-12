@@ -22,6 +22,12 @@ struct D3D11MeshUpload {
     std::vector<std::uint16_t> indices;
 };
 
+struct D3D11CachedMeshView {
+    ID3D11Buffer* vertexBuffer = nullptr;
+    ID3D11Buffer* indexBuffer = nullptr;
+    std::uint32_t indexCount = 0;
+};
+
 class D3D11MeshCache {
 public:
     D3D11MeshCache() = default;
@@ -32,6 +38,7 @@ public:
     bool upload(ID3D11Device* device, MeshHandle handle, const D3D11MeshUpload& mesh, std::string* error = nullptr);
 
     bool contains(MeshHandle handle) const;
+    bool find(MeshHandle handle, D3D11CachedMeshView& out) const;
     void release(MeshHandle handle);
     void clear();
     std::size_t count() const;
