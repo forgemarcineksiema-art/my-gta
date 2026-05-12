@@ -1540,39 +1540,39 @@ void worldDataMissionDefinesCompletePlayableVerticalSlice() {
     bs3d::MissionController mission(dialogue);
     const int applied = bs3d::applyMissionDataToController(mission, catalog.mission);
     expect(applied == 6, "all vertical slice objectives apply to the mission controller");
-    expect(mission.objectiveText() == "Sprawdź sklep Zenona na piechotę.",
-           "waiting objective previews the first playable beat");
+    expect(mission.objectiveText() == "Podejdź do Zenona — sprawdź, czy dług jeszcze żyje",
+           "waiting objective previews the local-motivation walk-to-shop intent");
 
     mission.start();
     expect(mission.phase() == bs3d::MissionPhase::WalkToShop, "vertical slice starts with the on-foot shop check");
-    expect(mission.objectiveText() == "Sprawdź sklep Zenona na piechotę.",
-           "walk-to-shop objective comes from runtime data");
+    expect(mission.objectiveText() == "Podejdź do Zenona — sprawdź, czy dług jeszcze żyje",
+           "walk-to-shop objective hints at debt ledger stakes");
     expect(dialogue.currentLine().speaker == "Boguś", "walk-to-shop beat has authored Bogus dialogue");
 
     mission.onShopVisitedOnFoot();
     expect(mission.phase() == bs3d::MissionPhase::ReturnToBench, "shop beat sends player back to Bogus");
-    expect(mission.objectiveText() == "Wróć do Bogusia pod blokiem.",
-           "return-to-bench objective comes from runtime data");
+    expect(mission.objectiveText() == "Wróć do Bogusia z wieściami",
+           "return-to-bench objective connects the round trip");
 
     mission.onReturnedToBogus();
     expect(mission.phase() == bs3d::MissionPhase::ReachVehicle, "Bogus return unlocks gruz step");
-    expect(mission.objectiveText() == "Wsiądź do auta na parkingu.",
-           "vehicle entry objective comes from runtime data");
+    expect(mission.objectiveText() == "Wsiądź do gruza",
+           "vehicle entry objective uses local vehicle name");
 
     mission.onPlayerEnteredVehicle();
     expect(mission.phase() == bs3d::MissionPhase::DriveToShop, "vehicle entry starts drive-to-shop step");
-    expect(mission.objectiveText() == "Podejdź pod sklep Zenona.",
-           "drive-to-shop objective comes from runtime data");
+    expect(mission.objectiveText() == "Podjedź gruzem pod Zenona",
+           "drive-to-shop objective uses vehicle identity in instruction");
 
     mission.onShopReachedByVehicle();
     expect(mission.phase() == bs3d::MissionPhase::ChaseActive, "shop vehicle trigger starts chase step");
-    expect(mission.objectiveText() == "Zgub osiedlowy pościg.",
-           "chase objective comes from runtime data");
+    expect(mission.objectiveText() == "Zgub przypał",
+           "chase objective uses local slang");
 
     mission.onChaseEscaped();
     expect(mission.phase() == bs3d::MissionPhase::ReturnToLot, "escape step sends player back to parking");
-    expect(mission.objectiveText() == "Wróć na parking pod blokiem.",
-           "return-to-lot objective comes from runtime data");
+    expect(mission.objectiveText() == "Wróć na parking",
+           "return-to-lot objective is concise for HUD");
 
     mission.onDropoffReached();
     expect(mission.phase() == bs3d::MissionPhase::Completed, "dropoff completes the vertical slice");

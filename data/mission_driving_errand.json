@@ -4,32 +4,32 @@
   "steps": [
     {
       "phase": "WalkToShop",
-      "objective": "Sprawdź sklep Zenona na piechotę.",
+      "objective": "Podejdź do Zenona — sprawdź, czy dług jeszcze żyje",
       "trigger": "shop_walk_intro"
     },
     {
       "phase": "ReturnToBench",
-      "objective": "Wróć do Bogusia pod blokiem.",
+      "objective": "Wróć do Bogusia z wieściami",
       "trigger": "npc_return_bogus"
     },
     {
       "phase": "ReachVehicle",
-      "objective": "Wsiądź do auta na parkingu.",
+      "objective": "Wsiądź do gruza",
       "trigger": "player_enters_vehicle"
     },
     {
       "phase": "DriveToShop",
-      "objective": "Podejdź pod sklep Zenona.",
+      "objective": "Podjedź gruzem pod Zenona",
       "trigger": "vehicle_reaches_shop_marker"
     },
     {
       "phase": "ChaseActive",
-      "objective": "Zgub osiedlowy pościg.",
+      "objective": "Zgub przypał",
       "trigger": "sustained_escape_distance"
     },
     {
       "phase": "ReturnToLot",
-      "objective": "Wróć na parking pod blokiem.",
+      "objective": "Wróć na parking",
       "trigger": "vehicle_reaches_dropoff_marker"
     }
   ],

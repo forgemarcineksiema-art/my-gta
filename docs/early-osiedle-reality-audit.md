@@ -380,3 +380,88 @@ git diff --check
 6. Walk to the shop — confirm the repair patch below the left window is visible and distinguishable from building color.
 7. Confirm: no new mission arc, no D3D11 changes, no renderer changes, no map expansion.
 8. Confirm: `--renderer d3d11` still returns error (not activated).
+
+---
+
+## 9. Implementation correction after screenshots (2026-05-12)
+
+### Objective source mismatch found and fixed
+
+**Root cause:** The visible HUD objective text was being overridden by `data/mission_driving_errand.json` via `WorldDataLoader.cpp:618` → `setObjectiveOverride()`, which takes precedence over `MissionController::objectiveText()` defaults. Updating only the C++ switch statement in the prior implementation pass did not change what the player actually sees.
+
+**Fix:**
+- Updated all 6 phase objectives in `data/mission_driving_errand.json` to match the desired local-motivation tone.
+- Updated test expectations in `tests/game_support_tests.cpp` to match the new strings.
+
+**Exact visible objective text after fix:**
+
+| Phase | Old (visible before) | New (visible after) |
+|---|---|---|
+| WaitingForStart / WalkToShop | "Sprawdź sklep Zenona na piechotę." | "Podejdź do Zenona — sprawdź, czy dług jeszcze żyje" |
+| ReturnToBench | "Wróć do Bogusia pod blokiem." | "Wróć do Bogusia z wieściami" |
+| ReachVehicle | "Wsiądź do auta na parkingu." | "Wsiądź do gruza" |
+| DriveToShop | "Podejdź pod sklep Zenona." | "Podjedź gruzem pod Zenona" |
+| ChaseActive | "Zgub osiedlowy pościg." | "Zgub przypał" |
+| ReturnToLot | "Wróć na parking pod blokiem." | "Wróć na parking" |
+
+### Footpath readability correction
+
+**Root cause:** The old path patches (path_2 through shop_shortcut) used the `addGroundPatch` auto-tint system which applied a green-ish tint (R=82, G=105, B=73, A=118) that blended into the grass instead of standing out. The patches also formed a nearly horizontal line (Z range: +2.2 to -12.0) that did not visually angle toward the shop (Z=-22.35), so the path read as random scuffs rather than a directional shortcut.
+
+**Fix:**
+- Patches 2–5 and shop_shortcut now use `addTintedDecor` with a warm earth tint (R=108, G=96, B=68, A=132) — noticeably warmer and darker than the surrounding grass.
+- Patch positions redesigned to form a clear southeast curve from bench area toward shop:
+  - path_2: `{-9.5, _, -5.5}` — heading south from bench
+  - path_3: `{-5.0, _, -9.0}` — starting southeast diagonal
+  - path_4: `{-0.5, _, -13.0}` — midpoint
+  - path_5: `{4.5, _, -16.5}` — past midpoint
+  - shop_shortcut: `{11.0, _, -20.0}` — approaching shop
+- Patches are slightly larger (2.3–2.5m wide, 3.8–4.0m long) with controlled 0.3–0.9m overlap for continuity.
+- Path_0 and path_1 (blok → bench area wear) retained as-is.
+- All patches tagged `footpath_guide` for potential future HUD path hinting.
+- Collision remains off (decorative only).
+
+### Midpoint landmark correction
+
+**What changed:**
+- `footpath_weathered_planter` moved from `{-5.5, _, -1.4}` to `{-0.5, _, -13.2}` — now placed directly along the corrected footpath at the visual midpoint between bench and shop.
+- Scale increased from `{0.65, 0.38, 0.48}` to `{1.18, 0.54, 0.78}` — nearly 2× volume, visible from 10–15m.
+- Tint darkened from `{98, 102, 94}` to `{74, 78, 70}` — stronger visual contrast against grass.
+- Tagged `landmark` to match the landmark system expectations.
+
+### Shop conflict hint correction
+
+**What changed:**
+- `shop_window_repair_patch` scale increased from `{1.05, 0.36, 0.038}` to `{1.25, 0.48, 0.040}` — wider and taller.
+- Tint darkened and made more opaque: from `{122, 118, 108, 172}` to `{96, 88, 76, 198}` — reads as a distinctly patched area against the shop wall base color.
+- Added `shop_conflict_notice` — a tinted `notice_board` positioned at eye level near the patched window, using a warm paper-yellow tint `{218, 192, 144}` that suggests a handwritten or passive-aggressive announcement. Reinforces the "something happened here" read without requiring dialogue.
+
+### Remaining issues honestly unchanged
+
+- Road loop is still a rectangular tech-demo track.
+- World is still sparse — no terrain variation, no ambient clutter rhythm.
+- Future districts (neighbor block, side block, main artery) are still `future_district` / `future_expansion` placeholders.
+- No ambient NPCs or social rhythms — only Bogus is visible at world start.
+- Mission flow is still a fetch-chain walk → walk-back → drive → chase → return.
+- No interiors, no threshold crossing.
+- D3D11 renderer remains parked — no `--renderer d3d11` activation.
+- No new mission arc, no random prop spam, no map expansion.
+
+**Verification commands:**
+```
+git diff --check
+cmake --preset ci-core && cmake --build --preset ci-core && ctest --preset ci-core
+cmake --preset ci && cmake --build --preset ci && ctest --preset ci
+.\tools\ci_smoke.ps1 -Preset ci
+.\tools\renderframe_capture_replay.ps1 -Preset ci -Build -DumpVersion v2
+```
+
+### Files changed
+
+| File | What |
+|---|---|
+| `data/mission_driving_errand.json` | All 6 phase objectives replaced with local-motivation text |
+| `tests/game_support_tests.cpp` | Expected objective strings updated to match new JSON data |
+| `src/game/IntroLevelGroundTruthDressing.cpp` | Footpath patches 2–5 + shop_shortcut redesigned with warm tint and correct curve; midpoint planter enlarged, moved, darkened |
+| `src/game/IntroLevelIdentityDressing.cpp` | Shop repair patch made larger/more-opaque; added conflict notice board |
+| `docs/early-osiedle-reality-audit.md` | This section added |

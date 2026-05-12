@@ -161,12 +161,12 @@ void addGroundTruthAndClutter(IntroLevelData& level) {
     addClutter("block_notice_stand", "notice_board", {-18.7f, 0.0f, 10.65f}, {1.45f, 1.05f, 0.10f}, WorldLocationTag::Block, {"vertical_readability", "story_dressing", "block_cluster"});
     addTintedDecor("footpath_weathered_planter",
                    "planter_concrete",
-                   {-5.5f, 0.0f, -1.4f},
-                   {0.65f, 0.38f, 0.48f},
+                   {-0.5f, 0.0f, -13.2f},
+                   {1.18f, 0.54f, 0.78f},
                    WorldLocationTag::RoadLoop,
-                   {"osiedle_clutter", "footpath_marker", "block_cluster"},
-                   objectTint(98, 102, 94),
-                   -0.15f);
+                   {"osiedle_clutter", "footpath_marker", "block_cluster", "landmark"},
+                   objectTint(74, 78, 70),
+                   -0.10f);
     addClutter("block_planter_0", "planter_concrete", {-13.4f, 0.0f, 10.72f}, {1.05f, 0.46f, 0.58f}, WorldLocationTag::Block, {"story_dressing", "block_cluster"});
     addClutter("block_planter_1", "planter_concrete", {-21.7f, 0.0f, 10.72f}, {1.05f, 0.46f, 0.58f}, WorldLocationTag::Block, {"story_dressing", "block_cluster"});
     addClutter("garage_tool_crate", "cardboard_stack", {-12.0f, 0.0f, 20.45f}, {0.80f, 0.60f, 0.62f}, WorldLocationTag::Garage, {"garage_identity", "garage_cluster"});
@@ -212,11 +212,48 @@ void addGroundTruthAndClutter(IntroLevelData& level) {
 
     addGroundPatch("grass_wear_bogus_path_0", "irregular_grass_patch", {-12.1f, GroundPatchRenderY, 4.8f}, {2.2f, 0.007f, 4.4f}, WorldLocationTag::Block, {"grass_patch", "block_cluster"}, -0.15f);
     addGroundPatch("grass_wear_bogus_path_1", "irregular_grass_patch", {-9.4f, GroundPatchRenderY, 8.0f}, {1.6f, 0.007f, 2.8f}, WorldLocationTag::Block, {"grass_patch", "block_cluster"}, 0.25f);
-    addGroundPatch("grass_wear_bogus_path_2", "irregular_grass_patch", {-10.2f, GroundPatchRenderY, 2.2f}, {1.9f, 0.007f, 3.2f}, WorldLocationTag::Block, {"grass_patch", "block_cluster"}, -0.10f);
-    addGroundPatch("grass_wear_bogus_path_3", "irregular_grass_patch", {-7.8f, GroundPatchRenderY, -1.2f}, {2.0f, 0.007f, 2.8f}, WorldLocationTag::RoadLoop, {"grass_patch", "block_cluster"}, 0.12f);
-    addGroundPatch("grass_wear_bogus_path_4", "irregular_grass_patch", {-3.0f, GroundPatchRenderY, -4.5f}, {2.2f, 0.007f, 3.0f}, WorldLocationTag::RoadLoop, {"grass_patch", "block_cluster"}, 0.18f);
-    addGroundPatch("grass_wear_bogus_path_5", "irregular_grass_patch", {3.2f, GroundPatchRenderY, -8.2f}, {2.1f, 0.007f, 3.4f}, WorldLocationTag::RoadLoop, {"grass_patch", "block_cluster"}, 0.28f);
-    addGroundPatch("grass_wear_shop_shortcut", "irregular_grass_patch", {10.7f, GroundPatchRenderY, -12.0f}, {2.0f, 0.007f, 4.2f}, WorldLocationTag::RoadLoop, {"grass_patch"}, 0.35f);
+
+    auto footpathTint = objectTint(108, 96, 68, 132);
+    addTintedDecor("grass_wear_bogus_path_2",
+                   "irregular_grass_patch",
+                   {-9.5f, GroundPatchRenderY, -5.5f},
+                   {2.4f, 0.007f, 3.8f},
+                   WorldLocationTag::Block,
+                   {"grass_patch", "block_cluster", "ground_patch", "irregular_ground_patch", "artkit_v2", "footpath_guide"},
+                   footpathTint,
+                   -0.10f);
+    addTintedDecor("grass_wear_bogus_path_3",
+                   "irregular_grass_patch",
+                   {-5.0f, GroundPatchRenderY, -9.0f},
+                   {2.3f, 0.007f, 3.8f},
+                   WorldLocationTag::RoadLoop,
+                   {"grass_patch", "block_cluster", "ground_patch", "irregular_ground_patch", "artkit_v2", "footpath_guide"},
+                   footpathTint,
+                   0.08f);
+    addTintedDecor("grass_wear_bogus_path_4",
+                   "irregular_grass_patch",
+                   {-0.5f, GroundPatchRenderY, -13.0f},
+                   {2.5f, 0.007f, 4.0f},
+                   WorldLocationTag::RoadLoop,
+                   {"grass_patch", "block_cluster", "ground_patch", "irregular_ground_patch", "artkit_v2", "footpath_guide"},
+                   footpathTint,
+                   0.12f);
+    addTintedDecor("grass_wear_bogus_path_5",
+                   "irregular_grass_patch",
+                   {4.5f, GroundPatchRenderY, -16.5f},
+                   {2.4f, 0.007f, 3.8f},
+                   WorldLocationTag::RoadLoop,
+                   {"grass_patch", "block_cluster", "ground_patch", "irregular_ground_patch", "artkit_v2", "footpath_guide"},
+                   footpathTint,
+                   0.16f);
+    addTintedDecor("grass_wear_shop_shortcut",
+                   "irregular_grass_patch",
+                   {11.0f, GroundPatchRenderY, -20.0f},
+                   {2.3f, 0.007f, 3.8f},
+                   WorldLocationTag::RoadLoop,
+                   {"grass_patch", "ground_patch", "irregular_ground_patch", "artkit_v2", "footpath_guide"},
+                   footpathTint,
+                   0.22f);
     addGroundPatch("grass_wear_trash_0", "irregular_grass_patch", {8.8f, GroundPatchRenderY, -2.9f}, {2.8f, 0.007f, 1.4f}, WorldLocationTag::Trash, {"grass_patch", "trash_cluster"});
     addGroundPatch("grass_wear_garage_0", "irregular_grass_patch", {-18.0f, GroundPatchRenderY, 19.2f}, {4.2f, 0.007f, 1.25f}, WorldLocationTag::Garage, {"grass_patch", "garage_cluster"});
     addGroundPatch("grass_wear_block_side", "irregular_grass_patch", {-23.2f, GroundPatchRenderY, 8.0f}, {1.7f, 0.007f, 4.5f}, WorldLocationTag::Block, {"grass_patch", "block_cluster"});
