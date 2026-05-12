@@ -167,6 +167,75 @@ bs3d::RenderFrame loadFrame(const std::string& path) {
     return frame;
 }
 
+bool isNonZero(const bs3d::Vec3& v) {
+    return v.x != 0.0f || v.y != 0.0f || v.z != 0.0f;
+}
+
+struct OrbitCameraState {
+    float yaw = 0.0f;
+    float radius = 8.0f;
+    float height = 4.0f;
+    float fovy = 60.0f;
+    bs3d::Vec3 target = {0.0f, 0.0f, 0.0f};
+};
+
+OrbitCameraState makeOrbitCameraState(const bs3d::RenderFrame& frame) {
+    OrbitCameraState state;
+    state.fovy = frame.camera.fovy > 0.0f ? frame.camera.fovy : 60.0f;
+    if (isNonZero(frame.camera.target)) {
+        state.target = frame.camera.target;
+    }
+    return state;
+}
+
+void resetOrbitCameraState(OrbitCameraState& state, const bs3d::RenderFrame& frame) {
+    state.yaw = 0.0f;
+    state.radius = 8.0f;
+    state.height = 4.0f;
+    state.fovy = frame.camera.fovy > 0.0f ? frame.camera.fovy : 60.0f;
+    if (isNonZero(frame.camera.target)) {
+        state.target = frame.camera.target;
+    } else {
+        state.target = {0.0f, 0.0f, 0.0f};
+    }
+}
+
+void updateOrbitCameraStateFromKeyboard(OrbitCameraState& state, bool autoOrbit) {
+    if ((GetAsyncKeyState(VK_LEFT) & 0x8000) != 0 || (GetAsyncKeyState(0x41) & 0x8000) != 0) {
+        state.yaw -= 0.04f;
+    }
+    if ((GetAsyncKeyState(VK_RIGHT) & 0x8000) != 0 || (GetAsyncKeyState(0x44) & 0x8000) != 0) {
+        state.yaw += 0.04f;
+    }
+    if ((GetAsyncKeyState(0x57) & 0x8000) != 0) {
+        state.radius -= 0.1f;
+        if (state.radius < 1.0f) state.radius = 1.0f;
+    }
+    if ((GetAsyncKeyState(0x53) & 0x8000) != 0) {
+        state.radius += 0.1f;
+    }
+    if ((GetAsyncKeyState(0x51) & 0x8000) != 0) {
+        state.height -= 0.1f;
+    }
+    if ((GetAsyncKeyState(0x45) & 0x8000) != 0) {
+        state.height += 0.1f;
+    }
+
+    if (autoOrbit) {
+        state.yaw += 0.02f;
+    }
+}
+
+void applyOrbitCameraToFrame(const OrbitCameraState& state, bs3d::RenderFrame& frame) {
+    frame.camera.position = {
+        state.target.x + std::sin(state.yaw) * state.radius,
+        state.target.y + state.height,
+        state.target.z - std::cos(state.yaw) * state.radius};
+    frame.camera.target = state.target;
+    frame.camera.up = {0.0f, 1.0f, 0.0f};
+    frame.camera.fovy = state.fovy;
+}
+
 int runShell(const ShellOptions& options) {
     constexpr int width = 1280;
     constexpr int height = 720;
@@ -196,18 +265,7 @@ int runShell(const ShellOptions& options) {
     bs3d::RenderFrame frame = loadFrame(options.loadFramePath);
     std::cout << "loaded frame from " << options.loadFramePath << '\n';
 
-    float orbitYaw = 0.0f;
-    float orbitRadius = 8.0f;
-    float orbitHeight = 4.0f;
-    float orbitFovy = frame.camera.fovy > 0.0f ? frame.camera.fovy : 60.0f;
-    bs3d::Vec3 orbitTarget = {0.0f, 0.0f, 0.0f};
-    {
-        const auto& t = frame.camera.target;
-        if (t.x != 0.0f || t.y != 0.0f || t.z != 0.0f) {
-            orbitTarget = t;
-        }
-    }
-    const float autoOrbitSpeed = 0.02f;
+    OrbitCameraState orbit = makeOrbitCameraState(frame);
 
     if (options.orbitCamera) {
         std::cout << "Orbit controls: Left/Right or A/D yaw, W/S zoom, Q/E height, R reset, Esc quit\n";
@@ -216,9 +274,9 @@ int runShell(const ShellOptions& options) {
     if (options.orbitCamera && options.diagnostics) {
         std::cout << "orbit camera: enabled"
                   << " auto-orbit=" << (options.autoOrbit ? "enabled" : "disabled")
-                  << " radius=" << orbitRadius
-                  << " height=" << orbitHeight
-                  << " fovy=" << orbitFovy << '\n';
+                  << " radius=" << orbit.radius
+                  << " height=" << orbit.height
+                  << " fovy=" << orbit.fovy << '\n';
     }
 
     if (options.diagnostics) {
@@ -263,49 +321,13 @@ int runShell(const ShellOptions& options) {
         }
 
         if (options.orbitCamera) {
-            if ((GetAsyncKeyState(VK_LEFT) & 0x8000) != 0 || (GetAsyncKeyState(0x41) & 0x8000) != 0) {
-                orbitYaw -= 0.04f;
-            }
-            if ((GetAsyncKeyState(VK_RIGHT) & 0x8000) != 0 || (GetAsyncKeyState(0x44) & 0x8000) != 0) {
-                orbitYaw += 0.04f;
-            }
-            if ((GetAsyncKeyState(0x57) & 0x8000) != 0) {
-                orbitRadius -= 0.1f;
-                if (orbitRadius < 1.0f) orbitRadius = 1.0f;
-            }
-            if ((GetAsyncKeyState(0x53) & 0x8000) != 0) {
-                orbitRadius += 0.1f;
-            }
-            if ((GetAsyncKeyState(0x51) & 0x8000) != 0) {
-                orbitHeight -= 0.1f;
-            }
-            if ((GetAsyncKeyState(0x45) & 0x8000) != 0) {
-                orbitHeight += 0.1f;
-            }
             if ((GetAsyncKeyState(0x52) & 0x8000) != 0) {
-                orbitYaw = 0.0f;
-                orbitRadius = 8.0f;
-                orbitHeight = 4.0f;
-                orbitFovy = frame.camera.fovy > 0.0f ? frame.camera.fovy : 60.0f;
-                const auto& t = frame.camera.target;
-                if (t.x != 0.0f || t.y != 0.0f || t.z != 0.0f) {
-                    orbitTarget = t;
-                } else {
-                    orbitTarget = {0.0f, 0.0f, 0.0f};
-                }
+                resetOrbitCameraState(orbit, frame);
+            } else {
+                updateOrbitCameraStateFromKeyboard(orbit, options.autoOrbit);
             }
 
-            if (options.autoOrbit) {
-                orbitYaw += autoOrbitSpeed;
-            }
-
-            frame.camera.position = {
-                orbitTarget.x + std::sin(orbitYaw) * orbitRadius,
-                orbitTarget.y + orbitHeight,
-                orbitTarget.z - std::cos(orbitYaw) * orbitRadius};
-            frame.camera.target = orbitTarget;
-            frame.camera.up = {0.0f, 1.0f, 0.0f};
-            frame.camera.fovy = orbitFovy;
+            applyOrbitCameraToFrame(orbit, frame);
         }
 
         renderer.renderFrame(frame);
