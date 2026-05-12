@@ -24,14 +24,13 @@ WorldObject toWorldObject(const EditorOverlayObject& object) {
 EditorOverlayApplyResult applyEditorOverlay(IntroLevelData& level,
                                             const EditorOverlayDocument& overlay) {
     EditorOverlayApplyResult result;
-    // Phase 1 — collect existing object IDs and apply overrides by matching id.
+    // Phase 1 — collect existing object IDs and apply matching overrides.
     std::unordered_set<std::string> ids;
     ids.reserve(level.objects.size() + overlay.instances.size());
 
     for (WorldObject& object : level.objects) {
         ids.insert(object.id);
-    // Phase 2 — report missing override targets (warn, don't crash).
-    for (const EditorOverlayObject& overrideObject : overlay.overrides) {
+        for (const EditorOverlayObject& overrideObject : overlay.overrides) {
             if (overrideObject.id != object.id) {
                 continue;
             }
@@ -45,6 +44,7 @@ EditorOverlayApplyResult applyEditorOverlay(IntroLevelData& level,
         }
     }
 
+    // Phase 2 — report missing override targets (warn, don't crash).
     for (const EditorOverlayObject& overrideObject : overlay.overrides) {
         if (ids.find(overrideObject.id) == ids.end()) {
             result.warnings.push_back("overlay override target not found: " + overrideObject.id);
