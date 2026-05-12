@@ -6,6 +6,7 @@
 #include "bs3d/render/RenderFrame.h"
 #include "bs3d/render/RenderFrameBuilder.h"
 
+#include <string>
 #include <vector>
 
 namespace bs3d {
@@ -51,5 +52,10 @@ WorldRenderExtractionStats addWorldRenderListFallbackBoxes(
     RenderFrameBuilder& builder,
     const WorldRenderList& renderList,
     const std::vector<WorldAssetDefinition>& assetDefinitions);
+
+std::vector<std::string> selectShadowMeshSeedAssetIds(
+    const WorldRenderList& renderList,
+    const std::vector<WorldAssetDefinition>& definitions,
+    int maxCount);
 
 } // namespace bs3d

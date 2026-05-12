@@ -2596,14 +2596,19 @@ void GameApp::run(const GameRunOptions& options) {
                 if (options.renderFrameShadowMeshes) {
                     if (!shadowMeshRegistrySeeded) {
                         shadowMeshRegistrySeeded = true;
-                        int seeded = 0;
-                        for (const auto& obj : renderList.opaque) {
-                            if (seeded >= 3) break;
-                            if (obj && shadowMeshRegistry.find(obj->assetId).id == 0) {
-                                const auto handle = shadowMeshRegistry.allocate(obj->assetId);
-                                shadowSeededMeshHandles.push_back(handle);
-                                ++seeded;
+                        const auto seedIds = selectShadowMeshSeedAssetIds(renderList, assetDefs, 3);
+                        for (const auto& assetId : seedIds) {
+                            const auto handle = shadowMeshRegistry.allocate(assetId);
+                            shadowSeededMeshHandles.push_back(handle);
+                        }
+                        if (options.d3d11ShadowDiagnostics) {
+                            std::string seedList;
+                            for (const auto& id : seedIds) {
+                                if (!seedList.empty()) seedList += ", ";
+                                seedList += id;
                             }
+                            TraceLog(LOG_INFO, "RenderFrame shadow diag: seeded %d mesh assetIds: %s",
+                                     static_cast<int>(seedIds.size()), seedList.c_str());
                         }
                     }
 

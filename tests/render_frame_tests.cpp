@@ -2528,6 +2528,225 @@ void meshExtractionDeduplicatesObjects() {
     expect(frame.primitives.size() == 1, "frame has 1 primitive (deduplicated)");
 }
 
+// ---------- Mesh seed selection tests ----------
+
+void seedSelectsFromOpaqueFirst() {
+    bs3d::WorldObject objA;
+    objA.id = "obj_a";
+    objA.assetId = "asset_a";
+    objA.position = {0.0f, 0.0f, 0.0f};
+
+    bs3d::WorldObject objB;
+    objB.id = "obj_b";
+    objB.assetId = "asset_b";
+    objB.position = {1.0f, 0.0f, 0.0f};
+
+    bs3d::WorldAssetDefinition defA;
+    defA.id = "asset_a";
+    defA.renderBucket = "Opaque";
+
+    bs3d::WorldAssetDefinition defB;
+    defB.id = "asset_b";
+    defB.renderBucket = "Opaque";
+
+    bs3d::WorldRenderList renderList;
+    renderList.opaque = {&objA, &objB};
+
+    const auto result = bs3d::selectShadowMeshSeedAssetIds(renderList, {defA, defB}, 1);
+    expect(result.size() == 1, "selects exactly maxCount assetIds");
+    expect(result[0] == "asset_a", "selects first opaque assetId first");
+}
+
+void seedRespectsMaxCount() {
+    bs3d::WorldObject objA;
+    objA.id = "obj_a";
+    objA.assetId = "asset_a";
+    objA.position = {0.0f, 0.0f, 0.0f};
+
+    bs3d::WorldObject objB;
+    objB.id = "obj_b";
+    objB.assetId = "asset_b";
+    objB.position = {1.0f, 0.0f, 0.0f};
+
+    bs3d::WorldAssetDefinition def;
+    def.id = "asset_a";
+    def.renderBucket = "Opaque";
+
+    bs3d::WorldAssetDefinition defB;
+    defB.id = "asset_b";
+    defB.renderBucket = "Opaque";
+
+    bs3d::WorldRenderList renderList;
+    renderList.opaque = {&objA, &objB};
+
+    auto result = bs3d::selectShadowMeshSeedAssetIds(renderList, {def, defB}, 2);
+    expect(result.size() == 2, "selects up to maxCount");
+
+    result = bs3d::selectShadowMeshSeedAssetIds(renderList, {def, defB}, 3);
+    expect(result.size() == 2, "returns at most available when maxCount exceeds");
+
+    result = bs3d::selectShadowMeshSeedAssetIds(renderList, {def, defB}, 0);
+    expect(result.empty(), "maxCount 0 returns empty");
+
+    result = bs3d::selectShadowMeshSeedAssetIds(renderList, {def, defB}, -1);
+    expect(result.empty(), "negative maxCount returns empty");
+}
+
+void seedSkipsMissingDefinitions() {
+    bs3d::WorldObject objA;
+    objA.id = "obj_a";
+    objA.assetId = "asset_a";
+    objA.position = {0.0f, 0.0f, 0.0f};
+
+    bs3d::WorldObject objB;
+    objB.id = "obj_b";
+    objB.assetId = "missing_def";
+    objB.position = {1.0f, 0.0f, 0.0f};
+
+    bs3d::WorldAssetDefinition defA;
+    defA.id = "asset_a";
+    defA.renderBucket = "Opaque";
+
+    bs3d::WorldRenderList renderList;
+    renderList.opaque = {&objB, &objA};
+
+    const auto result = bs3d::selectShadowMeshSeedAssetIds(renderList, {defA}, 3);
+    expect(result.size() == 1, "skips objects with missing definitions");
+    expect(result[0] == "asset_a", "selects object with valid definition");
+}
+
+void seedRemovesDuplicateAssetIds() {
+    bs3d::WorldObject objA1;
+    objA1.id = "obj_a1";
+    objA1.assetId = "asset_a";
+    objA1.position = {0.0f, 0.0f, 0.0f};
+
+    bs3d::WorldObject objA2;
+    objA2.id = "obj_a2";
+    objA2.assetId = "asset_a";
+    objA2.position = {1.0f, 0.0f, 0.0f};
+
+    bs3d::WorldObject objB;
+    objB.id = "obj_b";
+    objB.assetId = "asset_b";
+    objB.position = {2.0f, 0.0f, 0.0f};
+
+    bs3d::WorldAssetDefinition defA;
+    defA.id = "asset_a";
+    defA.renderBucket = "Opaque";
+
+    bs3d::WorldAssetDefinition defB;
+    defB.id = "asset_b";
+    defB.renderBucket = "Opaque";
+
+    bs3d::WorldRenderList renderList;
+    renderList.opaque = {&objA1, &objA2, &objB};
+
+    const auto result = bs3d::selectShadowMeshSeedAssetIds(renderList, {defA, defB}, 5);
+    expect(result.size() == 2, "removes duplicate assetIds");
+    expect(result[0] == "asset_a", "first unique assetId");
+    expect(result[1] == "asset_b", "second unique assetId");
+}
+
+void seedFallsBackToOtherBuckets() {
+    bs3d::WorldObject objV;
+    objV.id = "obj_v";
+    objV.assetId = "asset_v";
+    objV.position = {0.0f, 0.0f, 0.0f};
+
+    bs3d::WorldObject objD;
+    objD.id = "obj_d";
+    objD.assetId = "asset_d";
+    objD.position = {1.0f, 0.0f, 0.0f};
+
+    bs3d::WorldObject objG;
+    objG.id = "obj_g";
+    objG.assetId = "asset_g";
+    objG.position = {2.0f, 0.0f, 0.0f};
+
+    bs3d::WorldAssetDefinition defV;
+    defV.id = "asset_v";
+    defV.renderBucket = "Vehicle";
+
+    bs3d::WorldAssetDefinition defD;
+    defD.id = "asset_d";
+    defD.renderBucket = "Decal";
+
+    bs3d::WorldAssetDefinition defG;
+    defG.id = "asset_g";
+    defG.renderBucket = "Glass";
+
+    // Opaque list is empty — should fall back to other buckets in order.
+    bs3d::WorldRenderList renderList;
+    renderList.translucent = {&objV};
+    renderList.glass = {&objD};
+    renderList.transparent = {&objG};
+
+    auto result = bs3d::selectShadowMeshSeedAssetIds(renderList, {defV, defD, defG}, 3);
+    expect(result.size() == 3, "selects from all buckets when opaque is empty");
+    expect(result[0] == "asset_v", "Vehicle first (opaques empty)");
+    expect(result[1] == "asset_d", "Decal second");
+    expect(result[2] == "asset_g", "Glass third");
+}
+
+void seedDeterministicOrderFromScrambledInput() {
+    bs3d::WorldObject objO;
+    objO.id = "obj_o";
+    objO.assetId = "asset_o";
+    objO.position = {0.0f, 0.0f, 0.0f};
+
+    bs3d::WorldObject objV;
+    objV.id = "obj_v";
+    objV.assetId = "asset_v";
+    objV.position = {1.0f, 0.0f, 0.0f};
+
+    bs3d::WorldObject objD;
+    objD.id = "obj_d";
+    objD.assetId = "asset_d";
+    objD.position = {2.0f, 0.0f, 0.0f};
+
+    bs3d::WorldAssetDefinition defO;
+    defO.id = "asset_o";
+    defO.renderBucket = "Opaque";
+
+    bs3d::WorldAssetDefinition defV;
+    defV.id = "asset_v";
+    defV.renderBucket = "Vehicle";
+
+    bs3d::WorldAssetDefinition defD;
+    defD.id = "asset_d";
+    defD.renderBucket = "Decal";
+
+    // Put objects in scrambled order across render list fields.
+    bs3d::WorldRenderList renderList;
+    renderList.transparent = {&objV, &objO};
+    renderList.opaque = {&objD};
+
+    const auto result = bs3d::selectShadowMeshSeedAssetIds(renderList, {defO, defV, defD}, 3);
+    expect(result.size() == 3, "selects 3 assetIds from scrambled input");
+    expect(result[0] == "asset_o", "Opaque first regardless of which list field it was in");
+    expect(result[1] == "asset_v", "Vehicle second");
+    expect(result[2] == "asset_d", "Decal third");
+}
+
+void seedSkipsNullObjects() {
+    bs3d::WorldObject objA;
+    objA.id = "obj_a";
+    objA.assetId = "asset_a";
+    objA.position = {0.0f, 0.0f, 0.0f};
+
+    bs3d::WorldAssetDefinition defA;
+    defA.id = "asset_a";
+    defA.renderBucket = "Opaque";
+
+    bs3d::WorldRenderList renderList;
+    renderList.opaque = {nullptr, &objA, nullptr};
+
+    const auto result = bs3d::selectShadowMeshSeedAssetIds(renderList, {defA}, 3);
+    expect(result.size() == 1, "skips null objects");
+    expect(result[0] == "asset_a", "selects non-null object");
+}
+
 } // namespace
 
 int main() {
@@ -2575,6 +2794,13 @@ int main() {
     meshExtractionUsesObjectTintOverride();
     meshExtractionUsesDefinitionTintWhenNoOverride();
     meshExtractionDeduplicatesObjects();
+    seedSelectsFromOpaqueFirst();
+    seedRespectsMaxCount();
+    seedSkipsMissingDefinitions();
+    seedRemovesDuplicateAssetIds();
+    seedFallsBackToOtherBuckets();
+    seedDeterministicOrderFromScrambledInput();
+    seedSkipsNullObjects();
     dumpWriteAndReadRoundTrip();
     dumpReadMissingFileReturnsError();
     dumpReadMissingHeaderFails();

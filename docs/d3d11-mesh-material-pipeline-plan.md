@@ -10,7 +10,8 @@ Stage 4: DONE — RenderFrameDump v2
 Stage 5a: DONE — addWorldRenderListMeshCommands extraction helper
 Stage 5b: DONE — --renderframe-shadow-meshes wired to GameApp shadow path
 Stage 5c: DONE — D3D11 sidecar procedural mesh upload for emitted MeshHandle ids
-Next code pass: Stage 6 — real asset loading (OBJ/GLTF), or improve deterministic MeshRegistry seeding (Stage 5d)
+Stage 5d: DONE — selectShadowMeshSeedAssetIds deterministic seed helper
+Next code pass: Stage 6 — real asset loading (OBJ/GLTF), or Stage 5e further seed improvements
 
 See also:
 - `docs/backend-modernization-grounding.md` — truth hierarchy, protected systems, non-goals

@@ -376,4 +376,87 @@ WorldRenderExtractionStats addWorldRenderListMeshCommands(
     return stats;
 }
 
+std::vector<std::string> selectShadowMeshSeedAssetIds(
+    const WorldRenderList& renderList,
+    const std::vector<WorldAssetDefinition>& definitions,
+    int maxCount) {
+    std::vector<std::string> result;
+    if (maxCount <= 0) {
+        return result;
+    }
+
+    const RenderBucket bucketOrder[] = {
+        RenderBucket::Opaque,
+        RenderBucket::Vehicle,
+        RenderBucket::Decal,
+        RenderBucket::Glass,
+        RenderBucket::Translucent,
+    };
+
+    using BucketSources = std::vector<const WorldObject*>;
+    BucketSources opaque;
+    BucketSources vehicle;
+    BucketSources decal;
+    BucketSources glass;
+    BucketSources translucent;
+
+    WorldRenderExtractionStats stats;
+
+    // Collect objects from all render list fields, deduplicate, categorize by bucket.
+    std::vector<const WorldObject*> seen;
+
+    auto collectFrom = [&](const std::vector<const WorldObject*>& objects) {
+        for (const WorldObject* obj : objects) {
+            if (obj == nullptr || alreadySeen(seen, obj)) {
+                continue;
+            }
+            seen.push_back(obj);
+
+            const WorldAssetDefinition* def = findDefinition(definitions, obj->assetId);
+            if (def == nullptr) {
+                continue;
+            }
+
+            RenderBucket bucket = RenderBucket::Opaque;
+            if (!tryMapRenderBucket(*def, bucket, stats)) {
+                continue;
+            }
+
+            switch (bucket) {
+            case RenderBucket::Opaque:   opaque.push_back(obj); break;
+            case RenderBucket::Vehicle:  vehicle.push_back(obj); break;
+            case RenderBucket::Decal:    decal.push_back(obj); break;
+            case RenderBucket::Glass:    glass.push_back(obj); break;
+            case RenderBucket::Translucent: translucent.push_back(obj); break;
+            default: break;
+            }
+        }
+    };
+
+    collectFrom(renderList.opaque);
+    collectFrom(renderList.translucent);
+    collectFrom(renderList.glass);
+    collectFrom(renderList.transparent);
+
+    auto emitFromBucket = [&](const BucketSources& sources) {
+        for (const WorldObject* obj : sources) {
+            if (static_cast<int>(result.size()) >= maxCount) {
+                return;
+            }
+            const auto& assetId = obj->assetId;
+            if (std::find(result.begin(), result.end(), assetId) == result.end()) {
+                result.push_back(assetId);
+            }
+        }
+    };
+
+    emitFromBucket(opaque);
+    emitFromBucket(vehicle);
+    emitFromBucket(decal);
+    emitFromBucket(glass);
+    emitFromBucket(translucent);
+
+    return result;
+}
+
 } // namespace bs3d
