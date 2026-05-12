@@ -131,7 +131,7 @@ v 0 1 0
 v -1 -1 0
 v 1 -1 0
 f 1 2 3
-"@ | Set-Content -Path $TestObj
+"@ | Set-Content -Path $TestObj -Encoding ascii
 
 # --- Replay (direct) ---
 Write-Host ""
