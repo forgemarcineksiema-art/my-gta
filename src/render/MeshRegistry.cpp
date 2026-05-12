@@ -45,4 +45,12 @@ MeshHandle MeshRegistry::find(const std::string& assetId) const {
     return MeshHandle{found->second};
 }
 
+std::size_t MeshRegistry::count() const {
+    return entriesById_.size();
+}
+
+bool MeshRegistry::empty() const {
+    return entriesById_.empty();
+}
+
 } // namespace bs3d

@@ -27,6 +27,9 @@ void MaterialRegistry::release(MaterialHandle handle) {
     if (handle.id == 0) {
         return;
     }
+    if (handle.id == defaultOpaque_.id || handle.id == defaultAlpha_.id) {
+        return;
+    }
     const auto entry = entriesById_.find(handle.id);
     if (entry == entriesById_.end()) {
         return;
@@ -61,6 +64,14 @@ MaterialHandle MaterialRegistry::defaultOpaque() const {
 
 MaterialHandle MaterialRegistry::defaultAlpha() const {
     return defaultAlpha_;
+}
+
+std::size_t MaterialRegistry::count() const {
+    return entriesById_.size();
+}
+
+bool MaterialRegistry::empty() const {
+    return entriesById_.empty();
 }
 
 } // namespace bs3d

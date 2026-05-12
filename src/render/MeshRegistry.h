@@ -2,6 +2,7 @@
 
 #include "bs3d/render/RenderFrame.h"
 
+#include <cstddef>
 #include <string>
 #include <unordered_map>
 
@@ -14,6 +15,9 @@ public:
     bool isValid(MeshHandle handle) const;
     const std::string* assetId(MeshHandle handle) const;
     MeshHandle find(const std::string& assetId) const;
+
+    std::size_t count() const;
+    bool empty() const;
 
 private:
     std::uint32_t nextId_ = 2;

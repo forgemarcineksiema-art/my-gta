@@ -1626,6 +1626,58 @@ void materialRegistryFindDefaultsByName() {
     expect(alpha.id == registry.defaultAlpha().id, "find default_alpha must match defaultAlpha()");
 }
 
+// Registry count/empty helpers
+
+void meshRegistryCountTracksAllocations() {
+    bs3d::MeshRegistry registry;
+    expect(registry.count() == 0, "empty registry count must be 0");
+    expect(registry.empty(), "empty registry must be empty");
+    registry.allocate("a");
+    expect(registry.count() == 1, "count must be 1 after one allocation");
+    expect(!registry.empty(), "registry must not be empty after allocation");
+    registry.allocate("b");
+    expect(registry.count() == 2, "count must be 2 after two allocations");
+    registry.release(registry.find("a"));
+    expect(registry.count() == 1, "count must be 1 after release");
+}
+
+void meshRegistryReleaseUnknownDoesNotChangeCount() {
+    bs3d::MeshRegistry registry;
+    registry.allocate("a");
+    expect(registry.count() == 1, "count must be 1 after allocation");
+    registry.release(bs3d::MeshHandle{0});
+    expect(registry.count() == 1, "releasing zero handle must not change count");
+    registry.release(bs3d::MeshHandle{99});
+    expect(registry.count() == 1, "releasing unknown handle must not change count");
+}
+
+void materialRegistryStartsWithDefaultsCount() {
+    bs3d::MaterialRegistry registry;
+    expect(registry.count() == 2, "count must be 2 for defaultOpaque and defaultAlpha");
+    expect(!registry.empty(), "registry must not be empty because defaults exist");
+}
+
+void materialRegistryUserAllocationChangesCount() {
+    bs3d::MaterialRegistry registry;
+    expect(registry.count() == 2, "count must start at 2");
+    registry.allocate("concrete");
+    expect(registry.count() == 3, "count must be 3 after user allocation");
+    registry.release(registry.find("concrete"));
+    expect(registry.count() == 2, "count must return to 2 after releasing user material");
+}
+
+void materialRegistryDefaultsAreNotReleased() {
+    bs3d::MaterialRegistry registry;
+    registry.release(registry.defaultOpaque());
+    expect(registry.isValid(registry.defaultOpaque()), "defaultOpaque must remain valid after release attempt");
+    expect(registry.count() == 2, "count must stay 2 after attempting to release defaultOpaque");
+    registry.release(registry.defaultAlpha());
+    expect(registry.isValid(registry.defaultAlpha()), "defaultAlpha must remain valid after release attempt");
+    expect(registry.count() == 2, "count must stay 2 after attempting to release defaultAlpha");
+    const auto found = registry.find("default_opaque");
+    expect(found.id == registry.defaultOpaque().id, "defaultOpaque must remain findable after release attempt");
+}
+
 void factoryCreatesNullRenderer() {
     bs3d::RendererFactoryRequest request;
     request.useNullRenderer = true;
@@ -1790,6 +1842,11 @@ int main() {
     materialRegistryReleaseThenReallocateIsNewHandle();
     materialRegistryUserAllocationsDoNotCollideWithDefaults();
     materialRegistryFindDefaultsByName();
+    meshRegistryCountTracksAllocations();
+    meshRegistryReleaseUnknownDoesNotChangeCount();
+    materialRegistryStartsWithDefaultsCount();
+    materialRegistryUserAllocationChangesCount();
+    materialRegistryDefaultsAreNotReleased();
     factoryCreatesNullRenderer();
     factoryReturnsErrorForRaylibBackend();
     factoryDoesNotPretendRaylibAdapterExists();

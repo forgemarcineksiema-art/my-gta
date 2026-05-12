@@ -2,6 +2,7 @@
 
 #include "bs3d/render/RenderFrame.h"
 
+#include <cstddef>
 #include <string>
 #include <unordered_map>
 
@@ -18,6 +19,9 @@ public:
     MaterialHandle find(const std::string& name) const;
     MaterialHandle defaultOpaque() const;
     MaterialHandle defaultAlpha() const;
+
+    std::size_t count() const;
+    bool empty() const;
 
 private:
     std::uint32_t nextId_ = 3;
