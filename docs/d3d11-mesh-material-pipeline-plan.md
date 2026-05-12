@@ -66,40 +66,36 @@ Unsupported (skipped with stat tracking):
 - `TextureHandle` (line 49) is a zero-struct with `uint32_t id`.
 - `RenderMaterial` (line 53) has `RenderColor tint` and `TextureHandle texture`.
 
-These handles are reserved in the data model. `MeshHandle` is now consumed by `D3D11Renderer` through `D3D11MeshCache` for cached handles. `MaterialHandle` is still not consumed by the renderer (bucket-based fallback only). No extraction path populates mesh/material handles yet (Stage 5 deferred).
+These handles are reserved in the data model. `MeshHandle` is now consumed by `D3D11Renderer` through `D3D11MeshCache` for cached handles. `--renderframe-shadow-meshes` populates mesh/material handles in the shadow extraction path (Stage 5, implemented).
 
-### 1.3 RenderFrameDump v1
+### 1.3 RenderFrameDump
 
-`RenderFrameDump` (`src/render/RenderFrameDump.h:9-11`) intentionally serializes only:
-- `RenderCamera`
-- `RenderPrimitiveKind::Box` primitives
-- Debug lines
-
-Non-Box primitive kinds (Sphere, Mesh, CylinderX, QuadPanel) are **silently skipped on write**. The dump format version is `"RenderFrameDump v1"`. Any Mesh commands added to a RenderFrame in memory will not survive a dump/load round-trip.
+`RenderFrameDump` (`src/render/RenderFrameDump.h`) serializes `RenderFrame` to/from text files. Two versions:
+- **v1** (default): serializes `RenderCamera`, `RenderPrimitiveKind::Box` primitives, debug lines. Non-Box kinds are silently skipped on write.
+- **v2**: writes/reads all primitive kinds with `meshId`/`materialId` tokens. Reader accepts both v1 and v2 headers.
 
 ### 1.4 GameApp runtime
 
 - GameApp main renderer is **raylib** — no D3D11.
 - `--renderer d3d11` remains **inactive** (returns a clear error).
-- Shadow extraction (`--renderframe-shadow`) builds `RenderFrame` from live `WorldRenderList` via fallback Box extraction only. No mesh extraction exists.
-- Shadow sidecar (`--d3d11-shadow-window`) renders extracted Box + debug lines only.
-- `WorldModelCache` (`src/game/WorldAssetRegistry.h:76`) loads raylib `Model` objects directly; no backend-neutral mesh path exists.
+- Shadow extraction (`--renderframe-shadow`) builds `RenderFrame` from live `WorldRenderList`. Default path emits fallback Boxes. `--renderframe-shadow-meshes` enables Mesh command emission via `MeshRegistry`/`MaterialRegistry`.
+- Shadow sidecar (`--d3d11-shadow-window`) renders the shadow `RenderFrame` through `D3D11Renderer`, supporting Box, debug lines, and cached Mesh primitives.
+- `WorldModelCache` (`src/game/WorldAssetRegistry.h:76`) loads raylib `Model` objects directly; the new `CpuMeshLoader` pipeline is parallel and dev-only.
 
 ### 1.5 Game shell
 
-`D3D11GameShell` (`src/render_d3d11/D3D11GameShell.cpp`) loads `RenderFrameDump v1`, renders through `D3D11Renderer`, and supports `--add-test-mesh` (append `BuiltInUnitCubeMeshId` compound). No real asset loading.
+`D3D11GameShell` (`src/render_d3d11/D3D11GameShell.cpp`) loads `RenderFrameDump` (v1 or v2), renders through `D3D11Renderer`, and supports `--add-test-mesh` (append procedural Mesh primitives, handles id=1 and id=2), `--load-mesh <path>` (load OBJ via `CpuMeshLoader`, upload as id=3). No real asset loading.
 
-### 1.6 WorldAssetRegistry
+### 1.6 WorldAssetRegistry / CpuMeshLoader
 
-`WorldAssetRegistry` (`src/game/WorldAssetRegistry.h:61`) manages asset definitions (`WorldAssetDefinition` → `modelPath`, `fallbackSize`, `fallbackColor`, etc.) from `asset_manifest.txt`. `WorldModelCache` loads raylib `Model` instances directly from OBJ/GLTF files. There is no backend-neutral mesh registry or GPU-upload path.
+`WorldAssetRegistry` manages asset definitions from `asset_manifest.txt`. `WorldModelCache` loads raylib `Model` instances. `CpuMeshLoader` (`src/render/CpuMeshLoader.h/.cpp`) provides a backend-neutral OBJ loader producing `CpuMeshData` (positions + triangulated faces), used by `D3D11GameShell --load-mesh` and tests. No `WorldModelCache` replacement — the new pipeline is parallel. Mesh upload to the GPU cache remains through `D3D11MeshCache`.
 
 ### 1.7 Coverage diagnostics
 
 Current D3D11 coverage stats track:
-- `drawnBoxes`, `drawnMeshes` (cached Mesh handles increment this; `--add-test-mesh` shows `drawnMeshes=1`)
+- `drawnBoxes`, `drawnMeshes` (cached Mesh handles increment this; `--add-test-mesh` shows `drawnMeshes=2`, `--load-mesh` shows `drawnMeshes=1`)
 - `skippedMissingMeshes` (uncached Mesh handles), `skippedUnsupportedKinds`, `skippedUnsupportedBuckets`
-- `boxCoveragePct`, `meshCoveragePct` (mesh coverage reflects only cached uploaded meshes)
-- `primitiveCoveragePct`, `lineCoveragePct`
+- `boxCoveragePct`, `meshCoveragePct`, `primitiveCoveragePct`, `lineCoveragePct`
 
 ## 2) Architecture proposal
 
@@ -313,24 +309,6 @@ Implemented. See section 2.3 above for actual API. `D3D11MeshCache` integrates i
 - `RenderFrameDump v1` still does not serialize Mesh commands.
 - No file I/O, no asset loading, no GameApp integration.
 
-**Next: Stage 4 — RenderFrameDump v2**, or pre-Stage-4 cleanup (see below).
-
-**Goal:** Create a backend-neutral CPU-side mesh data struct that can be converted to `D3D11MeshUpload`, enabling game shell to upload custom procedural meshes beyond `BuiltInUnitCubeMeshId`.
-
-**Scope:**
-- Backend-neutral `CpuMeshData` struct (or `CpuMeshVertex` + indices) in `src/render/` or new location.
-- Adapter/conversion to `D3D11MeshUpload` (trivial since both use `float position[3]` and `uint16_t` indices).
-- `D3D11GameShell` can create a `CpuMeshData` for a simple triangle, convert to `D3D11MeshUpload`, upload to `D3D11MeshCache` via a new `D3D11Renderer` method or direct access.
-- New `--mesh-test-triangle` flag or reuse `--mesh-test`.
-- Diagnostics show `drawnMeshes=2` (BuiltInUnitCube + custom mesh).
-- **No file I/O, no asset loading, no GameApp integration, no RenderFrameDump v2.**
-
-**Verification:**
-- `.\build\ci\Debug\bs3d_d3d11_game_shell.exe --frames 3 --load-frame artifacts\shadow_frame.txt --add-test-mesh --mesh-test-triangle`
-- `.\tools\renderframe_capture_replay.ps1 -Preset ci -Build` (existing passes still work)
-
-**Runtime behavior:** No change to GameApp. `D3D11GameShell` only.
-
 ### Stage 4 — RenderFrameDump v2 serializing Mesh commands — DONE
 
 **Implemented:**
@@ -345,68 +323,21 @@ Implemented. See section 2.3 above for actual API. `D3D11MeshCache` integrates i
 - **No geometry data, no textures, no material definitions, no asset loading.**
 - `--renderer d3d11` remains inactive.
 
-**Next: Stage 5 — GameApp shadow extraction Mesh commands.**
+**Stage 5 implemented (see subsections 5a-5d in checklist).**
 
-### Stage 5 — GameApp shadow Mesh extraction — NEXT
+### Stage 5 — GameApp shadow Mesh extraction — DONE
 
-**Goal:** The `--renderframe-shadow` path can optionally emit `RenderPrimitiveKind::Mesh` commands in the shadow `RenderFrame` when a `MeshRegistry` is available.
+**Goal:** Achieved. The `--renderframe-shadow` path can optionally emit `RenderPrimitiveKind::Mesh` commands in the shadow `RenderFrame` when a `MeshRegistry` is available.
 
-**This is dev/shadow only.** Main raylib renderer remains unchanged. `--renderer d3d11` remains inactive.
+**Implemented as dev/shadow only.** Main raylib renderer remains unchanged. `--renderer d3d11` remains inactive.
 
-**Gating:**
+**Implemented sub-stages:**
+- **5a**: `addWorldRenderListMeshCommands` extraction helper. 12 tests.
+- **5b**: `--renderframe-shadow-meshes` CLI flag wired to GameApp. `drawnMeshes=5` with sidecar.
+- **5c**: `D3D11ShadowSidecar::uploadTestMesh` bridge. Procedural unit cube uploads.
+- **5d**: `selectShadowMeshSeedAssetIds` deterministic helper. 7 tests.
 
-New explicit dev flag:
-- `--renderframe-shadow-meshes` — enables Mesh command emission in the shadow frame.
-- Implies `--renderframe-shadow` (not meaningful without it).
-- Default remains fallback Box extraction only.
-- Invalid/absent MeshRegistry → fallback Box extraction (unchanged behavior).
-
-**Registry behavior (first pass):**
-
-- `MeshRegistry` maps `WorldObject.assetId` → `MeshHandle`.
-  - `WorldObject.assetId` matches `WorldAssetDefinition.id`.
-  - `MeshRegistry.find(definition.id)` returns `MeshHandle` or `MeshHandle{0}`.
-- `MaterialRegistry` uses `defaultOpaque()` / `defaultAlpha()` only (no per-asset materials yet).
-- First pass may map a **small subset** of assetIds to procedural/test handles — not every WorldObject needs a Mesh.
-- No real asset (OBJ/GLTF) loading in Stage 5. Meshes must be pre-uploaded into `D3D11MeshCache` beforehand.
-
-**Extraction design:**
-
-New function (additive to existing fallback Box path):
-```
-int addWorldRenderListMeshes(RenderFrameBuilder& builder,
-                             const WorldRenderList& renderList,
-                             const std::vector<WorldAssetDefinition>& assetDefinitions,
-                             const MeshRegistry& meshRegistry,
-                             const MaterialRegistry& materialRegistry);
-```
-
-Behavior:
-- Iterates `WorldRenderList` buckets (Opaque, Vehicle, Decal, Glass, Translucent) in production order.
-- For each `WorldObject`, resolves `assetId` via `MeshRegistry.find()`.
-- If resolved: emits `RenderPrimitiveCommand` with `kind=Mesh`, `mesh=handle`, `material=materialRegistry.defaultOpaque()` (or `defaultAlpha()` for Glass/Translucent buckets).
-- If NOT resolved: **falls back to existing Box extraction** (uses `WorldAssetDefinition.fallbackSize`/`fallbackColor`).
-- Returns `emittedMeshCount` for diagnostics.
-- `MeshRegistry` is passed by const-ref; if not available (caller passes empty/default registry), emits only fallback Boxes.
-
-**Diagnostics:**
-
-- `WorldRenderExtractionStats` gains `emittedMeshes` counter.
-- Shadow diagnostics log: `emittedMeshes`, `meshFallbacks` (objects where mesh was unresolved → Box fallback).
-- D3D11 sidecar diagnostics already track `drawnMeshes` and `meshCoveragePct`.
-- `RenderFrameDump v2` should be used when capturing shadow frames with Mesh commands (v1 would skip them).
-
-**Explicit non-goals (Stage 5):**
-
-- No real model/OBJ/GLTF loading.
-- No texture/material pipeline (MaterialRegistry is data-only).
-- No GameApp main D3D11 renderer.
-- No `--renderer d3d11` activation.
-- No replacement of `WorldRenderer`/`HudRenderer`/`DebugRenderer`.
-- No mesh auto-upload from `WorldModelCache` — meshes must be explicitly uploaded before extraction runs.
-- No `WorldRenderList` changes — extraction reads existing lists, does not modify them.
-
-**First Stage 5 code pass:**
+**First Stage 5 code pass:** (Done)
 
 1. Add `--renderframe-shadow-meshes` CLI flag to `GameRunOptions` and `main.cpp`.
 2. In `GameApp`, create `MeshRegistry` and `MaterialRegistry` when the flag is active.
@@ -415,13 +346,7 @@ Behavior:
 5. Add `emittedMeshes` to `WorldRenderExtractionStats` and shadow diagnostics.
 6. Test: `--renderframe-shadow --renderframe-shadow-meshes --renderframe-shadow-dump artifacts\shadow_v2.txt --renderframe-shadow-dump-version v2` with pre-uploaded test handles.
 
-**Verification:**
-- `.\tools\d3d11_shadow_smoke.ps1 -Preset ci -Build`
-- Shadow diagnostics show `emittedMeshes > 0` and `meshCoveragePct > 0`.
-- Existing smoke scripts still pass.
-- `--renderer d3d11` still rejected.
-
-### Stage 6 — Real mesh asset loading (planned)
+### Stage 6 — Real mesh asset loading — IN PROGRESS
 
 **Goal:** Load mesh data from existing `WorldAssetDefinition.modelPath` files into backend-neutral `CpuMeshData`, then upload to `D3D11MeshCache` where needed. This enables D3D11 sidecar to draw non-procedural meshes for real world assets.
 
@@ -436,7 +361,7 @@ Behavior:
 
 **Stage 6 sub-stages:**
 
-**Stage 6a — CpuMeshLoader (data-only, tests):**
+**Stage 6a — CpuMeshLoader (data-only, tests) — DONE:**
 - New file: `src/render/CpuMeshLoader.h/.cpp`
 - Backend-neutral loader interface producing `CpuMeshData` from file paths
 - First format: minimal OBJ subset (positions + faces/triangulation only)
@@ -445,7 +370,7 @@ Behavior:
 - No D3D11, no GPU, no asset registry integration
 - Linked into `bs3d_render_tests`
 
-**Stage 6b — D3D11GameShell upload from file:**
+**Stage 6b — D3D11GameShell upload from file — DONE:**
 - Shell loads a CpuMeshData from a file path via `CpuMeshLoader`
 - Uploads to `D3D11MeshCache` via existing `uploadTestMesh` path
 - New shell flag: `--load-mesh <path>` (appends Mesh primitive with test tint)
@@ -516,13 +441,12 @@ ctest --preset ci
 
 ## 7) Recommended next code pass
 
-**Stage 6a — CpuMeshLoader.**
+**Stage 6c — Dev-only shadow sidecar upload from modelPath files.**
 
-- New file: `src/render/CpuMeshLoader.h/.cpp`
-- Backend-neutral loader producing `CpuMeshData` from file paths
-- First format: minimal OBJ subset (positions + triangulated faces only)
-- Test data: tiny inline OBJ strings, not real large assets
-- No D3D11, no GPU, no asset registry integration
-- Linked into `bs3d_render_tests`
-- No GameApp integration
-- No `--renderer d3d11` activation
+- When `--renderframe-shadow-meshes` and `--d3d11-shadow-window` are both active
+- Load selected `WorldAssetDefinition.modelPath` files for seeded MeshHandle ids via `CpuMeshLoader`
+- Upload loaded `CpuMeshData` to sidecar's `D3D11MeshCache`
+- Diagnostics: `drawnMeshes` reflects real mesh geometry from asset files
+- Gated entirely behind existing dev flags
+- `WorldModelCache` / raylib `Model` loading unchanged
+- No GameApp main renderer, no `--renderer d3d11` activation
