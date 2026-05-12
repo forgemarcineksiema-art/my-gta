@@ -94,6 +94,8 @@ VehicleRuntimeState VehicleController::simulate(const VehicleRuntimeState& state
                                                 const VehicleSurfaceResponse& surface) const {
     VehicleRuntimeState next = state;
     const float dt = std::max(0.0f, deltaSeconds);
+
+    // Phase 1 — decay temporary state: horn, instability, lateral slip, drift angle, shift timer.
     const float speedBeforeInput = next.speed;
     next.hornPulse = approach(next.hornPulse, 0.0f, 2.2f * dt);
     next.hornCooldown = std::max(0.0f, next.hornCooldown - dt);
@@ -135,6 +137,7 @@ VehicleRuntimeState VehicleController::simulate(const VehicleRuntimeState& state
                             : next.gear == 2 ? 0.88f
                             : next.gear == 3 ? 0.76f
                                              : 0.62f;
+    // Phase 2 — acceleration, braking, drag, and handbrake speed modulation.
     if (input.accelerate && !input.brake) {
         if (next.speed < -0.05f) {
             next.speed = approach(next.speed, 0.0f, config_.braking * conditionMultiplier * dt);
@@ -184,6 +187,7 @@ VehicleRuntimeState VehicleController::simulate(const VehicleRuntimeState& state
         next.rpmNormalized = std::clamp((next.speed - gearLow) / std::max(0.1f, gearHigh - gearLow), 0.0f, 1.0f);
     }
 
+    // Phase 3 — steering, yaw, and front-wheel visual.
     const float speedFactor = std::clamp(std::fabs(next.speed) / config_.maxForwardSpeed, 0.0f, 1.0f);
     const bool drivingIntent = input.accelerate || input.brake ||
                                std::fabs(speedBeforeInput) > 0.08f ||
@@ -227,6 +231,7 @@ VehicleRuntimeState VehicleController::simulate(const VehicleRuntimeState& state
     const float steerVisualTarget = -steerSign * MaxFrontWheelSteerRadians;
     next.frontWheelSteerRadians = approach(next.frontWheelSteerRadians, steerVisualTarget, 6.8f * dt);
 
+    // Phase 4 — drift entry, sustain, counter-steer, and exit.
     const float steerDirection = signedDirection(steerSign);
     const float previousDriftDirection = signedDirection(next.driftAngleRadians, 0.025f);
     const float driftDirection = previousDriftDirection != 0.0f ? previousDriftDirection : steerDirection;
@@ -262,6 +267,7 @@ VehicleRuntimeState VehicleController::simulate(const VehicleRuntimeState& state
                                   1.0f);
     next.driftActive = next.driftAmount > 0.045f && std::fabs(next.speed) > 0.70f;
 
+    // Phase 5 — lateral slip integration, position update, wheel spin, suspension, visual cue.
     const Vec3 forward = forwardFromYaw(next.yawRadians);
     const Vec3 right = screenRightFromYaw(next.yawRadians);
     float targetSlip = steerSign * next.speed * (input.handbrake ? config_.handbrakeDriftFactor : config_.driftFactor);

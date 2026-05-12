@@ -31,7 +31,7 @@ The following are the runtime systems that most affect gameplay feel and stabili
 |---|---|---|
 | Player movement feel | `PlayerMotor.cpp` | **Reviewed** — input normalization safe, acceleration/deceleration smooth, coyote jump correct, platform handling solid, wall bump/stagger handled. Added phase comments (ground detection, speed/acceleration, jump, collision). |
 | Camera | `CameraRig.cpp` | **Reviewed** — code is solid, collapse smoothing safe, boom occlusion correct, recenter handled. Minor improvements: clamped `smoothAlpha` exponent, added phase comments. |
-| Vehicle handling | `VehicleController*` | Steering authority, drift feel, gear shifts, collision impact |
+| Vehicle handling | `VehicleController.cpp` | **Reviewed** — dt-safe, surface-response guarded, gear/RPM math correct, steering authority speed-dependent, drift entry/sustain/counter-steer/exit system solid, lateral slip integration guarded, collision impact handled. Added phase comments (decay, accel/brake, steering, drift, slip/position). |
 | World collision / props | `WorldCollision*`, `PropSimulation*` | Hit detection accuracy, support platform velocity |
 | Mission flow | `MissionRuntimeBridge*`, `MissionOutcomeTrigger*` | Phase transitions, save/load consistency |
 | Editor / dev tools | `RuntimeMapEditor*`, `DevTools*` | ImGui integration, isolation modes, asset preview |
@@ -55,11 +55,11 @@ Each pass is small, testable, avoids huge rewrites, and does not touch D3D11.
 **Checked:** Input normalization (`normalizeXZ` re-applied, safe for zero input). Acceleration curve uses `approach()` with per-frame max delta (no dt instability). Quick-turn detection via dot product with acceleration boost. Coyote jump window (`coyoteTime = 0.12s`) correct. Jump buffer (`jumpBufferTime = 0.10s`) handled. Platform carry/fall-off at speed thresholds. Wall bump → stagger with cooldown (`bumpCooldownSeconds_`). Ground snap at two phases (before and after collision resolve). Landing recovery with speed state gating. Status modifiers (scared/tired/bruised) affect speed/acceleration correctly. Added phase comments (1: ground/platform, 2: speed/accel/facing, 3: jump, 4: collision/snap).
 **Remaining risks:** None at current smoke scope. Movement math is frame-time stable. Speed transitions feel responsive.
 
-### Pass 3: Vehicle gear shift / drift tuning
+### Pass 3: Vehicle gear shift / drift tuning — REVIEWED
 
-**Scope:** `VehicleController` shift timer, drift amount scaling.
-**Check:** Does gear display match engine RPM? Is drift entry/exit predictable?
-**Test:** Smoke with vehicle active, verify diagnostics show consistent RPM/gear/slip.
+**Scope:** `VehicleController.cpp`.
+**Checked:** `simulate()` is a pure function (excellent for testing). dt clamped, surface multipliers guarded with `std::max(min, ...)`. Gear upshift immediate, downshift after shift timer (0.26s). Acceleration curve anti-stall (`std::max(0.22f, 1.0f - speedRatio * 0.68f)`). RPM: `(speed - gearLow) / max(0.1f, gearHigh - gearLow)` — division safety applied. Steering authority speed-dependent with minimum floor (`minimumSteeringAuthority = 0.62f`). Turn angle capped at `Pi * 0.95f`. Drift: entry via handbrake+steer+speed, sustain with `driftSustainFactor`, counter-steer with `driftCounterSteerRate`, exit with `driftExitRate`. Lateral slip target uses grip-to-power (`pow(grip, 3)`) for low-grip surface amplification — protected with `std::max(0.22f, grip)`. Position integration: `forward * speed * dt + right * lateralSlip * dt`. Collision impact: condition decay, instability/slip/suspension set, speed reduction (0.35x for >8m/s, 0.62x otherwise). Added phase comments (1: decay, 2: accel/brake/drag, 3: steering, 4: drift, 5: slip/position/visual).
+**Remaining risks:** None at current smoke scope. Gear/RPM display consistent. Drift entry/exit predictable.
 
 ### Pass 4: Mission flow consistency
 
