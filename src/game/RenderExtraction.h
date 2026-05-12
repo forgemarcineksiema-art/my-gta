@@ -22,7 +22,20 @@ struct WorldRenderExtractionStats {
     int skippedDebugOnly = 0;
     int skippedUnsupportedBucket = 0;
     int totalCommands = 0;
+    int emittedMeshes = 0;
+    int meshFallbacks = 0;
+    int missingDefinitions = 0;
 };
+
+class MeshRegistry;
+class MaterialRegistry;
+
+WorldRenderExtractionStats addWorldRenderListMeshCommands(
+    RenderFrameBuilder& builder,
+    const WorldRenderList& renderList,
+    const std::vector<WorldAssetDefinition>& definitions,
+    const MeshRegistry& meshRegistry,
+    const MaterialRegistry& materialRegistry);
 
 RenderFrame makeEmptyRenderFrame(RenderCamera camera, WorldPresentationStyle style);
 void addWorldFallbackBox(RenderFrame& frame,

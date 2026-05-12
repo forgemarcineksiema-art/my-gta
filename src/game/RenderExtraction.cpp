@@ -1,5 +1,7 @@
 #include "RenderExtraction.h"
 
+#include "MaterialRegistry.h"
+#include "MeshRegistry.h"
 #include "bs3d/render/WorldRenderList.h"
 
 #include <algorithm>
@@ -169,6 +171,57 @@ void builderAppendCommands(RenderFrameBuilder& builder,
     }
 }
 
+void builderEmitMeshOrFallback(RenderFrameBuilder& builder,
+                               const WorldObject& object,
+                               const WorldAssetDefinition& definition,
+                               RenderBucket bucket,
+                               const MeshRegistry& meshRegistry,
+                               const MaterialRegistry& materialRegistry,
+                               WorldRenderExtractionStats& stats) {
+    const auto meshHandle = meshRegistry.find(definition.id);
+    if (meshHandle.id != 0) {
+        RenderPrimitiveCommand command;
+        command.kind = RenderPrimitiveKind::Mesh;
+        command.bucket = bucket;
+        command.mesh = meshHandle;
+        if (bucket == RenderBucket::Glass || bucket == RenderBucket::Translucent) {
+            command.material = materialRegistry.defaultAlpha();
+        } else {
+            command.material = materialRegistry.defaultOpaque();
+        }
+        command.transform.position = object.position + definition.visualOffset;
+        command.transform.position.y += definition.fallbackSize.y * object.scale.y * 0.5f;
+        command.transform.scale = object.scale;
+        command.transform.yawRadians = object.yawRadians;
+        command.size = {definition.fallbackSize.x * object.scale.x,
+                        definition.fallbackSize.y * object.scale.y,
+                        definition.fallbackSize.z * object.scale.z};
+        command.tint = object.hasTintOverride ? toRenderColor(object.tintOverride) : toRenderColor(definition.fallbackColor);
+        command.sourceId = definition.id;
+        builder.addPrimitive(command);
+        ++stats.emittedMeshes;
+        ++stats.totalCommands;
+    } else {
+        builderAddFallbackBox(builder, object, definition, bucket);
+        ++stats.meshFallbacks;
+        ++stats.totalCommands;
+    }
+}
+
+void builderAppendMeshCommands(RenderFrameBuilder& builder,
+                               const std::vector<WorldRenderExtractionCommandSource>& sources,
+                               RenderBucket bucket,
+                               int& bucketCount,
+                               WorldRenderExtractionStats& stats,
+                               const MeshRegistry& meshRegistry,
+                               const MaterialRegistry& materialRegistry) {
+    for (const WorldRenderExtractionCommandSource& source : sources) {
+        builderEmitMeshOrFallback(builder, *source.object, *source.definition,
+                                  bucket, meshRegistry, materialRegistry, stats);
+        ++bucketCount;
+    }
+}
+
 } // namespace
 
 RenderFrame makeEmptyRenderFrame(RenderCamera camera, WorldPresentationStyle style) {
@@ -248,6 +301,78 @@ WorldRenderExtractionStats addWorldRenderListFallbackBoxes(
     builderAppendCommands(builder, decal, RenderBucket::Decal, stats.decalCommands, stats);
     builderAppendCommands(builder, glass, RenderBucket::Glass, stats.glassCommands, stats);
     builderAppendCommands(builder, translucent, RenderBucket::Translucent, stats.translucentCommands, stats);
+    return stats;
+}
+
+WorldRenderExtractionStats addWorldRenderListMeshCommands(
+    RenderFrameBuilder& builder,
+    const WorldRenderList& renderList,
+    const std::vector<WorldAssetDefinition>& definitions,
+    const MeshRegistry& meshRegistry,
+    const MaterialRegistry& materialRegistry) {
+    WorldRenderExtractionStats stats;
+    std::vector<const WorldObject*> seen;
+    std::vector<WorldRenderExtractionCommandSource> opaque;
+    std::vector<WorldRenderExtractionCommandSource> vehicle;
+    std::vector<WorldRenderExtractionCommandSource> decal;
+    std::vector<WorldRenderExtractionCommandSource> glass;
+    std::vector<WorldRenderExtractionCommandSource> translucent;
+
+    auto collectSources = [&](const std::vector<const WorldObject*>& objects) {
+        for (const WorldObject* obj : objects) {
+            if (obj == nullptr || alreadySeen(seen, obj)) {
+                continue;
+            }
+            seen.push_back(obj);
+
+            const WorldAssetDefinition* def = findDefinition(definitions, obj->assetId);
+            if (def == nullptr) {
+                ++stats.missingDefinitions;
+                continue;
+            }
+
+            RenderBucket bucket = RenderBucket::Opaque;
+            if (!tryMapRenderBucket(*def, bucket, stats)) {
+                continue;
+            }
+
+            switch (bucket) {
+            case RenderBucket::Opaque:
+                opaque.push_back({obj, def});
+                break;
+            case RenderBucket::Vehicle:
+                vehicle.push_back({obj, def});
+                break;
+            case RenderBucket::Decal:
+                decal.push_back({obj, def});
+                break;
+            case RenderBucket::Glass:
+                glass.push_back({obj, def});
+                break;
+            case RenderBucket::Translucent:
+                translucent.push_back({obj, def});
+                break;
+            default:
+                break;
+            }
+        }
+    };
+
+    collectSources(renderList.opaque);
+    collectSources(renderList.translucent);
+    collectSources(renderList.glass);
+    collectSources(renderList.transparent);
+
+    builderAppendMeshCommands(builder, opaque, RenderBucket::Opaque, stats.opaqueCommands,
+                              stats, meshRegistry, materialRegistry);
+    builderAppendMeshCommands(builder, vehicle, RenderBucket::Vehicle, stats.vehicleCommands,
+                              stats, meshRegistry, materialRegistry);
+    builderAppendMeshCommands(builder, decal, RenderBucket::Decal, stats.decalCommands,
+                              stats, meshRegistry, materialRegistry);
+    builderAppendMeshCommands(builder, glass, RenderBucket::Glass, stats.glassCommands,
+                              stats, meshRegistry, materialRegistry);
+    builderAppendMeshCommands(builder, translucent, RenderBucket::Translucent, stats.translucentCommands,
+                              stats, meshRegistry, materialRegistry);
     return stats;
 }
 

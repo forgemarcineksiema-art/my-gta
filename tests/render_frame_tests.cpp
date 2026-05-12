@@ -2042,6 +2042,492 @@ void factoryCreatesUninitializedD3D11RendererWithOptIn() {
 }
 #endif
 
+// ---------- Mesh extraction tests ----------
+
+void meshCommandEmittedWhenRegistryHasAssetId() {
+    bs3d::WorldObject obj;
+    obj.id = "test_mesh_obj";
+    obj.assetId = "prop_barrel";
+    obj.position = {5.0f, 0.0f, 3.0f};
+    obj.scale = {2.0f, 1.5f, 2.0f};
+    obj.yawRadians = 0.5f;
+
+    bs3d::WorldAssetDefinition def;
+    def.id = "prop_barrel";
+    def.fallbackSize = {1.0f, 2.0f, 1.0f};
+    def.fallbackColor = {10, 20, 30, 200};
+    def.renderBucket = "Opaque";
+
+    bs3d::MeshRegistry meshRegistry;
+    const auto meshHandle = meshRegistry.allocate("prop_barrel");
+
+    bs3d::MaterialRegistry materialRegistry;
+
+    bs3d::WorldRenderList renderList;
+    renderList.opaque.push_back(&obj);
+
+    bs3d::RenderFrameBuilder builder;
+    const auto stats = bs3d::addWorldRenderListMeshCommands(
+        builder, renderList, {def}, meshRegistry, materialRegistry);
+
+    expect(stats.emittedMeshes == 1, "mesh extraction emits 1 mesh command when registry has assetId");
+    expect(stats.meshFallbacks == 0, "mesh extraction has no fallbacks when mesh is found");
+    expect(stats.totalCommands == 1, "mesh extraction counts 1 total command");
+    expect(stats.opaqueCommands == 1, "mesh extraction counts 1 opaque command");
+
+    const bs3d::RenderFrame frame = builder.build();
+    expect(frame.primitives.size() == 1, "mesh extraction frame has 1 primitive");
+    expect(frame.primitives[0].kind == bs3d::RenderPrimitiveKind::Mesh, "emitted primitive is Mesh kind");
+    expect(frame.primitives[0].bucket == bs3d::RenderBucket::Opaque, "mesh bucket is Opaque");
+    expect(frame.primitives[0].mesh.id == meshHandle.id, "mesh handle matches registry");
+    expect(frame.primitives[0].material.id == materialRegistry.defaultOpaque().id,
+           "opaque mesh uses defaultOpaque material");
+    expect(frame.primitives[0].sourceId == "prop_barrel", "mesh sourceId is assetId");
+}
+
+void fallbackBoxEmittedWhenRegistryLacksAssetId() {
+    bs3d::WorldObject obj;
+    obj.id = "test_fallback_obj";
+    obj.assetId = "missing_mesh";
+    obj.position = {1.0f, 0.0f, 2.0f};
+
+    bs3d::WorldAssetDefinition def;
+    def.id = "missing_mesh";
+    def.fallbackSize = {1.0f, 1.5f, 1.0f};
+    def.fallbackColor = {100, 200, 50, 255};
+    def.renderBucket = "Decal";
+
+    bs3d::MeshRegistry meshRegistry;
+
+    bs3d::MaterialRegistry materialRegistry;
+
+    bs3d::WorldRenderList renderList;
+    renderList.translucent.push_back(&obj);
+
+    bs3d::RenderFrameBuilder builder;
+    const auto stats = bs3d::addWorldRenderListMeshCommands(
+        builder, renderList, {def}, meshRegistry, materialRegistry);
+
+    expect(stats.emittedMeshes == 0, "mesh extraction emits 0 meshes when registry lacks assetId");
+    expect(stats.meshFallbacks == 1, "mesh extraction has 1 fallback when mesh is missing");
+    expect(stats.totalCommands == 1, "mesh extraction counts fallback as total command");
+    expect(stats.decalCommands == 1, "mesh extraction fallback counts as decal command");
+
+    const bs3d::RenderFrame frame = builder.build();
+    expect(frame.primitives.size() == 1, "mesh extraction fallback frame has 1 primitive");
+    expect(frame.primitives[0].kind == bs3d::RenderPrimitiveKind::Box,
+           "fallback primitive is Box kind when mesh missing");
+    expect(frame.primitives[0].bucket == bs3d::RenderBucket::Decal,
+           "fallback bucket is Decal");
+    expect(frame.primitives[0].sourceId == "test_fallback_obj",
+           "fallback sourceId is object id");
+}
+
+void glassAndTranslucentBucketsUseDefaultAlphaMaterial() {
+    bs3d::WorldObject glassObj;
+    glassObj.id = "test_glass";
+    glassObj.assetId = "glass_asset";
+    glassObj.position = {0.0f, 0.0f, 0.0f};
+
+    bs3d::WorldObject translucentObj;
+    translucentObj.id = "test_translucent";
+    translucentObj.assetId = "translucent_asset";
+    translucentObj.position = {1.0f, 0.0f, 0.0f};
+
+    bs3d::WorldAssetDefinition glassDef;
+    glassDef.id = "glass_asset";
+    glassDef.renderBucket = "Glass";
+
+    bs3d::WorldAssetDefinition translucentDef;
+    translucentDef.id = "translucent_asset";
+    translucentDef.renderBucket = "Translucent";
+
+    bs3d::MeshRegistry meshRegistry;
+    meshRegistry.allocate("glass_asset");
+    meshRegistry.allocate("translucent_asset");
+
+    bs3d::MaterialRegistry materialRegistry;
+    const auto alphaHandle = materialRegistry.defaultAlpha();
+
+    bs3d::WorldRenderList renderList;
+    renderList.glass.push_back(&glassObj);
+    renderList.transparent.push_back(&translucentObj);
+
+    bs3d::RenderFrameBuilder builder;
+    bs3d::addWorldRenderListMeshCommands(
+        builder, renderList, {glassDef, translucentDef}, meshRegistry, materialRegistry);
+
+    const bs3d::RenderFrame frame = builder.build();
+    expect(frame.primitives.size() == 2, "glass and translucent mesh frame has 2 primitives");
+    expect(frame.primitives[0].bucket == bs3d::RenderBucket::Glass,
+           "glass primitive is first in production order");
+    expect(frame.primitives[0].material.id == alphaHandle.id,
+           "glass mesh uses defaultAlpha material");
+    expect(frame.primitives[1].bucket == bs3d::RenderBucket::Translucent,
+           "translucent primitive is second");
+    expect(frame.primitives[1].material.id == alphaHandle.id,
+           "translucent mesh uses defaultAlpha material");
+}
+
+void opaqueVehicleDecalBucketsUseDefaultOpaqueMaterial() {
+    bs3d::WorldObject opaqueObj;
+    opaqueObj.id = "test_opaque";
+    opaqueObj.assetId = "opaque_asset";
+    opaqueObj.position = {0.0f, 0.0f, 0.0f};
+
+    bs3d::WorldObject vehicleObj;
+    vehicleObj.id = "test_vehicle";
+    vehicleObj.assetId = "vehicle_asset";
+    vehicleObj.position = {1.0f, 0.0f, 0.0f};
+
+    bs3d::WorldObject decalObj;
+    decalObj.id = "test_decal";
+    decalObj.assetId = "decal_asset";
+    decalObj.position = {2.0f, 0.0f, 0.0f};
+
+    bs3d::WorldAssetDefinition opaqueDef;
+    opaqueDef.id = "opaque_asset";
+    opaqueDef.renderBucket = "Opaque";
+
+    bs3d::WorldAssetDefinition vehicleDef;
+    vehicleDef.id = "vehicle_asset";
+    vehicleDef.renderBucket = "Vehicle";
+
+    bs3d::WorldAssetDefinition decalDef;
+    decalDef.id = "decal_asset";
+    decalDef.renderBucket = "Decal";
+
+    bs3d::MeshRegistry meshRegistry;
+    meshRegistry.allocate("opaque_asset");
+    meshRegistry.allocate("vehicle_asset");
+    meshRegistry.allocate("decal_asset");
+
+    bs3d::MaterialRegistry materialRegistry;
+    const auto opaqueHandle = materialRegistry.defaultOpaque();
+
+    bs3d::WorldRenderList renderList;
+    renderList.transparent = {&opaqueObj, &vehicleObj, &decalObj};
+
+    bs3d::RenderFrameBuilder builder;
+    bs3d::addWorldRenderListMeshCommands(
+        builder, renderList, {opaqueDef, vehicleDef, decalDef}, meshRegistry, materialRegistry);
+
+    const bs3d::RenderFrame frame = builder.build();
+    expect(frame.primitives.size() == 3, "opaque/vehicle/decal mesh frame has 3 primitives");
+    expect(frame.primitives[0].material.id == opaqueHandle.id,
+           "opaque mesh uses defaultOpaque material");
+    expect(frame.primitives[1].material.id == opaqueHandle.id,
+           "vehicle mesh uses defaultOpaque material");
+    expect(frame.primitives[2].material.id == opaqueHandle.id,
+           "decal mesh uses defaultOpaque material");
+}
+
+void meshExtractionPreservesProductionBucketOrder() {
+    bs3d::WorldObject opaqueObj;
+    opaqueObj.id = "test_opaque";
+    opaqueObj.assetId = "opaque_asset";
+    opaqueObj.position = {0.0f, 0.0f, 0.0f};
+
+    bs3d::WorldObject vehicleObj;
+    vehicleObj.id = "test_vehicle";
+    vehicleObj.assetId = "vehicle_asset";
+    vehicleObj.position = {1.0f, 0.0f, 0.0f};
+
+    bs3d::WorldObject decalObj;
+    decalObj.id = "test_decal";
+    decalObj.assetId = "decal_asset";
+    decalObj.position = {2.0f, 0.0f, 0.0f};
+
+    bs3d::WorldObject glassObj;
+    glassObj.id = "test_glass";
+    glassObj.assetId = "glass_asset";
+    glassObj.position = {3.0f, 0.0f, 0.0f};
+
+    bs3d::WorldObject translucentObj;
+    translucentObj.id = "test_translucent";
+    translucentObj.assetId = "translucent_asset";
+    translucentObj.position = {4.0f, 0.0f, 0.0f};
+
+    bs3d::WorldAssetDefinition opaqueDef;
+    opaqueDef.id = "opaque_asset";
+    opaqueDef.renderBucket = "Opaque";
+
+    bs3d::WorldAssetDefinition vehicleDef;
+    vehicleDef.id = "vehicle_asset";
+    vehicleDef.renderBucket = "Vehicle";
+
+    bs3d::WorldAssetDefinition decalDef;
+    decalDef.id = "decal_asset";
+    decalDef.renderBucket = "Decal";
+
+    bs3d::WorldAssetDefinition glassDef;
+    glassDef.id = "glass_asset";
+    glassDef.renderBucket = "Glass";
+
+    bs3d::WorldAssetDefinition translucentDef;
+    translucentDef.id = "translucent_asset";
+    translucentDef.renderBucket = "Translucent";
+
+    bs3d::MeshRegistry meshRegistry;
+    meshRegistry.allocate("opaque_asset");
+    meshRegistry.allocate("vehicle_asset");
+    meshRegistry.allocate("decal_asset");
+    meshRegistry.allocate("glass_asset");
+    meshRegistry.allocate("translucent_asset");
+
+    bs3d::MaterialRegistry materialRegistry;
+
+    // Add objects in scrambled order to render list.
+    bs3d::WorldRenderList renderList;
+    renderList.opaque = {&vehicleObj};
+    renderList.transparent = {&glassObj, &translucentObj, &opaqueObj, &decalObj};
+
+    bs3d::RenderFrameBuilder builder;
+    bs3d::addWorldRenderListMeshCommands(
+        builder, renderList,
+        {opaqueDef, vehicleDef, decalDef, glassDef, translucentDef},
+        meshRegistry, materialRegistry);
+
+    const bs3d::RenderFrame frame = builder.build();
+    expect(frame.primitives.size() == 5, "mesh extraction emits 5 primitives");
+    expect(frame.primitives[0].bucket == bs3d::RenderBucket::Opaque, "production order[0] is Opaque");
+    expect(frame.primitives[1].bucket == bs3d::RenderBucket::Vehicle, "production order[1] is Vehicle");
+    expect(frame.primitives[2].bucket == bs3d::RenderBucket::Decal, "production order[2] is Decal");
+    expect(frame.primitives[3].bucket == bs3d::RenderBucket::Glass, "production order[3] is Glass");
+    expect(frame.primitives[4].bucket == bs3d::RenderBucket::Translucent, "production order[4] is Translucent");
+    expect(bs3d::isRenderFrameBucketOrderValid(frame), "mesh extraction has valid bucket order");
+}
+
+void meshExtractionStatsCountEmittedMeshesAndFallbacks() {
+    bs3d::WorldObject meshObj;
+    meshObj.id = "test_mesh";
+    meshObj.assetId = "has_mesh";
+    meshObj.position = {0.0f, 0.0f, 0.0f};
+
+    bs3d::WorldObject fallbackObj;
+    fallbackObj.id = "test_fallback";
+    fallbackObj.assetId = "no_mesh";
+    fallbackObj.position = {1.0f, 0.0f, 0.0f};
+
+    bs3d::WorldAssetDefinition meshDef;
+    meshDef.id = "has_mesh";
+    meshDef.renderBucket = "Opaque";
+
+    bs3d::WorldAssetDefinition fallbackDef;
+    fallbackDef.id = "no_mesh";
+    fallbackDef.renderBucket = "Opaque";
+
+    bs3d::MeshRegistry meshRegistry;
+    meshRegistry.allocate("has_mesh");
+
+    bs3d::MaterialRegistry materialRegistry;
+
+    bs3d::WorldRenderList renderList;
+    renderList.opaque = {&meshObj, &fallbackObj};
+
+    bs3d::RenderFrameBuilder builder;
+    const auto stats = bs3d::addWorldRenderListMeshCommands(
+        builder, renderList, {meshDef, fallbackDef}, meshRegistry, materialRegistry);
+
+    expect(stats.emittedMeshes == 1, "stats counts 1 emitted mesh");
+    expect(stats.meshFallbacks == 1, "stats counts 1 mesh fallback");
+    expect(stats.totalCommands == 2, "stats counts 2 total commands");
+    expect(stats.opaqueCommands == 2, "stats counts 2 opaque commands");
+    expect(stats.missingDefinitions == 0, "stats has no missing definitions");
+    expect(stats.skippedDebugOnly == 0, "stats has no DebugOnly skips");
+}
+
+void meshExtractionEmptyWorldRenderListProducesNoCommands() {
+    bs3d::MeshRegistry meshRegistry;
+    bs3d::MaterialRegistry materialRegistry;
+    bs3d::WorldRenderList renderList;
+
+    bs3d::RenderFrameBuilder builder;
+    const auto stats = bs3d::addWorldRenderListMeshCommands(
+        builder, renderList, {}, meshRegistry, materialRegistry);
+
+    expect(stats.totalCommands == 0, "empty world render list produces 0 mesh commands");
+    expect(stats.emittedMeshes == 0, "empty list has 0 emitted meshes");
+    expect(stats.meshFallbacks == 0, "empty list has 0 fallbacks");
+    expect(stats.missingDefinitions == 0, "empty list has 0 missing definitions");
+
+    const bs3d::RenderFrame frame = builder.build();
+    expect(frame.primitives.empty(), "empty list produces empty frame");
+}
+
+void meshExtractionCountsMissingDefinitions() {
+    bs3d::WorldObject missingObj;
+    missingObj.id = "test_missing";
+    missingObj.assetId = "nonexistent_def";
+    missingObj.position = {0.0f, 0.0f, 0.0f};
+
+    bs3d::WorldObject presentObj;
+    presentObj.id = "test_present";
+    presentObj.assetId = "has_def";
+    presentObj.position = {1.0f, 0.0f, 0.0f};
+
+    bs3d::WorldAssetDefinition def;
+    def.id = "has_def";
+    def.renderBucket = "Opaque";
+
+    bs3d::MeshRegistry meshRegistry;
+    meshRegistry.allocate("has_def");
+
+    bs3d::MaterialRegistry materialRegistry;
+
+    bs3d::WorldRenderList renderList;
+    renderList.opaque = {&missingObj, &presentObj};
+
+    bs3d::RenderFrameBuilder builder;
+    const auto stats = bs3d::addWorldRenderListMeshCommands(
+        builder, renderList, {def}, meshRegistry, materialRegistry);
+
+    expect(stats.missingDefinitions == 1, "stats counts 1 missing definition");
+    expect(stats.emittedMeshes == 1, "stats counts 1 emitted mesh for present object");
+    expect(stats.totalCommands == 1, "stats counts 1 total command (missing skipped)");
+
+    const bs3d::RenderFrame frame = builder.build();
+    expect(frame.primitives.size() == 1, "frame has 1 primitive (missing definition skipped)");
+}
+
+void meshExtractionSkipsDebugOnlyDefinitions() {
+    bs3d::WorldObject debugObj;
+    debugObj.id = "test_debug_only";
+    debugObj.assetId = "debug_asset";
+    debugObj.position = {0.0f, 0.0f, 0.0f};
+
+    bs3d::WorldObject normalObj;
+    normalObj.id = "test_normal";
+    normalObj.assetId = "normal_asset";
+    normalObj.position = {1.0f, 0.0f, 0.0f};
+
+    bs3d::WorldAssetDefinition debugDef;
+    debugDef.id = "debug_asset";
+    debugDef.renderBucket = "DebugOnly";
+
+    bs3d::WorldAssetDefinition normalDef;
+    normalDef.id = "normal_asset";
+    normalDef.renderBucket = "Opaque";
+
+    bs3d::MeshRegistry meshRegistry;
+    meshRegistry.allocate("normal_asset");
+
+    bs3d::MaterialRegistry materialRegistry;
+
+    bs3d::WorldRenderList renderList;
+    renderList.opaque = {&debugObj, &normalObj};
+
+    bs3d::RenderFrameBuilder builder;
+    const auto stats = bs3d::addWorldRenderListMeshCommands(
+        builder, renderList, {debugDef, normalDef}, meshRegistry, materialRegistry);
+
+    expect(stats.skippedDebugOnly == 1, "stats counts 1 DebugOnly skip");
+    expect(stats.emittedMeshes == 1, "stats counts 1 emitted mesh for normal object");
+    expect(stats.totalCommands == 1, "stats counts 1 total command");
+
+    const bs3d::RenderFrame frame = builder.build();
+    expect(frame.primitives.size() == 1, "frame has 1 primitive (DebugOnly skipped)");
+}
+
+void meshExtractionUsesObjectTintOverride() {
+    bs3d::WorldObject obj;
+    obj.id = "test_tint_override";
+    obj.assetId = "tint_asset";
+    obj.position = {0.0f, 0.0f, 0.0f};
+    obj.hasTintOverride = true;
+    obj.tintOverride = {50, 100, 150, 200};
+
+    bs3d::WorldAssetDefinition def;
+    def.id = "tint_asset";
+    def.fallbackColor = {10, 20, 30, 40};
+    def.renderBucket = "Opaque";
+
+    bs3d::MeshRegistry meshRegistry;
+    meshRegistry.allocate("tint_asset");
+
+    bs3d::MaterialRegistry materialRegistry;
+
+    bs3d::WorldRenderList renderList;
+    renderList.opaque.push_back(&obj);
+
+    bs3d::RenderFrameBuilder builder;
+    bs3d::addWorldRenderListMeshCommands(
+        builder, renderList, {def}, meshRegistry, materialRegistry);
+
+    const bs3d::RenderFrame frame = builder.build();
+    expect(frame.primitives.size() == 1, "tint override frame has 1 primitive");
+    expect(frame.primitives[0].tint.r == 50, "mesh tint r from override");
+    expect(frame.primitives[0].tint.g == 100, "mesh tint g from override");
+    expect(frame.primitives[0].tint.b == 150, "mesh tint b from override");
+    expect(frame.primitives[0].tint.a == 200, "mesh tint a from override");
+}
+
+void meshExtractionUsesDefinitionTintWhenNoOverride() {
+    bs3d::WorldObject obj;
+    obj.id = "test_no_override";
+    obj.assetId = "def_tint_asset";
+    obj.position = {0.0f, 0.0f, 0.0f};
+
+    bs3d::WorldAssetDefinition def;
+    def.id = "def_tint_asset";
+    def.fallbackColor = {40, 80, 120, 160};
+    def.renderBucket = "Vehicle";
+
+    bs3d::MeshRegistry meshRegistry;
+    meshRegistry.allocate("def_tint_asset");
+
+    bs3d::MaterialRegistry materialRegistry;
+
+    bs3d::WorldRenderList renderList;
+    renderList.translucent.push_back(&obj);
+
+    bs3d::RenderFrameBuilder builder;
+    bs3d::addWorldRenderListMeshCommands(
+        builder, renderList, {def}, meshRegistry, materialRegistry);
+
+    const bs3d::RenderFrame frame = builder.build();
+    expect(frame.primitives.size() == 1, "definition tint frame has 1 primitive");
+    expect(frame.primitives[0].kind == bs3d::RenderPrimitiveKind::Mesh,
+           "emitted primitive is Mesh");
+    expect(frame.primitives[0].tint.r == 40, "mesh tint r from definition");
+    expect(frame.primitives[0].tint.g == 80, "mesh tint g from definition");
+    expect(frame.primitives[0].tint.b == 120, "mesh tint b from definition");
+    expect(frame.primitives[0].tint.a == 160, "mesh tint a from definition");
+    expect(frame.primitives[0].material.id == materialRegistry.defaultOpaque().id,
+           "vehicle mesh uses defaultOpaque material");
+}
+
+void meshExtractionDeduplicatesObjects() {
+    bs3d::WorldObject obj;
+    obj.id = "test_dedup";
+    obj.assetId = "dedup_asset";
+    obj.position = {0.0f, 0.0f, 0.0f};
+
+    bs3d::WorldAssetDefinition def;
+    def.id = "dedup_asset";
+    def.renderBucket = "Opaque";
+
+    bs3d::MeshRegistry meshRegistry;
+    meshRegistry.allocate("dedup_asset");
+
+    bs3d::MaterialRegistry materialRegistry;
+
+    // Same object appears in multiple render list buckets.
+    bs3d::WorldRenderList renderList;
+    renderList.opaque.push_back(&obj);
+    renderList.transparent.push_back(&obj);
+
+    bs3d::RenderFrameBuilder builder;
+    const auto stats = bs3d::addWorldRenderListMeshCommands(
+        builder, renderList, {def}, meshRegistry, materialRegistry);
+
+    expect(stats.emittedMeshes == 1, "stats has 1 emitted mesh (deduplicated)");
+    expect(stats.totalCommands == 1, "stats has 1 total command (deduplicated)");
+
+    const bs3d::RenderFrame frame = builder.build();
+    expect(frame.primitives.size() == 1, "frame has 1 primitive (deduplicated)");
+}
+
 } // namespace
 
 int main() {
@@ -2077,6 +2563,18 @@ int main() {
     builderExtractionCountsMissingDefinitions();
     builderExtractionSkipsDebugOnly();
     builderExtractionSupportsDecalGlassTranslucentBuckets();
+    meshCommandEmittedWhenRegistryHasAssetId();
+    fallbackBoxEmittedWhenRegistryLacksAssetId();
+    glassAndTranslucentBucketsUseDefaultAlphaMaterial();
+    opaqueVehicleDecalBucketsUseDefaultOpaqueMaterial();
+    meshExtractionPreservesProductionBucketOrder();
+    meshExtractionStatsCountEmittedMeshesAndFallbacks();
+    meshExtractionEmptyWorldRenderListProducesNoCommands();
+    meshExtractionCountsMissingDefinitions();
+    meshExtractionSkipsDebugOnlyDefinitions();
+    meshExtractionUsesObjectTintOverride();
+    meshExtractionUsesDefinitionTintWhenNoOverride();
+    meshExtractionDeduplicatesObjects();
     dumpWriteAndReadRoundTrip();
     dumpReadMissingFileReturnsError();
     dumpReadMissingHeaderFails();

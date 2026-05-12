@@ -112,6 +112,8 @@ if(WIN32)
     add_executable(bs3d_d3d11_renderer_smoke
         src/render_d3d11/D3D11RendererSmoke.cpp
         src/game/RenderExtraction.cpp
+        src/render/MeshRegistry.cpp
+        src/render/MaterialRegistry.cpp
         src/render/RendererFactory.cpp
         src/render/RenderFrameDump.cpp
     )
@@ -258,10 +260,12 @@ if(BS3D_BUILD_GAME)
         src/game/EditorOverlayApply.cpp
         src/game/EditorOverlayCodec.cpp
         src/game/WorldDataLoader.cpp
+        src/render/MeshRegistry.cpp
+        src/render/MaterialRegistry.cpp
     )
 
     target_link_libraries(bs3d_game_support PUBLIC bs3d_core raylib)
-    target_include_directories(bs3d_game_support PUBLIC include src/game)
+    target_include_directories(bs3d_game_support PUBLIC include src/game src/render)
     target_compile_definitions(bs3d_game_support PUBLIC BS3D_ENABLE_DEV_TOOLS=$<BOOL:${BS3D_ENABLE_DEV_TOOLS}>)
     if(BS3D_ENABLE_DEV_TOOLS)
         target_sources(bs3d_game_support PRIVATE src/game/RuntimeMapEditorImGui.cpp)
