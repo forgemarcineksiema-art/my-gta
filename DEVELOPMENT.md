@@ -115,6 +115,7 @@ Add `--auto-orbit` (implies `--orbit-camera`) for slow automatic yaw rotation:
 - W/S — zoom radius in/out (6.0 units/s)
 - Q/E — lower/raise height (6.0 units/s)
 - R — reset camera defaults (yaw=0, radius=8, height=4)
+- F5 — reload dump file from --load-frame
 - Auto-orbit speed: 1.2 rad/s
 
 Use `--frames 0` to run until closed (Escape or window X) instead of auto-exiting after a fixed frame count:

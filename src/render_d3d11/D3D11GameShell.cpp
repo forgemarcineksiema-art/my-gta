@@ -105,6 +105,7 @@ ShellOptions parseOptions(int argc, char** argv) {
                       << "  W / S              zoom radius in/out\n"
                       << "  Q / E              lower/raise height\n"
                       << "  R                  reset camera defaults\n"
+                      << "  F5                 reload dump file from --load-frame\n"
                       << "\n"
                       << "  --help              print this message\n";
             std::exit(0);
@@ -276,7 +277,7 @@ int runShell(const ShellOptions& options) {
     OrbitCameraState orbit = makeOrbitCameraState(frame);
 
     if (options.orbitCamera) {
-        std::cout << "Orbit controls: Left/Right or A/D yaw, W/S zoom, Q/E height, R reset, Esc quit\n";
+        std::cout << "Orbit controls: Left/Right or A/D yaw, W/S zoom, Q/E height, R reset, F5 reload, Esc quit\n";
     }
 
     if (options.orbitCamera && options.diagnostics) {
@@ -333,6 +334,37 @@ int runShell(const ShellOptions& options) {
             DestroyWindow(window);
             running = false;
             break;
+        }
+
+        if ((GetAsyncKeyState(VK_F5) & 0x8000) != 0) {
+            bs3d::RenderFrame reloaded;
+            std::string reloadError;
+            if (bs3d::readRenderFrameDump(options.loadFramePath, reloaded, &reloadError)) {
+                frame = reloaded;
+                if (options.orbitCamera) {
+                    resetOrbitCameraState(orbit, frame);
+                }
+                diagnosticsCoveragePrinted = false;
+                std::cout << "reloaded frame from " << options.loadFramePath << '\n';
+                if (options.diagnostics) {
+                    const auto stats = bs3d::summarizeRenderFrame(frame);
+                    const auto validation = bs3d::validateRenderFrame(frame);
+                    std::cout << "loaded frame: primitives=" << stats.totalPrimitives
+                              << " debugLines=" << stats.debugLines
+                              << " valid=" << (validation.valid ? "true" : "false");
+                    if (!validation.valid) {
+                        std::cout << " (" << validation.message << ")";
+                    }
+                    std::cout << " opaque=" << stats.opaque
+                              << " vehicle=" << stats.vehicle
+                              << " decal=" << stats.decal
+                              << " glass=" << stats.glass
+                              << " translucent=" << stats.translucent
+                              << " debug=" << stats.debug << '\n';
+                }
+            } else {
+                std::cerr << "reload failed: " << reloadError << '\n';
+            }
         }
 
         if (options.orbitCamera) {
