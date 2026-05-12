@@ -2626,21 +2626,33 @@ void GameApp::run(const GameRunOptions& options) {
                 if (options.d3d11ShadowDiagnostics) {
                     const auto& d3d11Stats = sidecar.lastD3D11Stats();
                     int supportedBoxes = 0;
+                    int supportedMeshes = 0;
                     for (const auto& prim : shadowFrame.primitives) {
-                        if (prim.kind != RenderPrimitiveKind::Box) {
-                            continue;
-                        }
-                        if (prim.bucket == RenderBucket::Opaque ||
+                        const bool supportedBucket =
+                            prim.bucket == RenderBucket::Opaque ||
                             prim.bucket == RenderBucket::Vehicle ||
                             prim.bucket == RenderBucket::Decal ||
                             prim.bucket == RenderBucket::Glass ||
                             prim.bucket == RenderBucket::Translucent ||
-                            prim.bucket == RenderBucket::Debug) {
+                            prim.bucket == RenderBucket::Debug;
+                        if (!supportedBucket) {
+                            continue;
+                        }
+                        if (prim.kind == RenderPrimitiveKind::Box) {
                             ++supportedBoxes;
+                        } else if (prim.kind == RenderPrimitiveKind::Mesh && prim.mesh.id == 1) {
+                            ++supportedMeshes;
                         }
                     }
+                    const int supportedPrimitives = supportedBoxes + supportedMeshes;
                     const int boxCoveragePct = supportedBoxes > 0
                         ? (d3d11Stats.drawnBoxes * 100) / supportedBoxes
+                        : 100;
+                    const int meshCoveragePct = supportedMeshes > 0
+                        ? (d3d11Stats.drawnMeshes * 100) / supportedMeshes
+                        : 100;
+                    const int primitiveCoveragePct = supportedPrimitives > 0
+                        ? ((d3d11Stats.drawnBoxes + d3d11Stats.drawnMeshes) * 100) / supportedPrimitives
                         : 100;
                     const int lineCoveragePct = stats.debugLines > 0
                         ? (d3d11Stats.drawnDebugLines * 100) / stats.debugLines
@@ -2651,7 +2663,8 @@ void GameApp::run(const GameRunOptions& options) {
                              "sidecarInit=%d sidecarCalls=%d sidecarValid=%d "
                               "drawnBoxes=%d drawnMeshes=%d skipMissMesh=%d skipKinds=%d skipBuckets=%d skipPrims=%d "
                               "drawnLines=%d skipLines=%d "
-                              "supportedBoxes=%d boxCoveragePct=%d lineCoveragePct=%d",
+                              "supportedBoxes=%d supportedMeshes=%d supportedPrims=%d "
+                              "boxCoveragePct=%d meshCoveragePct=%d primitiveCoveragePct=%d lineCoveragePct=%d",
                               shadowFramesBuilt,
                               shadowFramesSubmitted,
                               stats.totalPrimitives,
@@ -2672,11 +2685,15 @@ void GameApp::run(const GameRunOptions& options) {
                               d3d11Stats.skippedUnsupportedKinds,
                               d3d11Stats.skippedUnsupportedBuckets,
                               d3d11Stats.skippedPrimitives,
-                             d3d11Stats.drawnDebugLines,
-                             d3d11Stats.skippedDebugLines,
-                             supportedBoxes,
-                             boxCoveragePct,
-                             lineCoveragePct);
+                              d3d11Stats.drawnDebugLines,
+                              d3d11Stats.skippedDebugLines,
+                              supportedBoxes,
+                              supportedMeshes,
+                              supportedPrimitives,
+                              boxCoveragePct,
+                              meshCoveragePct,
+                              primitiveCoveragePct,
+                              lineCoveragePct);
                     if (!sidecar.isInitialized() && options.d3d11ShadowWindow) {
                         TraceLog(LOG_WARNING, "RenderFrame shadow diag: sidecar error: %s", sidecar.lastError());
                     }
