@@ -133,13 +133,18 @@ void RuntimeMapEditorImGui::draw(RuntimeMapEditor& editor,
 
         // Editable Asset ID
         static char assetIdBuf[128] = "";
-        if (assetIdBuf[0] == '\0' || editor.selectedObjectId() != lastInspectedId_) {
+        const std::uint64_t inspectorRevision = editor.revision();
+        if (assetIdBuf[0] == '\0' ||
+            editor.selectedObjectId() != lastAssetObjectId_ ||
+            inspectorRevision != lastAssetRevision_) {
             const std::size_t len = selected->assetId.copy(assetIdBuf, sizeof(assetIdBuf) - 1);
             assetIdBuf[len] = '\0';
-            lastInspectedId_ = editor.selectedObjectId();
+            lastAssetObjectId_ = editor.selectedObjectId();
+            lastAssetRevision_ = inspectorRevision;
         }
         if (ImGui::InputText("Asset", assetIdBuf, sizeof(assetIdBuf), ImGuiInputTextFlags_EnterReturnsTrue)) {
             editor.setSelectedAssetId(assetIdBuf);
+            lastAssetRevision_ = editor.revision();
         }
 
         // Editable Zone Tag (combo)
@@ -151,14 +156,18 @@ void RuntimeMapEditorImGui::draw(RuntimeMapEditor& editor,
 
         // Editable Gameplay Tags
         static char tagsBuf[512] = "";
-        if (tagsBuf[0] == '\0' || editor.selectedObjectId() != lastInspectedId_) {
+        if (tagsBuf[0] == '\0' ||
+            editor.selectedObjectId() != lastTagsObjectId_ ||
+            inspectorRevision != lastTagsRevision_) {
             const std::string joined = joinTags(selected->gameplayTags);
             const std::size_t len = joined.copy(tagsBuf, sizeof(tagsBuf) - 1);
             tagsBuf[len] = '\0';
-            lastInspectedId_ = editor.selectedObjectId();
+            lastTagsObjectId_ = editor.selectedObjectId();
+            lastTagsRevision_ = inspectorRevision;
         }
         if (ImGui::InputText("Tags", tagsBuf, sizeof(tagsBuf), ImGuiInputTextFlags_EnterReturnsTrue)) {
             editor.setSelectedGameplayTags(splitTags(tagsBuf));
+            lastTagsRevision_ = editor.revision();
         }
 
         ImGui::Separator();
@@ -201,7 +210,7 @@ void RuntimeMapEditorImGui::draw(RuntimeMapEditor& editor,
     }
     if (ImGui::Button("Save Overlay")) {
         std::vector<std::string> warnings;
-        if (editor.saveOverlay(overlayPath, warnings)) {
+        if (editor.saveOverlay(overlayPath, warnings, registry)) {
             lastStatus_ = "Saved " + overlayPath;
         } else {
             lastStatus_ = warnings.empty() ? "Save failed" : warnings.front();

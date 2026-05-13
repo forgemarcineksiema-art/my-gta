@@ -44,9 +44,13 @@ public static class MissionDocumentStore
         File.WriteAllText(path, json);
     }
 
-    public static MissionSaveResult SaveValidated(string path, MissionDocument mission)
+    public static MissionSaveResult SaveValidated(
+        string path,
+        MissionDocument mission,
+        ObjectOutcomeCatalog? outcomeCatalog = null,
+        MissionLocalization? localization = null)
     {
-        var issues = MissionDocumentValidator.Validate(mission).ToList();
+        var issues = MissionDocumentValidator.Validate(mission, outcomeCatalog, localization).ToList();
         if (issues.Count > 0)
         {
             return MissionSaveResult.Failed(issues);

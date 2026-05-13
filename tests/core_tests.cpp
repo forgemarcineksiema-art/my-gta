@@ -686,6 +686,25 @@ void saveGameValidationRejectsCorruptRuntimeState() {
     expect(corrupt.errors.size() >= 4, "validation reports every unsafe save field");
 }
 
+void saveGameValidationRejectsScalarTrailingGarbage() {
+    const bs3d::SaveGameValidation corrupt = bs3d::validateSaveGame(bs3d::deserializeSaveGame(
+        "version=1junk\n"
+        "mission.phase=5junk\n"
+        "mission.phaseSeconds=1.25junk\n"
+        "checkpoint=phase_5\n"
+        "paragon.phase=2junk\n"
+        "player.position=1,0,2\n"
+        "player.yaw=0.25junk\n"
+        "player.inVehicle=1junk\n"
+        "vehicle.position=3,0,4\n"
+        "vehicle.yaw=0.5junk\n"
+        "vehicle.condition=91junk\n"
+        "przypal.value=20junk\n"));
+
+    expect(!corrupt.ok, "save validation rejects scalar values with trailing garbage");
+    expect(corrupt.errors.size() >= 8, "save validation reports each malformed scalar field");
+}
+
 void saveGameFileWritesAreAtomicAndValidatedOnLoad() {
     const std::string path = "artifacts/test_save_atomic.sav";
     bs3d::SaveGame save;
@@ -6056,6 +6075,7 @@ int main() {
         saveGameRoundTripsWorldReactionRhythm();
         saveGameRoundTripsCompletedLocalRewirFavors();
         saveGameValidationRejectsCorruptRuntimeState();
+        saveGameValidationRejectsScalarTrailingGarbage();
         saveGameFileWritesAreAtomicAndValidatedOnLoad();
         missionControllerCanRestoreSaveStateAndUseDataObjectiveOverrides();
         paragonMissionCanRestorePersistedConsequences();

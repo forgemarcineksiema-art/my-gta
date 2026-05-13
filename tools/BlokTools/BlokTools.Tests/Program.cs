@@ -12,9 +12,11 @@ var tests = new (string Name, Action Body)[]
     ("mission dialogue line with lineKey only passes validation", MissionDocumentValidationAllowsDialogueLineKey),
     ("mission npc reaction line with lineKey only passes validation", MissionDocumentValidationAllowsNpcReactionLineKey),
     ("mission cutscene line with lineKey only passes validation", MissionDocumentValidationAllowsCutsceneLineKey),
+    ("mission document validation rejects unknown localization lineKey", MissionDocumentValidationRejectsUnknownLocalizationLineKey),
     ("mission editor session binds step trigger to object outcome", MissionEditorSessionBindsStepTriggerToObjectOutcome),
     ("mission editor session adds npc reaction and cutscene", MissionEditorSessionAddsNpcReactionAndCutscene),
     ("mission editor session rejects unknown outcome triggers", MissionEditorSessionRejectsUnknownOutcomeTriggers),
+    ("mission document validation accepts concrete outcome covered by pattern", MissionDocumentValidationAcceptsConcreteOutcomeCoveredByPattern),
     ("shop catalog fixture validates and loads", ShopCatalogFixtureLoadsAndValidates),
     ("object outcome catalog loads stable object hooks", ObjectOutcomeCatalogLoadsStableObjectHooks),
     ("object outcome catalog validates world event metadata", ObjectOutcomeCatalogValidatesWorldEventMetadata),
@@ -24,7 +26,11 @@ var tests = new (string Name, Action Body)[]
     ("ci verify builds BlokTools app", CiVerifyBuildsBlokToolsApp),
     ("ci verify builds dev-tools preset", CiVerifyBuildsDevToolsPreset),
     ("ci verify runs dev-tools tests", CiVerifyRunsDevToolsTests),
+    ("ci verify runs game smoke", CiVerifyRunsGameSmoke),
+    ("github actions workflow runs quality gate", GitHubActionsWorkflowRunsQualityGate),
     ("ci verify fails on native command errors", CiVerifyFailsOnNativeCommandErrors),
+    ("run dev fails on native command errors", RunDevFailsOnNativeCommandErrors),
+    ("run release smoke fails on native command errors", RunReleaseSmokeFailsOnNativeCommandErrors),
 };
 
 var failures = 0;
@@ -313,6 +319,33 @@ static void MissionEditorSessionRejectsUnknownOutcomeTriggers()
     AssertIssue(result.Issues, "mission.step.trigger.outcome");
 }
 
+static void MissionDocumentValidationAcceptsConcreteOutcomeCoveredByPattern()
+{
+    var mission = ValidTestMission();
+    mission.Steps[0].Trigger = "outcome:shop_prices_read_shop_price_card_0";
+    var catalog = new ObjectOutcomeCatalog
+    {
+        SchemaVersion = 1,
+        Outcomes =
+        {
+            new ObjectOutcomeDefinition
+            {
+                IdPattern = "shop_prices_read_*",
+                Label = "Shop prices read",
+                Source = "tag:shop_price_card",
+                Category = "object_use",
+                Location = "Shop",
+                Speaker = "Kartka",
+                Line = "line",
+            },
+        },
+    };
+
+    var issues = MissionDocumentValidator.Validate(mission, catalog).ToList();
+
+    AssertEmpty(issues, "concrete outcome trigger covered by idPattern should validate");
+}
+
 static void ShopCatalogFixtureLoadsAndValidates()
 {
     var root = WorkspaceRoot();
@@ -430,6 +463,8 @@ static void WorkspaceSnapshotPresentsMissionEditorSurface()
         "first mission node includes trigger");
     AssertTrue(snapshot.MissionNodes.Any(node => node.Text.Contains("player_enters_vehicle", StringComparison.Ordinal)),
         "mission nodes include vehicle entry trigger");
+    AssertTrue(snapshot.DialogueLines.Any(line => line.Text.Contains("Zenona", StringComparison.Ordinal)),
+        "snapshot resolves dialogue lineKey text from mission localization");
     AssertTrue(snapshot.ObjectOutcomeHooks.Any(hook => hook.Text.Contains("shop_door_checked", StringComparison.Ordinal)),
         "snapshot includes shop door hook");
     AssertTrue(snapshot.ObjectOutcomeHooks.Any(hook =>
@@ -475,10 +510,38 @@ static void WorkspaceLoaderValidatesMissionOutcomeTriggersAgainstCatalog()
             },
         });
     CreateMinimalShopCatalog(root);
+    CreateMinimalMissionLocalization(root);
 
     var snapshot = BlokWorkspaceLoader.Load(root);
 
     AssertIssue(snapshot.Issues, "mission.step.trigger.outcome");
+}
+
+static void MissionDocumentValidationRejectsUnknownLocalizationLineKey()
+{
+    var mission = ValidTestMission();
+    mission.NpcReactions.Add(new MissionNpcReaction { Phase = "ReachVehicle", Speaker = "NPC", DurationSeconds = 2.0 });
+    mission.Cutscenes.Add(new MissionCutsceneLine { Cutscene = "test_cutscene", Phase = "ReachVehicle", Speaker = "Narrator", DurationSeconds = 2.0 });
+    mission.Dialogue[0].Text = "";
+    mission.Dialogue[0].LineKey = "mission.missing";
+    mission.NpcReactions[0].Text = "";
+    mission.NpcReactions[0].LineKey = "mission.npc_missing";
+    mission.Cutscenes[0].Text = "";
+    mission.Cutscenes[0].LineKey = "mission.cutscene_missing";
+    var localization = new MissionLocalization
+    {
+        SchemaVersion = 1,
+        Lines =
+        {
+            ["mission.present"] = "Present line.",
+        },
+    };
+
+    var issues = MissionDocumentValidator.Validate(mission, null, localization).ToList();
+
+    AssertIssue(issues, "mission.dialogue.lineKey");
+    AssertIssue(issues, "mission.npcReactions.lineKey");
+    AssertIssue(issues, "mission.cutscenes.lineKey");
 }
 
 static void CreateMinimalShopCatalog(string root)
@@ -513,6 +576,21 @@ static void CreateMinimalShopCatalog(string root)
                     Currency = "zl",
                     Description = "fixture product",
                 },
+            },
+        });
+}
+
+static void CreateMinimalMissionLocalization(string root)
+{
+    MissionLocalizationStore.Save(
+        Path.Combine(root, "data", "world", "mission_localization_pl.json"),
+        new MissionLocalization
+        {
+            SchemaVersion = 1,
+            Lines =
+            {
+                ["mission.test"] = "Test line.",
+                ["mission.bogus_intro"] = "Mission intro.",
             },
         });
 }
@@ -553,6 +631,41 @@ static void CiVerifyRunsDevToolsTests()
         "ci_verify.ps1 should run dev-tools tests after building the dev-tools preset");
 }
 
+static void CiVerifyRunsGameSmoke()
+{
+    var root = WorkspaceRoot();
+    var script = File.ReadAllText(Path.Combine(root, "tools", "ci_verify.ps1"));
+
+    AssertTrue(
+        script.Contains("ci_smoke.ps1", StringComparison.Ordinal) &&
+        script.Contains("-SmokeFrames", StringComparison.Ordinal),
+        "ci_verify.ps1 should run the game smoke script as part of the quality gate");
+}
+
+static void GitHubActionsWorkflowRunsQualityGate()
+{
+    var root = WorkspaceRoot();
+    var workflowPath = Path.Combine(root, ".github", "workflows", "quality-gate.yml");
+
+    AssertTrue(File.Exists(workflowPath), "root GitHub Actions workflow should exist");
+    var workflow = File.ReadAllText(workflowPath);
+
+    AssertTrue(
+        workflow.Contains("pull_request:", StringComparison.Ordinal) &&
+        workflow.Contains("push:", StringComparison.Ordinal),
+        "quality gate workflow should run for PRs and pushes");
+    AssertTrue(
+        workflow.Contains("windows-latest", StringComparison.Ordinal),
+        "quality gate workflow should use a Windows runner for the C++/WPF toolchain");
+    AssertTrue(
+        workflow.Contains("actions/checkout@v4", StringComparison.Ordinal) &&
+        workflow.Contains("actions/setup-dotnet@v4", StringComparison.Ordinal),
+        "quality gate workflow should checkout the repo and install the requested .NET SDK");
+    AssertTrue(
+        workflow.Contains(".\\tools\\ci_verify.ps1 -Preset ci", StringComparison.Ordinal),
+        "quality gate workflow should run the same ci_verify.ps1 preset as local CI");
+}
+
 static void CiVerifyFailsOnNativeCommandErrors()
 {
     var root = WorkspaceRoot();
@@ -562,6 +675,32 @@ static void CiVerifyFailsOnNativeCommandErrors()
         script.Contains("$LASTEXITCODE", StringComparison.Ordinal) &&
         script.Contains("throw", StringComparison.Ordinal),
         "ci_verify.ps1 should fail when a native command exits non-zero");
+}
+
+static void RunDevFailsOnNativeCommandErrors()
+{
+    var root = WorkspaceRoot();
+    var script = File.ReadAllText(Path.Combine(root, "tools", "run_dev.ps1"));
+
+    AssertTrue(
+        script.Contains("Invoke-CheckedNative", StringComparison.Ordinal) &&
+        script.Contains("$LASTEXITCODE", StringComparison.Ordinal) &&
+        script.Contains("\"--preset\"", StringComparison.Ordinal) &&
+        script.Contains("Invoke-CheckedNative $ExePath", StringComparison.Ordinal),
+        "run_dev.ps1 should fail when configure, build, or the game executable exits non-zero");
+}
+
+static void RunReleaseSmokeFailsOnNativeCommandErrors()
+{
+    var root = WorkspaceRoot();
+    var script = File.ReadAllText(Path.Combine(root, "tools", "run_release_smoke.ps1"));
+
+    AssertTrue(
+        script.Contains("Invoke-CheckedNative", StringComparison.Ordinal) &&
+        script.Contains("$LASTEXITCODE", StringComparison.Ordinal) &&
+        script.Contains("\"--preset\"", StringComparison.Ordinal) &&
+        script.Contains("Invoke-CheckedNative $ExePath", StringComparison.Ordinal),
+        "run_release_smoke.ps1 should fail when configure, build, or the game executable exits non-zero");
 }
 
 static string WorkspaceRoot()

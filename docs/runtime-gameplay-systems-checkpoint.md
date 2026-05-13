@@ -14,10 +14,10 @@ See also:
 D3D11 dev tooling is in a strong, stable state:
 
 - `--renderframe-shadow` + `--renderframe-shadow-meshes` extract and emit Mesh commands
-- `--d3d11-shadow-window` renders shadow frames through D3D11Renderer (Box + 36 cached Meshes)
+- `--d3d11-shadow-window` renders shadow frames through D3D11Renderer (one-time seed limit 16; sample captures may draw more mesh commands)
 - `D3D11GameShell --load-mesh` loads OBJ files and renders through standalone D3D11
 - `renderframe_capture_replay.ps1` validates the full capture/replay pipeline (7 passes)
-- All CI passes cleanly (ci-core 11/11, ci 12/12, ci_smoke, capture_replay)
+- Standard CI/dev-tools quality gates pass through `tools/ci_verify.ps1`; capture/replay remains a separate D3D pre-work smoke
 
 This pipeline is **parked** — resume only when there is a concrete driving need for GLTF, materials, textures, or main-renderer D3D11.
 
@@ -36,7 +36,7 @@ The following are the runtime systems that most affect gameplay feel and stabili
 | Mission flow | `MissionController.cpp`, `MissionRuntimeBridge.cpp` | **Reviewed** — phase guards prevent double-trigger, `fail()` blocked before start/after completion, `retryToCheckpoint()` only from Failed with invalid phase fallback, `restoreForSave()` repairs Failed→ReachVehicle, `consumeChaseWanted()` one-shot, objective overrides support empty-string deletion, dialogue queues scoped per-phase. Added guard comments. |
 | Editor / dev tools | `EditorOverlayApply.cpp`, `EditorOverlayCodec.cpp`, `RuntimeMapEditor.cpp` | **Reviewed** — overlay apply has 3-phase guard (override, warn-missing, instance-add with collision check), codec has self-contained JSON parser with type validation, schema version check (v1), required-field validation (id/assetId non-empty), JSON escape/serialize safe. Map editor: `selectObject`/`selectedObject` null-guarded, `setSelected*` checks `level_` and selection, undo/redo with 100-limit history stack, `canUndo`/`canRedo` null-guarded. Existing `bs3d_editor_overlay_validation` test passes. Added phase comments. |
 | Smoke / CI hygiene | `tools/*.ps1`, `CMakeLists.txt` | **Reviewed** — scripts use preset-resolved paths, error handling via `$ErrorActionPreference = "Stop"`, incremental builds via `--target`, clear colored OK/FAIL output. Added artifact directory creation guard in `renderframe_capture_replay.ps1`. No duplicate build steps, no stale references. |
-| Save / load | `SaveGame.cpp` | **Reviewed** — atomic temp-write/rename, pre-write validation, post-load re-validation, version lock, all Vec3 checked `finite()`, all enums validated, array counts capped (`std::clamp`, max 64 each), NaN returned on parse failure for catch by validator, fallback defaults on every field, newline injection prevented. Added guard comments. |
+| Save / load | `SaveGame.cpp` | **Reviewed** — atomic temp-write/rename, pre-write validation, post-load re-validation, version lock, strict scalar parsing, all Vec3 checked `finite()`, all enums validated, array counts capped (`std::clamp`, max 64 each), newline injection prevented. |
 
 ## Proposed next passes (outside renderer)
 
@@ -77,8 +77,8 @@ Each pass is small, testable, avoids huge rewrites, and does not touch D3D11.
 ### Pass 6: Save / load consistency — REVIEWED
 
 **Scope:** `SaveGame.cpp`.
-**Checked:** Serialization: key-value text format with array index prefixes. Deserialization: fallback defaults on every field (`asInt/asFloat/asBool/asText`). Array counts capped via `std::clamp(count, 0, Max*)` — prevents allocation bombs from corrupt files. Validation: version lock (v1 only), all enums validated via switch-exhaustive `valid*()` functions, all Vec3 values checked `finite()`, ranges checked (condition 0-100, intensity 0-3, stackCount 1-5), newline injection prevented in source strings, favor IDs validated against known list. File I/O: atomic via temp file + rename, directory creation with error handling, stream error check, pre-write validation, post-load re-validation. `parseVec3` returns NaN on malformed input to be caught by `finite()` check.
-**Remaining risks:** None at current scope. Save format is self-validating. Atomic write prevents partial saves.
+**Checked:** Serialization: key-value text format with array index prefixes. Deserialization: strict integer/float/bool parsing records malformed scalar errors instead of accepting trailing garbage. Array counts capped via `std::clamp(count, 0, Max*)` — prevents allocation bombs from corrupt files. Validation: version lock (v1 only), parse errors surfaced, all enums validated via switch-exhaustive `valid*()` functions, all Vec3 values checked `finite()`, ranges checked (condition 0-100, intensity 0-3, stackCount 1-5), newline injection prevented in source strings, favor IDs validated against known list. File I/O: atomic via temp file + rename, directory creation with error handling, stream error check, pre-write validation, post-load re-validation. `parseVec3` returns NaN on malformed input to be caught by `finite()` check.
+**Remaining risks:** Save/load preserves mission phase/checkpoint, player/vehicle/world reaction state, but not exact live pursuer AI/timers for a mid-chase reload. Treat exact live chase restore as separate future scope.
 
 ## Next possible checkpoint areas
 

@@ -3,12 +3,14 @@
 #include "EditorOverlayData.h"
 #include "IntroLevelBuilder.h"
 
+#include <cstdint>
 #include <string>
 #include <vector>
 
 namespace bs3d {
 
 struct WorldAssetDefinition;
+class WorldAssetRegistry;
 
 Vec3 runtimeEditorPlacementPosition(Vec3 anchor, float yawRadians, float distanceMeters = 3.0f);
 std::string runtimeEditorOverlayPathForDataRoot(const std::string& dataRoot);
@@ -44,8 +46,10 @@ public:
     bool canRedo() const;
     bool undo();
     bool redo();
+    std::uint64_t revision() const;
     EditorOverlayDocument buildOverlayDocument() const;
     bool saveOverlay(const std::string& path, std::vector<std::string>& warnings);
+    bool saveOverlay(const std::string& path, std::vector<std::string>& warnings, const WorldAssetRegistry& registry);
     bool dirty() const;
     void clearDirty();
     std::vector<WorldObject*> objects();
@@ -69,6 +73,7 @@ private:
     std::vector<HistoryEntry> redoStack_;
     bool dirty_ = false;
     int generatedInstanceCounter_ = 0;
+    std::uint64_t revision_ = 0;
 };
 
 } // namespace bs3d

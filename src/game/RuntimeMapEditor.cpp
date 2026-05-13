@@ -5,8 +5,10 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cmath>
 #include <filesystem>
 #include <sstream>
+#include <unordered_set>
 #include <utility>
 
 namespace bs3d {
@@ -62,6 +64,97 @@ std::vector<std::string> filterTokens(const std::string& filter) {
     return tokens;
 }
 
+bool isFiniteVec3(Vec3 value) {
+    return std::isfinite(value.x) && std::isfinite(value.y) && std::isfinite(value.z);
+}
+
+bool isNonGameplayAsset(const WorldAssetDefinition& definition) {
+    return definition.assetType == "DebugOnly" ||
+           definition.renderBucket == "DebugOnly" ||
+           !definition.renderInGameplay;
+}
+
+bool validateOverlayObjectForSave(const EditorOverlayObject& object,
+                                  const char* section,
+                                  const WorldAssetRegistry& registry,
+                                  std::vector<std::string>& warnings) {
+    bool ok = true;
+    const std::string label = std::string("editor overlay ") + section + " '" + object.id + "'";
+    if (object.id.empty()) {
+        warnings.push_back(std::string("editor overlay ") + section + " has an empty id");
+        ok = false;
+    }
+    if (object.assetId.empty()) {
+        warnings.push_back(label + " has an empty asset id");
+        ok = false;
+    }
+    const WorldAssetDefinition* definition = object.assetId.empty() ? nullptr : registry.find(object.assetId);
+    if (!object.assetId.empty() && definition == nullptr) {
+        warnings.push_back(label + " references unknown asset '" + object.assetId + "'");
+        ok = false;
+    }
+    if (definition != nullptr && isNonGameplayAsset(*definition)) {
+        warnings.push_back(label + " references non-gameplay asset '" + object.assetId + "'");
+        ok = false;
+    }
+    if (definition != nullptr && definition->assetType == "CollisionProxy") {
+        warnings.push_back(label + " references collision proxy asset '" + object.assetId + "'");
+        ok = false;
+    }
+    if (!isFiniteVec3(object.position)) {
+        warnings.push_back(label + " has a non-finite position");
+        ok = false;
+    }
+    if (!isFiniteVec3(object.scale) ||
+        object.scale.x <= 0.0f ||
+        object.scale.y <= 0.0f ||
+        object.scale.z <= 0.0f) {
+        warnings.push_back(label + " has an invalid scale");
+        ok = false;
+    }
+    if (!std::isfinite(object.yawRadians)) {
+        warnings.push_back(label + " has a non-finite yaw");
+        ok = false;
+    }
+
+    std::unordered_set<std::string> tags;
+    for (const std::string& tag : object.gameplayTags) {
+        if (tag.empty()) {
+            warnings.push_back(label + " has an empty gameplay tag");
+            ok = false;
+            continue;
+        }
+        if (!tags.insert(tag).second) {
+            warnings.push_back(label + " has duplicate gameplay tag '" + tag + "'");
+            ok = false;
+        }
+    }
+    return ok;
+}
+
+bool validateOverlayDocumentForSave(const EditorOverlayDocument& document,
+                                    const WorldAssetRegistry& registry,
+                                    std::vector<std::string>& warnings) {
+    bool ok = true;
+    std::unordered_set<std::string> ids;
+    const auto validateId = [&ids, &warnings, &ok](const EditorOverlayObject& object, const char* section) {
+        if (!object.id.empty() && !ids.insert(object.id).second) {
+            warnings.push_back(std::string("editor overlay ") + section + " duplicates id '" + object.id + "'");
+            ok = false;
+        }
+    };
+
+    for (const EditorOverlayObject& object : document.overrides) {
+        validateId(object, "override");
+        ok = validateOverlayObjectForSave(object, "override", registry, warnings) && ok;
+    }
+    for (const EditorOverlayObject& object : document.instances) {
+        validateId(object, "instance");
+        ok = validateOverlayObjectForSave(object, "instance", registry, warnings) && ok;
+    }
+    return ok;
+}
+
 } // namespace
 
 Vec3 runtimeEditorPlacementPosition(Vec3 anchor, float yawRadians, float distanceMeters) {
@@ -95,6 +188,7 @@ void RuntimeMapEditor::attach(IntroLevelData& level) {
     redoStack_.clear();
     dirty_ = false;
     generatedInstanceCounter_ = 0;
+    revision_ = 0;
 }
 
 void RuntimeMapEditor::attach(IntroLevelData& level, const EditorOverlayDocument& loadedOverlay) {
@@ -177,6 +271,7 @@ bool RuntimeMapEditor::setSelectedPositionSilent(Vec3 position) {
     }
     object->position = position;
     markSelectedBaseObjectEdited();
+    ++revision_;
     return true;
 }
 
@@ -337,6 +432,7 @@ bool RuntimeMapEditor::undo() {
     restoreState(entry.before);
     redoStack_.push_back(std::move(entry));
     dirty_ = true;
+    ++revision_;
     return true;
 }
 
@@ -349,7 +445,12 @@ bool RuntimeMapEditor::redo() {
     restoreState(entry.after);
     undoStack_.push_back(std::move(entry));
     dirty_ = true;
+    ++revision_;
     return true;
+}
+
+std::uint64_t RuntimeMapEditor::revision() const {
+    return revision_;
 }
 
 EditorOverlayDocument RuntimeMapEditor::buildOverlayDocument() const {
@@ -377,6 +478,20 @@ EditorOverlayDocument RuntimeMapEditor::buildOverlayDocument() const {
 
 bool RuntimeMapEditor::saveOverlay(const std::string& path, std::vector<std::string>& warnings) {
     if (!saveEditorOverlayFile(path, buildOverlayDocument(), warnings)) {
+        return false;
+    }
+    clearDirty();
+    return true;
+}
+
+bool RuntimeMapEditor::saveOverlay(const std::string& path,
+                                   std::vector<std::string>& warnings,
+                                   const WorldAssetRegistry& registry) {
+    const EditorOverlayDocument document = buildOverlayDocument();
+    if (!validateOverlayDocumentForSave(document, registry, warnings)) {
+        return false;
+    }
+    if (!saveEditorOverlayFile(path, document, warnings)) {
         return false;
     }
     clearDirty();
@@ -430,6 +545,7 @@ void RuntimeMapEditor::pushHistory(HistoryState before) {
     }
     redoStack_.clear();
     dirty_ = true;
+    ++revision_;
 }
 
 bool RuntimeMapEditor::commitCapturedEdit(HistoryState before) {

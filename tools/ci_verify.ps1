@@ -29,6 +29,9 @@ Invoke-CheckedNative python (Join-Path $PSScriptRoot "validate_world_contract.py
 Invoke-CheckedNative cmake --preset $Preset
 Invoke-CheckedNative cmake --build --preset $Preset
 Invoke-CheckedNative ctest --preset $Preset
+if ($Preset -ne "ci-core") {
+    Invoke-CheckedNative powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot "ci_smoke.ps1") -Preset $Preset -SmokeFrames 3
+}
 if ($Preset -ne "dev-tools") {
     Invoke-CheckedNative cmake --preset dev-tools
     Invoke-CheckedNative cmake --build --preset dev-tools

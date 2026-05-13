@@ -5,22 +5,31 @@ namespace BlokTools.Core;
 public sealed class MissionEditorSession
 {
     private readonly ObjectOutcomeCatalog? outcomeCatalog;
+    private readonly MissionLocalization? localization;
 
-    private MissionEditorSession(string path, MissionDocument mission, ObjectOutcomeCatalog? outcomeCatalog)
+    private MissionEditorSession(
+        string path,
+        MissionDocument mission,
+        ObjectOutcomeCatalog? outcomeCatalog,
+        MissionLocalization? localization)
     {
         Path = path;
         Mission = mission;
         this.outcomeCatalog = outcomeCatalog;
+        this.localization = localization;
     }
 
     public string Path { get; }
     public MissionDocument Mission { get; }
 
-    public IReadOnlyList<ValidationIssue> Issues => MissionDocumentValidator.Validate(Mission, outcomeCatalog).ToList();
+    public IReadOnlyList<ValidationIssue> Issues => MissionDocumentValidator.Validate(Mission, outcomeCatalog, localization).ToList();
 
-    public static MissionEditorSession Load(string path, ObjectOutcomeCatalog? outcomeCatalog = null)
+    public static MissionEditorSession Load(
+        string path,
+        ObjectOutcomeCatalog? outcomeCatalog = null,
+        MissionLocalization? localization = null)
     {
-        return new MissionEditorSession(path, MissionDocumentStore.Load(path), outcomeCatalog);
+        return new MissionEditorSession(path, MissionDocumentStore.Load(path), outcomeCatalog, localization);
     }
 
     public void UpdateStepObjective(int index, string objective)
@@ -185,7 +194,7 @@ public sealed class MissionEditorSession
             return MissionSaveResult.Failed(issues);
         }
 
-        return MissionDocumentStore.SaveValidated(Path, Mission);
+        return MissionDocumentStore.SaveValidated(Path, Mission, outcomeCatalog, localization);
     }
 }
 

@@ -60,3 +60,6 @@ Write-Host "Smoke frames: $SmokeFrames"
     --no-save `
     --no-load-save `
     --smoke-frames $SmokeFrames
+if ($LASTEXITCODE -ne 0) {
+    throw "CI smoke failed with exit code $LASTEXITCODE"
+}

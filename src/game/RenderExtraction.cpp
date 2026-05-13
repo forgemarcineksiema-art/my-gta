@@ -151,9 +151,7 @@ void builderAddFallbackBox(RenderFrameBuilder& builder,
     command.transform.position.y += definition.fallbackSize.y * object.scale.y * 0.5f;
     command.transform.scale = object.scale;
     command.transform.yawRadians = object.yawRadians;
-    command.size = {definition.fallbackSize.x * object.scale.x,
-                    definition.fallbackSize.y * object.scale.y,
-                    definition.fallbackSize.z * object.scale.z};
+    command.size = definition.fallbackSize;
     command.tint = object.hasTintOverride ? toRenderColor(object.tintOverride) : toRenderColor(definition.fallbackColor);
     command.sourceId = object.id;
     builder.addPrimitive(command);
@@ -193,9 +191,7 @@ void builderEmitMeshOrFallback(RenderFrameBuilder& builder,
         command.transform.position.y += definition.fallbackSize.y * object.scale.y * 0.5f;
         command.transform.scale = object.scale;
         command.transform.yawRadians = object.yawRadians;
-        command.size = {definition.fallbackSize.x * object.scale.x,
-                        definition.fallbackSize.y * object.scale.y,
-                        definition.fallbackSize.z * object.scale.z};
+        command.size = definition.fallbackSize;
         command.tint = object.hasTintOverride ? toRenderColor(object.tintOverride) : toRenderColor(definition.fallbackColor);
         command.sourceId = definition.id;
         builder.addPrimitive(command);
@@ -242,9 +238,7 @@ void addWorldFallbackBox(RenderFrame& frame,
     command.transform.position.y += definition.fallbackSize.y * object.scale.y * 0.5f;
     command.transform.scale = object.scale;
     command.transform.yawRadians = object.yawRadians;
-    command.size = {definition.fallbackSize.x * object.scale.x,
-                    definition.fallbackSize.y * object.scale.y,
-                    definition.fallbackSize.z * object.scale.z};
+    command.size = definition.fallbackSize;
     command.tint = object.hasTintOverride ? toRenderColor(object.tintOverride) : toRenderColor(definition.fallbackColor);
     command.sourceId = object.id;
     frame.primitives.push_back(command);

@@ -1,6 +1,7 @@
 #include "WorldDataLoader.h"
 
 #include "EditorOverlayApply.h"
+#include "WorldAssetRegistry.h"
 
 #include <algorithm>
 #include <cctype>
@@ -568,7 +569,9 @@ WorldDataCatalog loadWorldDataCatalog(const std::string& dataRoot) {
     return catalog;
 }
 
-WorldDataApplyResult applyWorldDataCatalog(IntroLevelData& level, const WorldDataCatalog& catalog) {
+WorldDataApplyResult applyWorldDataCatalogWithRegistry(IntroLevelData& level,
+                                                       const WorldDataCatalog& catalog,
+                                                       const WorldAssetRegistry* registry) {
     WorldDataApplyResult result;
     if (!catalog.loaded) {
         return result;
@@ -586,9 +589,11 @@ WorldDataApplyResult applyWorldDataCatalog(IntroLevelData& level, const WorldDat
     config.zenonPosition = config.zenonPosition + shopOffset;
     config.initialChaserPosition = config.initialChaserPosition + shopOffset;
 
-    level = IntroLevelBuilder::build(config);
+    level = registry != nullptr ? IntroLevelBuilder::build(config, *registry)
+                                : IntroLevelBuilder::build(config);
     if (catalog.editorOverlay.loaded) {
         const EditorOverlayApplyResult overlay = applyEditorOverlay(level, catalog.editorOverlay.document);
+        IntroLevelBuilder::normalizeCollisionAuthoring(level, registry);
         result.appliedEditorOverlayOverrides = overlay.appliedOverrides;
         result.appliedEditorOverlayInstances = overlay.appliedInstances;
         result.warnings.insert(result.warnings.end(), overlay.warnings.begin(), overlay.warnings.end());
@@ -596,6 +601,16 @@ WorldDataApplyResult applyWorldDataCatalog(IntroLevelData& level, const WorldDat
     result.applied = true;
     result.appliedMissionPhases = static_cast<int>(catalog.mission.phases.size());
     return result;
+}
+
+WorldDataApplyResult applyWorldDataCatalog(IntroLevelData& level, const WorldDataCatalog& catalog) {
+    return applyWorldDataCatalogWithRegistry(level, catalog, nullptr);
+}
+
+WorldDataApplyResult applyWorldDataCatalog(IntroLevelData& level,
+                                           const WorldDataCatalog& catalog,
+                                           const WorldAssetRegistry& registry) {
+    return applyWorldDataCatalogWithRegistry(level, catalog, &registry);
 }
 
 int applyMissionDataToController(MissionController& mission, const MissionData& data) {

@@ -141,6 +141,7 @@ public:
     static IntroLevelData build();
     static IntroLevelData build(const IntroLevelBuildConfig& config);
     static IntroLevelData build(const IntroLevelBuildConfig& config, const WorldAssetRegistry& registry);
+    static void normalizeCollisionAuthoring(IntroLevelData& level, const WorldAssetRegistry* registry = nullptr);
     static void populateWorld(const IntroLevelData& level, Scene& scene, WorldCollision& collision);
     static void populateInteractions(const IntroLevelData& level, WorldInteraction& interactions);
 };

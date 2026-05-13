@@ -22,6 +22,7 @@
 #include "RaylibInputReader.h"
 #include "RaylibPlatform.h"
 #include "RuntimeAudio.h"
+#include "RuntimeWorldState.h"
 #include "VehicleExitResolver.h"
 #include "VisualBaselineDebug.h"
 #include "WorldDataLoader.h"
@@ -74,6 +75,7 @@
 #include "raylib.h"
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <cstdlib>
 #include <filesystem>
 #include <sstream>
@@ -416,6 +418,7 @@ struct Runtime {
     RuntimeMapEditorImGui runtimeEditorUi;
     EditorGizmo gizmo;
     bool runtimeEditorOpen = false;
+    std::uint64_t observedRuntimeEditorRevision = 0;
 #endif
 
     Vec3& chaserPosition;
@@ -532,7 +535,7 @@ struct Runtime {
 
         gameWorld.dataCatalog = loadWorldDataCatalog(dataRootPath.string());
         if (gameWorld.dataCatalog.loaded) {
-            const WorldDataApplyResult dataApply = applyWorldDataCatalog(level, gameWorld.dataCatalog);
+            const WorldDataApplyResult dataApply = applyWorldDataCatalog(level, gameWorld.dataCatalog, assetRegistry);
             const int missionOverrides = applyMissionDataToController(mission, gameWorld.dataCatalog.mission);
             TraceLog(LOG_INFO,
                      "World data catalog applied: mission phases=%d overrides=%d",
@@ -564,13 +567,11 @@ struct Runtime {
         resetDriveRoute();
         vehicle.reset(level.vehicleStart, driveRoute.yawFrom(level.vehicleStart));
         chaserPosition = level.initialChaserPosition;
-        IntroLevelBuilder::populateWorld(level, scene, collision);
+        rebuildRuntimeWorldDerivedState(level, scene, collision, propSimulation, interactions, missionTriggers);
 #if defined(BS3D_ENABLE_DEV_TOOLS) && BS3D_ENABLE_DEV_TOOLS
         runtimeEditor.attach(level, gameWorld.dataCatalog.editorOverlay.document);
+        observedRuntimeEditorRevision = runtimeEditor.revision();
 #endif
-        propSimulation.addPropsFromWorld(level.objects);
-        IntroLevelBuilder::populateInteractions(level, interactions);
-        missionTriggers.setTriggers(level.missionTriggers);
 
         camera.fovy = 55.0f;
         camera.projection = CAMERA_PERSPECTIVE;
@@ -1038,6 +1039,18 @@ struct Runtime {
         }
     }
 
+#if defined(BS3D_ENABLE_DEV_TOOLS) && BS3D_ENABLE_DEV_TOOLS
+    void syncRuntimeEditorDerivedStateIfNeeded() {
+        const std::uint64_t currentRevision = runtimeEditor.revision();
+        if (currentRevision == observedRuntimeEditorRevision) {
+            return;
+        }
+        rebuildRuntimeWorldDerivedState(level, scene, collision, propSimulation, interactions, missionTriggers);
+        observedRuntimeEditorRevision = currentRevision;
+        resetRenderSnapshots();
+    }
+#endif
+
     void fixedUpdate(const RawInputState& rawInput, float deltaSeconds) {
         previousRenderSnapshot = currentRenderSnapshot;
         lastDeltaSeconds = deltaSeconds;
@@ -1076,6 +1089,7 @@ struct Runtime {
             const CameraRigState& editorRigState = cameraRig.state();
             gizmo.update(input, runtimeEditor, editorRigState.position, editorRigState.target, level.objects);
         }
+        syncRuntimeEditorDerivedStateIfNeeded();
 #endif
         lastRawInput = rawInput;
 

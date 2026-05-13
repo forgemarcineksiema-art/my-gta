@@ -8,6 +8,20 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+function Invoke-CheckedNative {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Command,
+        [Parameter(ValueFromRemainingArguments = $true)]
+        [string[]]$Arguments
+    )
+
+    & $Command @Arguments
+    if ($LASTEXITCODE -ne 0) {
+        throw "Native command failed with exit code $($LASTEXITCODE): $Command $Arguments"
+    }
+}
+
 function Resolve-GameExecutable {
     param(
         [Parameter(Mandatory = $true)]
@@ -55,11 +69,11 @@ Write-Host "Binary dir: $BinaryDir"
 Write-Host "Data root: $DataRoot"
 Write-Host "Smoke frames: $SmokeFrames"
 
-cmake --preset $Preset
-cmake --build --preset $Preset
+Invoke-CheckedNative "cmake" "--preset" $Preset
+Invoke-CheckedNative "cmake" "--build" "--preset" $Preset
 
 $ExePath = Resolve-GameExecutable -BinaryDir $BinaryDir -Configuration $Configuration
 Write-Host "Executable: $ExePath"
 Write-Host "Args: --data-root `"$DataRoot`" --no-audio --no-save --no-load-save --smoke-frames $SmokeFrames $GameArgs"
 
-& $ExePath --data-root $DataRoot --no-audio --no-save --no-load-save --smoke-frames $SmokeFrames @GameArgs
+Invoke-CheckedNative $ExePath "--data-root" $DataRoot "--no-audio" "--no-save" "--no-load-save" "--smoke-frames" $SmokeFrames @GameArgs

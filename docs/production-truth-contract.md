@@ -269,6 +269,14 @@ python tools\validate_world_contract.py data --asset-root data\assets
 python tools\validate_editor_overlay.py data\world\block13_editor_overlay.json --asset-root data\assets
 python tools\validate_object_outcomes.py data\world\object_outcome_catalog.json --runtime-policy src\game\WorldObjectInteraction.cpp
 ctest --preset ci
+.\tools\ci_verify.ps1 -Preset ci
+```
+
+D3D shadow/capture validation is dev-only and stays explicit:
+
+```powershell
+.\tools\d3d11_shadow_smoke.ps1 -Preset ci -Build
+.\tools\renderframe_capture_replay.ps1 -Preset ci -Build -DumpVersion v2
 ```
 
 Regression priorities:

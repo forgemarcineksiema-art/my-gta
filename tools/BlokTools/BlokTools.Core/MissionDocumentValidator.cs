@@ -2,12 +2,20 @@ namespace BlokTools.Core;
 
 public static class MissionDocumentValidator
 {
-    public static IEnumerable<ValidationIssue> Validate(MissionDocument mission, ObjectOutcomeCatalog? outcomeCatalog = null)
+    public static IEnumerable<ValidationIssue> Validate(
+        MissionDocument mission,
+        ObjectOutcomeCatalog? outcomeCatalog = null,
+        MissionLocalization? localization = null)
     {
         var outcomeKeys = outcomeCatalog?.Outcomes
             .Select(outcome => outcome.Key)
             .Where(key => !string.IsNullOrWhiteSpace(key))
             .ToHashSet(StringComparer.Ordinal);
+        var outcomePatternPrefixes = outcomeCatalog?.Outcomes
+            .Select(outcome => outcome.IdPattern)
+            .Where(pattern => !string.IsNullOrWhiteSpace(pattern) && pattern.EndsWith("*", StringComparison.Ordinal))
+            .Select(pattern => pattern[..^1])
+            .ToList();
 
         var missionPhases = mission.Steps.Select(step => step.Phase).ToHashSet(StringComparer.Ordinal);
 
@@ -53,7 +61,10 @@ public static class MissionDocumentValidator
             else if (outcomeKeys is not null && step.Trigger.StartsWith("outcome:", StringComparison.Ordinal))
             {
                 var outcomeKey = step.Trigger["outcome:".Length..];
-                if (!outcomeKeys.Contains(outcomeKey))
+                var exactMatch = outcomeKeys.Contains(outcomeKey);
+                var patternMatch = outcomePatternPrefixes is not null &&
+                    outcomePatternPrefixes.Any(prefix => outcomeKey.StartsWith(prefix, StringComparison.Ordinal));
+                if (!exactMatch && !patternMatch)
                 {
                     yield return new ValidationIssue(
                         "mission.step.trigger.outcome",
@@ -84,6 +95,12 @@ public static class MissionDocumentValidator
             {
                 yield return new ValidationIssue("mission.dialogue.text", "Dialogue line needs text or a localization lineKey.");
             }
+            if (hasLineKey && localization is not null && !localization.HasLine(line.LineKey))
+            {
+                yield return new ValidationIssue(
+                    "mission.dialogue.lineKey",
+                    $"Dialogue lineKey '{line.LineKey}' is not defined in mission localization.");
+            }
             if (line.DurationSeconds <= 0.0)
             {
                 yield return new ValidationIssue("mission.dialogue.duration", "Dialogue duration must be positive.");
@@ -112,6 +129,12 @@ public static class MissionDocumentValidator
             if (!hasText && !hasLineKey)
             {
                 yield return new ValidationIssue("mission.npcReactions.text", "NPC reaction line needs text or a localization lineKey.");
+            }
+            if (hasLineKey && localization is not null && !localization.HasLine(line.LineKey))
+            {
+                yield return new ValidationIssue(
+                    "mission.npcReactions.lineKey",
+                    $"NPC reaction lineKey '{line.LineKey}' is not defined in mission localization.");
             }
             if (line.DurationSeconds <= 0.0)
             {
@@ -145,6 +168,12 @@ public static class MissionDocumentValidator
             if (!hasText && !hasLineKey)
             {
                 yield return new ValidationIssue("mission.cutscenes.text", "Cutscene line needs text or a localization lineKey.");
+            }
+            if (hasLineKey && localization is not null && !localization.HasLine(line.LineKey))
+            {
+                yield return new ValidationIssue(
+                    "mission.cutscenes.lineKey",
+                    $"Cutscene lineKey '{line.LineKey}' is not defined in mission localization.");
             }
             if (line.DurationSeconds <= 0.0)
             {
