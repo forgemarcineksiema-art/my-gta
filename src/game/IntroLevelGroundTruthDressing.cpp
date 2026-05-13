@@ -277,7 +277,7 @@ void addGroundTruthAndClutter(IntroLevelData& level) {
 
     addClutter("fence_garage_boundary", "fence_panel", {-12.5f, 0.0f, 21.58f}, {3.2f, 1.30f, 0.10f}, WorldLocationTag::Garage, {"garage_identity", "garage_cluster"});
     addClutter("fence_trash_boundary", "fence_panel", {11.2f, 0.0f, -3.25f}, {2.8f, 1.30f, 0.10f}, WorldLocationTag::Trash, {"trash_dressing", "trash_cluster"}, 1.5708f);
-    addClutter("fence_road_west_outer", "fence_panel", {-29.8f, 0.0f, 0.0f}, {2.8f, 1.30f, 0.10f}, WorldLocationTag::RoadLoop, {"drive_readability"});
+    addClutter("fence_road_west_outer", "fence_panel", {-33.95f, 0.0f, 0.0f}, {2.8f, 1.30f, 0.10f}, WorldLocationTag::RoadLoop, {"drive_readability"}, 1.5708f);
 
     addClutter("planter_shop_side_right", "planter_concrete", {12.5f, 0.0f, -22.98f}, {0.72f, 0.38f, 0.48f}, WorldLocationTag::Shop, {"shop_identity", "shop_cluster"});
     addClutter("planter_block_entrance", "planter_concrete", {-13.8f, 0.0f, 10.68f}, {0.88f, 0.42f, 0.52f}, WorldLocationTag::Block, {"story_dressing", "block_cluster"});

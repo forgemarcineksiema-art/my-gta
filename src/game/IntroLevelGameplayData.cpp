@@ -125,18 +125,28 @@ void IntroLevelAuthoring::addGameplayData(IntroLevelData& level) {
          "pavilions_market",
          true,
          true,
-         {{{-10.0f, 0.0f, 10.5f}, 3.0f, "Spod Bloku 13"},
+         {{level.vehicleStart, 3.0f, "Gruz pod blokiem"},
+          {level.parkingExitPosition, 3.0f, "Wyjazd"},
           {level.parkingLanePosition, 3.0f, "Alejka"},
-          {level.shopEntrancePosition, 4.2f, "Pod sklep"},
+          {level.roadBendPosition, 3.2f, "Luk przy drodze"},
+          {level.shopRoadPosition, 3.6f, "Wylot"},
+          {{8.5f, 0.0f, -25.0f}, 2.4f, "Brama arterii"},
+          {{14.5f, 0.0f, -28.0f}, 3.0f, "Pas arterii"},
           {{25.0f, 0.0f, -30.0f}, 4.4f, "Pawilony"}}},
         {"route_block13_garage_belt",
          "block13",
          "garage_belt",
          true,
          true,
-         {{{-10.0f, 0.0f, 10.5f}, 3.0f, "Spod Bloku 13"},
-          {{-18.0f, 0.0f, 23.0f}, 3.4f, "Garaze Ryska"},
-          {{-34.0f, 0.0f, 28.0f}, 4.2f, "Pas garazy"}}}
+         {{level.vehicleStart, 3.0f, "Gruz pod blokiem"},
+          {level.parkingExitPosition, 3.0f, "Wyjazd"},
+          {level.parkingLanePosition, 3.0f, "Alejka"},
+          {level.roadBendPosition, 3.2f, "Luk przy drodze"},
+          {{-20.0f, 0.0f, -24.0f}, 3.4f, "Poludniowa droga"},
+          {{-31.0f, 0.0f, -18.0f}, 3.4f, "Zachodnia droga"},
+          {{-30.75f, 0.0f, 8.0f}, 3.2f, "Wjazd w garaze"},
+          {{-30.75f, 0.0f, 19.0f}, 3.8f, "Pas garazowy"},
+          {{-30.75f, 0.0f, 28.0f}, 4.2f, "Pas garazy"}}}
     };
 
     level.visualBaselines = {

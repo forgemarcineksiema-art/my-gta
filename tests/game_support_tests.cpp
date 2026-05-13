@@ -751,6 +751,105 @@ void introLevelMainArteryRouteIsVehicleTraversableByGruz() {
                std::to_string(report.resolvedPosition.z));
 }
 
+std::string vehicleRouteBlockerCandidates(const bs3d::IntroLevelData& level,
+                                          const std::string& routeId,
+                                          const std::string& blockedSegmentLabel) {
+    std::string candidates;
+    for (const bs3d::WorldObject& object : level.objects) {
+        const bool vehicleBlocking =
+            hasLayer(object, bs3d::CollisionLayer::WorldStatic) ||
+            hasLayer(object, bs3d::CollisionLayer::VehicleBlocker) ||
+            hasLayer(object, bs3d::CollisionLayer::DynamicProp);
+        if (!vehicleBlocking || object.collision.kind == bs3d::WorldCollisionShapeKind::None ||
+            object.collision.kind == bs3d::WorldCollisionShapeKind::Unspecified) {
+            continue;
+        }
+
+        bs3d::WorldCollision singleObjectCollision;
+        singleObjectCollision.addGroundPlane(0.0f);
+        addObjectCollisionForTest(object, singleObjectCollision);
+        const bs3d::DistrictRouteTraversalReport singleObjectReport =
+            bs3d::inspectDistrictRouteVehicleTraversal(level, routeId, singleObjectCollision);
+        if (!singleObjectReport.clear &&
+            singleObjectReport.blockedSegmentLabel == blockedSegmentLabel) {
+            if (!candidates.empty()) {
+                candidates += ",";
+            }
+            candidates += object.id;
+        }
+    }
+
+    return candidates.empty() ? " candidate_objects=<none>" : " candidate_objects=" + candidates;
+}
+
+void introLevelFutureDistrictRoutesAreVehicleTraversableByGruz() {
+    const bs3d::IntroLevelData level = bs3d::IntroLevelBuilder::build();
+    bs3d::Scene scene;
+    bs3d::WorldCollision collision;
+    bs3d::IntroLevelBuilder::populateWorld(level, scene, collision);
+
+    bs3d::PropSimulationSystem props;
+    props.addPropsFromWorld(level.objects);
+    props.publishCollision(collision);
+
+    std::vector<const bs3d::WorldObject*> driveSurfaces;
+    std::vector<const bs3d::WorldObject*> solidBlockers;
+    for (const bs3d::WorldObject& object : level.objects) {
+        if (object.assetId == "parking_surface" || object.assetId == "road_asphalt") {
+            driveSurfaces.push_back(&object);
+        }
+        if (object.collision.kind == bs3d::WorldCollisionShapeKind::Box &&
+            !hasTag(object, "boundary")) {
+            solidBlockers.push_back(&object);
+        }
+    }
+
+    const std::vector<std::string> routeIds{
+        "route_block13_pavilions_market",
+        "route_block13_garage_belt"};
+
+    for (const std::string& routeId : routeIds) {
+        const bs3d::DistrictRoutePlan* route = nullptr;
+        for (const bs3d::DistrictRoutePlan& candidate : level.districtRoutePlans) {
+            if (candidate.id == routeId) {
+                route = &candidate;
+                break;
+            }
+        }
+        expect(route != nullptr, "future district route exists for traversal QA: " + routeId);
+        expect(route != nullptr && route->vehicleRoute, "future district route is authored for gruz traversal: " + routeId);
+
+        for (std::size_t i = 1; route != nullptr && i < route->points.size(); ++i) {
+            const bs3d::RoutePoint& point = route->points[i];
+            bool covered = false;
+            for (const bs3d::WorldObject* surface : driveSurfaces) {
+                covered = covered || pointInsideVisualFootprint(*surface, point.position, 0.25f);
+            }
+            expect(covered, "future district route waypoint has drive surface under it: " + routeId + " / " + point.label);
+
+            for (const bs3d::WorldObject* blocker : solidBlockers) {
+                expect(!pointInsideBoxCollision(*blocker, point.position, 0.05f),
+                       "future district route waypoint stays outside solid blocking collision: " +
+                           routeId + " / " + point.label + " vs " + blocker->id);
+            }
+        }
+
+        const bs3d::DistrictRouteTraversalReport report =
+            bs3d::inspectDistrictRouteVehicleTraversal(level, routeId, collision);
+        const std::string blockerCandidates = report.clear
+                                                  ? std::string{}
+                                                  : vehicleRouteBlockerCandidates(level, routeId, report.blockedSegmentLabel);
+        expect(report.foundRoute, "future district traversal QA finds authored route: " + routeId);
+        expect(report.checkedSegments >= 2, "future district traversal QA checks route segments: " + routeId);
+        expect(report.clear,
+               "future district traversal reaches every gruz waypoint: " + routeId +
+                   " blocked segment=" + report.blockedSegmentLabel +
+                   " resolved=" + std::to_string(report.resolvedPosition.x) +
+                   "," + std::to_string(report.resolvedPosition.z) +
+                   blockerCandidates);
+    }
+}
+
 void editorOverlayDataDefaultsAreSafe() {
     const bs3d::EditorOverlayDocument overlay;
     expect(overlay.schemaVersion == 1, "editor overlay schema starts at version 1");
@@ -5135,6 +5234,7 @@ int main() {
         introLevelFlatDriveSurfacesUseSeparatedRenderHeights();
         introLevelMainArteryExpansionHasReadableRouteGuidance();
         introLevelMainArteryRouteIsVehicleTraversableByGruz();
+        introLevelFutureDistrictRoutesAreVehicleTraversableByGruz();
         editorOverlayDataDefaultsAreSafe();
         editorOverlayCodecParsesValidOverlay();
         editorOverlayCodecRejectsBadSchema();

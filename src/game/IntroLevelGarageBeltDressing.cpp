@@ -200,7 +200,7 @@ void addGarageBeltDressing(IntroLevelData& level) {
     // === Signs ===
     addDecor("gb_sign_private",
              "street_sign",
-             {LaneX, 0.0f, 12.0f},
+             {-27.35f, 0.0f, 12.0f},
              {0.55f, 1.40f, 0.08f},
              WorldLocationTag::Garage,
              {"garage_identity", "garage_belt", "vertical_readability", "midpoly_target"});
