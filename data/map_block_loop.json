@@ -1,5 +1,9 @@
 {
   "id": "one_block_loop",
+  "districtBounds": {
+    "center": [-7.0, 0.0, -1.5],
+    "size": [83.0, 9.0, 74.0]
+  },
   "spawn": {
     "player": [-12.0, 0.0, -7.0],
     "vehicle": [-7.0, 0.0, 9.4],

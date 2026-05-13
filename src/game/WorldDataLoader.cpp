@@ -399,6 +399,39 @@ WorldDataBounds boundsFromSpawns(const std::vector<Vec3>& points) {
     return {(min + max) * 0.5f, (max - min) + padding};
 }
 
+bool isVec3Array(const JsonValue* value) {
+    return value != nullptr &&
+           value->type == JsonType::Array &&
+           value->array.size() >= 3 &&
+           value->array[0].type == JsonType::Number &&
+           value->array[1].type == JsonType::Number &&
+           value->array[2].type == JsonType::Number;
+}
+
+bool parseAuthoredBounds(const JsonValue& map, WorldDataBounds& out) {
+    const JsonValue* bounds = objectMember(map, "districtBounds");
+    if (bounds == nullptr) {
+        bounds = objectMember(map, "worldBounds");
+    }
+    if (bounds == nullptr || bounds->type != JsonType::Object) {
+        return false;
+    }
+
+    const JsonValue* center = objectMember(*bounds, "center");
+    const JsonValue* size = objectMember(*bounds, "size");
+    if (!isVec3Array(center) || !isVec3Array(size)) {
+        return false;
+    }
+
+    const Vec3 parsedSize = vec3FromArray(size);
+    if (parsedSize.x <= 0.0f || parsedSize.y <= 0.0f || parsedSize.z <= 0.0f) {
+        return false;
+    }
+
+    out = {vec3FromArray(center), parsedSize};
+    return true;
+}
+
 } // namespace
 
 WorldDataCatalog loadWorldDataCatalog(const std::string& dataRoot) {
@@ -425,11 +458,13 @@ WorldDataCatalog loadWorldDataCatalog(const std::string& dataRoot) {
         catalog.world.dropoffPosition = points != nullptr
                                              ? vec3FromArray(objectMember(*points, "dropoff"))
                                              : (spawn != nullptr ? vec3FromArray(objectMember(*spawn, "dropoff")) : Vec3{});
-        catalog.world.districtBounds = boundsFromSpawns({catalog.world.playerSpawn,
-                                                         catalog.world.vehicleSpawn,
-                                                         catalog.world.npcSpawn,
-                                                         catalog.world.shopPosition,
-                                                         catalog.world.dropoffPosition});
+        if (!parseAuthoredBounds(map, catalog.world.districtBounds)) {
+            catalog.world.districtBounds = boundsFromSpawns({catalog.world.playerSpawn,
+                                                             catalog.world.vehicleSpawn,
+                                                             catalog.world.npcSpawn,
+                                                             catalog.world.shopPosition,
+                                                             catalog.world.dropoffPosition});
+        }
         if (!catalog.world.loaded || spawn == nullptr) {
             catalog.world.loaded = false;
             catalog.warnings.push_back("invalid map_block_loop.json schema");

@@ -1565,8 +1565,13 @@ void worldDataLoaderReadsRuntimeWorldAndMissionSchema() {
         expectNear(intercomOutcome->worldEvent->cooldownSeconds, 3.0f, 0.001f,
                    "runtime outcome data preserves authored intercom cooldown");
     }
-    expect(catalog.world.districtBounds.size.x > 0.0f && catalog.world.districtBounds.size.z > 0.0f,
-           "world schema exposes authored district bounds");
+    expect(catalog.world.districtBounds.size.x >= 82.0f &&
+               catalog.world.districtBounds.size.z >= 73.0f,
+           "world schema exposes authored bounds for the expanded Blok 13/Grochow footprint");
+    expectNear(catalog.world.districtBounds.center.x, -7.0f, 0.001f,
+               "world schema district bounds center matches authored boundary wall footprint x");
+    expectNear(catalog.world.districtBounds.center.z, -1.5f, 0.001f,
+               "world schema district bounds center matches authored boundary wall footprint z");
 
     bs3d::IntroLevelData level = bs3d::IntroLevelBuilder::build();
     const bs3d::WorldDataApplyResult applied = bs3d::applyWorldDataCatalog(level, catalog);
@@ -1654,6 +1659,7 @@ void worldDataLoaderParsesJsonSchemaWithoutFieldOrderCoupling() {
         map << "{\n"
             << "  \"spawns\": {\"vehicle\": [4,0,5], \"npc\": [1,0,2], \"player\": [0,0,1]},\n"
             << "  \"id\": \"test_block\",\n"
+            << "  \"districtBounds\": {\"size\": [44, 5, 42], \"center\": [2, 0, -3]},\n"
             << "  \"points\": {\"dropoff\": [8,0,9], \"shop\": [6,0,7]}\n"
             << "}\n";
     }
@@ -1696,6 +1702,10 @@ void worldDataLoaderParsesJsonSchemaWithoutFieldOrderCoupling() {
     expect(catalog.loaded, "loader accepts valid JSON schema from runtime data root");
     expect(catalog.world.id == "test_block", "map id parses independent of object field order");
     expectNear(catalog.world.playerSpawn.z, 1.0f, 0.001f, "nested player spawn parses from map schema");
+    expectNear(catalog.world.districtBounds.center.x, 2.0f, 0.001f,
+               "authored map bounds center parses independent of object field order");
+    expectNear(catalog.world.districtBounds.size.z, 42.0f, 0.001f,
+               "authored map bounds size parses independent of object field order");
     expect(catalog.mission.phases.size() == 2, "mission phases parse independent of object field order");
     expect(catalog.mission.phases[0].objective == "Data objective A",
            "mission objective survives reordered phase fields");
