@@ -360,6 +360,27 @@ bool routeSegmentHasDriveSurfaceCoverage(const std::vector<const bs3d::WorldObje
     return true;
 }
 
+const bs3d::WorldObject* routeSegmentCorridorBlocker(const std::vector<const bs3d::WorldObject*>& blockers,
+                                                     bs3d::Vec3 start,
+                                                     bs3d::Vec3 end,
+                                                     float sampleSpacing,
+                                                     float corridorHalfWidth,
+                                                     bs3d::Vec3& blockedPoint) {
+    const float length = bs3d::distanceXZ(start, end);
+    const int samples = std::max(1, static_cast<int>(std::ceil(length / std::max(sampleSpacing, 0.01f))));
+    for (int i = 0; i <= samples; ++i) {
+        const float t = static_cast<float>(i) / static_cast<float>(samples);
+        const bs3d::Vec3 point = start + (end - start) * t;
+        for (const bs3d::WorldObject* blocker : blockers) {
+            if (pointInsideBoxCollision(*blocker, point, corridorHalfWidth)) {
+                blockedPoint = point;
+                return blocker;
+            }
+        }
+    }
+    return nullptr;
+}
+
 void addObjectCollisionForTest(const bs3d::WorldObject& object, bs3d::WorldCollision& collision) {
     const bs3d::Vec3 center = object.position + object.collision.offset;
     switch (object.collision.kind) {
@@ -918,6 +939,58 @@ void introLevelFutureDistrictRoutesAreVehicleTraversableByGruz() {
                    " resolved=" + std::to_string(report.resolvedPosition.x) +
                    "," + std::to_string(report.resolvedPosition.z) +
                    blockerCandidates);
+    }
+}
+
+void introLevelVehicleRoutesKeepClearanceFromAuthoredObjectFootprints() {
+    const bs3d::IntroLevelData level = bs3d::IntroLevelBuilder::build();
+
+    std::vector<const bs3d::WorldObject*> blockers;
+    for (const bs3d::WorldObject& object : level.objects) {
+        if (object.assetId == "parking_surface" || object.assetId == "road_asphalt") {
+            continue;
+        }
+        const bool vehicleBlocking =
+            hasLayer(object, bs3d::CollisionLayer::WorldStatic) ||
+            hasLayer(object, bs3d::CollisionLayer::VehicleBlocker) ||
+            hasLayer(object, bs3d::CollisionLayer::DynamicProp);
+        const bool boxLike = object.collision.kind == bs3d::WorldCollisionShapeKind::Box ||
+                             object.collision.kind == bs3d::WorldCollisionShapeKind::OrientedBox;
+        if (vehicleBlocking && boxLike) {
+            blockers.push_back(&object);
+        }
+    }
+
+    const std::vector<std::string> routeIds{
+        "route_block13_main_artery",
+        "route_block13_pavilions_market",
+        "route_block13_garage_belt"};
+
+    for (const std::string& routeId : routeIds) {
+        const bs3d::DistrictRoutePlan* route = nullptr;
+        for (const bs3d::DistrictRoutePlan& candidate : level.districtRoutePlans) {
+            if (candidate.id == routeId) {
+                route = &candidate;
+                break;
+            }
+        }
+        expect(route != nullptr, "vehicle clearance route exists: " + routeId);
+
+        for (std::size_t i = 1; route != nullptr && i < route->points.size(); ++i) {
+            bs3d::Vec3 blockedPoint{};
+            const bs3d::WorldObject* blocker = routeSegmentCorridorBlocker(blockers,
+                                                                           route->points[i - 1].position,
+                                                                           route->points[i].position,
+                                                                           0.50f,
+                                                                           1.05f,
+                                                                           blockedPoint);
+            expect(blocker == nullptr,
+                   "vehicle route corridor keeps object-footprint clearance: " + routeId + " / " +
+                       route->points[i - 1].label + " -> " + route->points[i].label +
+                       " blocker=" + (blocker != nullptr ? blocker->id : std::string{"<none>"}) +
+                       " at=" + std::to_string(blockedPoint.x) +
+                       "," + std::to_string(blockedPoint.z));
+        }
     }
 }
 
@@ -5307,6 +5380,7 @@ int main() {
         introLevelMainArteryExpansionHasReadableRouteGuidance();
         introLevelMainArteryRouteIsVehicleTraversableByGruz();
         introLevelFutureDistrictRoutesAreVehicleTraversableByGruz();
+        introLevelVehicleRoutesKeepClearanceFromAuthoredObjectFootprints();
         editorOverlayDataDefaultsAreSafe();
         editorOverlayCodecParsesValidOverlay();
         editorOverlayCodecRejectsBadSchema();

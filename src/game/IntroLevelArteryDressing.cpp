@@ -86,7 +86,7 @@ void addArteryAndPavilionsDressing(IntroLevelData& level) {
         const float lx = -28.0f + static_cast<float>(lamp) * 10.5f;
         addDecor("artery_lamp_N_" + std::to_string(lamp),
                  "lamp_post_lowpoly",
-                 {lx, 0.0f, ArteryZ + 1.8f},
+                 {lx, 0.0f, ArteryZ + 4.6f},
                  {0.18f, 3.2f, 0.18f},
                  WorldLocationTag::RoadLoop,
                  {"artery", "vertical_readability", "artkit_v2"});
@@ -304,14 +304,14 @@ void addArteryAndPavilionsDressing(IntroLevelData& level) {
     // === Bus stop shelter ===
     addDecor("bus_stop",
              "bus_stop_shelter",
-             {22.0f, 0.0f, ArteryZ + 0.80f},
+             {22.0f, 0.0f, ArteryZ + 4.35f},
              {3.0f, 2.5f, 1.8f},
              WorldLocationTag::RoadLoop,
              {"artery", "bus_stop", "landmark", "midpoly_target"});
     // Bus stop sign
     addDecor("bus_stop_sign",
              "street_sign",
-             {23.5f, 0.0f, ArteryZ + 0.5f},
+             {23.5f, 0.0f, ArteryZ + 4.20f},
              {0.55f, 1.8f, 0.08f},
              WorldLocationTag::RoadLoop,
              {"artery", "bus_stop", "vertical_readability", "midpoly_target"});

@@ -51,7 +51,7 @@ void IntroLevelAuthoring::addGameplayData(IntroLevelData& level) {
         {"lm_block11", "Blok 11", {5.0f, 0.0f, 17.0f}, "block11"},
         {"lm_playground", "Plac zabaw", {-6.0f, 0.0f, 14.0f}, "playground"},
         {"lm_pavilions", "Pawilony", {25.0f, 0.0f, -34.0f}, "pavilions"},
-        {"lm_bus_stop", "Przystanek", {22.0f, 0.0f, -29.2f}, "bus_stop"},
+        {"lm_bus_stop", "Przystanek", {22.0f, 0.0f, -25.65f}, "bus_stop"},
         {"lm_garage_belt", "Pasaz Garazowy", {-33.0f, 0.0f, 19.0f}, "garage_belt"}
     };
 
