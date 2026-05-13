@@ -149,6 +149,7 @@ void MissionController::onDropoffReached() {
     phase_ = MissionPhase::Completed;
     phaseSeconds_ = 0.0f;
     dialogue_.push({"Misja", "Odcinek zaliczony. Rewir juz cie kojarzy.", 3.0f, DialogueChannel::MissionCritical});
+    pushObjectiveLine("Pogadaj z Bogusiem o Paragon Grozy.");
     queueMissionPhaseLines(phase_);
 }
 

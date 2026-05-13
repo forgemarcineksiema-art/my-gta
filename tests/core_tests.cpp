@@ -89,6 +89,31 @@ void missionAdvancesThroughDrivingErrand() {
     expect(mission.phase() == bs3d::MissionPhase::Completed, "completed mission cannot be failed");
 }
 
+void missionCompletionQueuesParagonGrozyNextEpisodeHint() {
+    bs3d::DialogueSystem dialogue;
+    bs3d::MissionController mission(dialogue);
+
+    mission.start();
+    mission.onShopVisitedOnFoot();
+    mission.onReturnedToBogus();
+    mission.onPlayerEnteredVehicle();
+    mission.onShopReachedByVehicle();
+    mission.onChaseEscaped();
+    dialogue.clear();
+
+    mission.onDropoffReached();
+    expect(mission.phase() == bs3d::MissionPhase::Completed, "dropoff completes intro before next episode hint");
+    expect(dialogue.currentLine().text.find("Rewir") != std::string::npos,
+           "completion line still closes the intro episode first");
+
+    dialogue.update(3.1f);
+    expect(dialogue.hasLine(), "post-intro completion queues a next episode hint");
+    expect(dialogue.currentLine().text.find("Paragon Grozy") != std::string::npos,
+           "post-intro hint points the player to Paragon Grozy");
+    expect(dialogue.currentLine().text.find("Bogusi") != std::string::npos,
+           "post-intro hint sends the player back to Bogus");
+}
+
 void missionFailureCanRetryFromVehicleObjective() {
     bs3d::DialogueSystem dialogue;
     bs3d::MissionController mission(dialogue);
@@ -6016,6 +6041,7 @@ void collisionUsesBroadphaseForCameraBoomSegments() {
 int main() {
     try {
         missionAdvancesThroughDrivingErrand();
+        missionCompletionQueuesParagonGrozyNextEpisodeHint();
         missionFailureCanRetryFromVehicleObjective();
         missionFailureCanRetryToSerializedCheckpointPhase();
         missionTriggerSystemFiresDataDrivenPhaseZonesOnce();

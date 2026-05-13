@@ -16,6 +16,7 @@ Run this after every controls/camera change.
 - Walk to Zenon's shop without prior map knowledge. Expected: green objective arrow/marker makes the route readable.
 - Try to enter the gruz before finishing the shop/Bogus loop. Expected: prompt or line explains `Najpierw Zenon i Bogus`.
 - Complete the loop: Bogus -> Zenon's shop -> Bogus -> gruz -> shop -> chase -> parking.
+- After the intro completion line, confirm a system hint points to `Paragon Grozy` at Bogus and the Bogus prompt can start it.
 - Confirm subtitles stay in the lower subtitle box, wrap if needed, and do not float around the world.
 - Confirm Przypal and reaction toasts add flavor without covering mission/chase/fail UI.
 - Confirm the first complaint is not "nie wiem gdzie jest sklep" or "nie moge wsiasc do auta".
