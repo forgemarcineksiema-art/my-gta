@@ -62,6 +62,8 @@ Or run the combined CI helper:
 
 The combined helper also builds and tests the `dev-tools` preset so Dear ImGui/runtime-editor code cannot drift outside the normal quality gate.
 
+GitHub Actions runs the same Windows quality gate from `.github/workflows/quality-gate.yml` on pull requests, pushes to `main`/`master`, and Codex branches.
+
 ## D3D11 shadow sidecar smoke (dev-only, Windows)
 
 Verifies the D3D11 shadow RenderFrame sidecar: diagnostics (no window) and full sidecar window with D3D11 rendering. Raylib remains the main runtime renderer. Does not activate `--renderer d3d11`.

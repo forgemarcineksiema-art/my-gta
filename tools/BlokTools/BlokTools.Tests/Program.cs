@@ -26,6 +26,7 @@ var tests = new (string Name, Action Body)[]
     ("ci verify builds dev-tools preset", CiVerifyBuildsDevToolsPreset),
     ("ci verify runs dev-tools tests", CiVerifyRunsDevToolsTests),
     ("ci verify runs game smoke", CiVerifyRunsGameSmoke),
+    ("github actions workflow runs quality gate", GitHubActionsWorkflowRunsQualityGate),
     ("ci verify fails on native command errors", CiVerifyFailsOnNativeCommandErrors),
     ("run dev fails on native command errors", RunDevFailsOnNativeCommandErrors),
     ("run release smoke fails on native command errors", RunReleaseSmokeFailsOnNativeCommandErrors),
@@ -593,6 +594,30 @@ static void CiVerifyRunsGameSmoke()
         script.Contains("ci_smoke.ps1", StringComparison.Ordinal) &&
         script.Contains("-SmokeFrames", StringComparison.Ordinal),
         "ci_verify.ps1 should run the game smoke script as part of the quality gate");
+}
+
+static void GitHubActionsWorkflowRunsQualityGate()
+{
+    var root = WorkspaceRoot();
+    var workflowPath = Path.Combine(root, ".github", "workflows", "quality-gate.yml");
+
+    AssertTrue(File.Exists(workflowPath), "root GitHub Actions workflow should exist");
+    var workflow = File.ReadAllText(workflowPath);
+
+    AssertTrue(
+        workflow.Contains("pull_request:", StringComparison.Ordinal) &&
+        workflow.Contains("push:", StringComparison.Ordinal),
+        "quality gate workflow should run for PRs and pushes");
+    AssertTrue(
+        workflow.Contains("windows-latest", StringComparison.Ordinal),
+        "quality gate workflow should use a Windows runner for the C++/WPF toolchain");
+    AssertTrue(
+        workflow.Contains("actions/checkout@v4", StringComparison.Ordinal) &&
+        workflow.Contains("actions/setup-dotnet@v4", StringComparison.Ordinal),
+        "quality gate workflow should checkout the repo and install the requested .NET SDK");
+    AssertTrue(
+        workflow.Contains(".\\tools\\ci_verify.ps1 -Preset ci", StringComparison.Ordinal),
+        "quality gate workflow should run the same ci_verify.ps1 preset as local CI");
 }
 
 static void CiVerifyFailsOnNativeCommandErrors()
