@@ -147,6 +147,9 @@ if(Python3_Interpreter_FOUND)
                 ${CMAKE_SOURCE_DIR}/data/world/block13_editor_overlay.json
                 --asset-root ${CMAKE_SOURCE_DIR}/data/assets
     )
+    add_test(NAME bs3d_editor_overlay_validator_unit_tests
+        COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tools/test_validate_editor_overlay.py
+    )
     add_test(NAME bs3d_world_contract_validation
         COMMAND ${Python3_EXECUTABLE} ${CMAKE_SOURCE_DIR}/tools/validate_world_contract.py
                 ${CMAKE_SOURCE_DIR}/data

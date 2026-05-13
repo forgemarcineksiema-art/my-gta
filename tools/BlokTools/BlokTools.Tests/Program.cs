@@ -22,6 +22,7 @@ var tests = new (string Name, Action Body)[]
     ("workspace snapshot presents mission editor surface", WorkspaceSnapshotPresentsMissionEditorSurface),
     ("workspace loader validates mission outcome triggers against catalog", WorkspaceLoaderValidatesMissionOutcomeTriggersAgainstCatalog),
     ("ci verify builds BlokTools app", CiVerifyBuildsBlokToolsApp),
+    ("ci verify builds dev-tools preset", CiVerifyBuildsDevToolsPreset),
     ("ci verify fails on native command errors", CiVerifyFailsOnNativeCommandErrors),
 };
 
@@ -523,6 +524,17 @@ static void CiVerifyBuildsBlokToolsApp()
     AssertTrue(
         script.Contains("BlokTools.App\\BlokTools.App.csproj", StringComparison.Ordinal),
         "ci_verify.ps1 should build the WPF BlokTools app, not only the test project");
+}
+
+static void CiVerifyBuildsDevToolsPreset()
+{
+    var root = WorkspaceRoot();
+    var script = File.ReadAllText(Path.Combine(root, "tools", "ci_verify.ps1"));
+
+    AssertTrue(
+        script.Contains("--preset dev-tools", StringComparison.Ordinal) &&
+        script.Contains("cmake --build --preset dev-tools", StringComparison.Ordinal),
+        "ci_verify.ps1 should include the dev-tools build in the quality gate");
 }
 
 static void CiVerifyFailsOnNativeCommandErrors()

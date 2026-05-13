@@ -1073,7 +1073,8 @@ struct Runtime {
             input.mouseLookActive = false;
             input.mouseDeltaX = 0.0f;
             input.mouseDeltaY = 0.0f;
-            gizmo.update(input, runtimeEditor, rigState.position, rigState.target, level.objects);
+            const CameraRigState& editorRigState = cameraRig.state();
+            gizmo.update(input, runtimeEditor, editorRigState.position, editorRigState.target, level.objects);
         }
 #endif
         lastRawInput = rawInput;
@@ -2173,7 +2174,8 @@ struct Runtime {
             if (runtimeEditor.selectedObject() != nullptr) {
                 WorldRenderer::drawSelectionHighlight(*runtimeEditor.selectedObject());
                 gizmo.drawSelectedGizmo(runtimeEditor.selectedObject()->position,
-                                        renderSnapshot.camera.position);
+                                        {renderSnapshot.camera.position.x, renderSnapshot.camera.position.y,
+                                         renderSnapshot.camera.position.z});
             }
         }
 #endif

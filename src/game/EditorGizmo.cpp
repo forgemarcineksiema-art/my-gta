@@ -153,19 +153,18 @@ void EditorGizmo::resetDrag() {
     dragState_ = GizmoDragState::Idle;
 }
 
-static float gizmoScaleFn(Vec3 objectPos, Vec3 cameraPos) {
-    return std::clamp(distance(objectPos, cameraPos) * 0.15f, 0.12f, 2.5f);
-}
-
 void EditorGizmo::update(const InputState& input, RuntimeMapEditor& editor, Vec3 cameraPosition, Vec3 cameraTarget,
                           const std::vector<WorldObject>& objects) {
     (void)input;
+    (void)editor;
     (void)cameraTarget;
     (void)objects;
     (void)cameraPosition;
 
 #if defined(BS3D_ENABLE_DEV_TOOLS) && BS3D_ENABLE_DEV_TOOLS
-    mouseScreenPos_ = GetMousePosition();
+    const Vector2 mousePosition = GetMousePosition();
+    mouseScreenPos_.x = mousePosition.x;
+    mouseScreenPos_.y = mousePosition.y;
     primaryPressed_ = IsMouseButtonPressed(MOUSE_BUTTON_LEFT);
     primaryDown_ = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
 
@@ -186,6 +185,12 @@ void EditorGizmo::update(const InputState& input, RuntimeMapEditor& editor, Vec3
     pendingClick_ = true;
 #endif
 }
+
+#if defined(BS3D_ENABLE_DEV_TOOLS) && BS3D_ENABLE_DEV_TOOLS
+static float gizmoScaleFn(Vec3 objectPos, Vec3 cameraPos) {
+    return std::clamp(distance(objectPos, cameraPos) * 0.15f, 0.12f, 2.5f);
+}
+#endif
 
 void EditorGizmo::processFrame(RuntimeMapEditor& editor, Vec3 cameraPos, Vec3 cameraTarget, float fovY,
                                 const std::vector<WorldObject>& objects) {
@@ -246,6 +251,12 @@ void EditorGizmo::processFrame(RuntimeMapEditor& editor, Vec3 cameraPos, Vec3 ca
     if (hit != nullptr) {
         editor.selectObject(hit->id);
     }
+#else
+    (void)editor;
+    (void)cameraPos;
+    (void)cameraTarget;
+    (void)fovY;
+    (void)objects;
 #endif
 }
 
@@ -267,14 +278,14 @@ void EditorGizmo::drawSelectedGizmo(Vec3 objectPosition, Vec3 cameraPosition) co
     rlTranslatef(objectPosition.x, objectPosition.y, objectPosition.z);
     rlRotatef(-90.0f, 0.0f, 0.0f, 1.0f);
     DrawCylinderEx({0, 0, 0}, {0, shaftLen, 0}, shaftRadius, shaftRadius, 12, RED);
-    DrawCone({0, shaftLen, 0}, coneRadius, 0.0f, coneLen, 12, RED);
+    DrawCylinder({0.0f, shaftLen + coneLen * 0.5f, 0.0f}, 0.0f, coneRadius, coneLen, 12, RED);
     rlPopMatrix();
 
     // Y axis — green, already Y-up
     rlPushMatrix();
     rlTranslatef(objectPosition.x, objectPosition.y, objectPosition.z);
     DrawCylinderEx({0, 0, 0}, {0, shaftLen, 0}, shaftRadius, shaftRadius, 12, GREEN);
-    DrawCone({0, shaftLen, 0}, coneRadius, 0.0f, coneLen, 12, GREEN);
+    DrawCylinder({0.0f, shaftLen + coneLen * 0.5f, 0.0f}, 0.0f, coneRadius, coneLen, 12, GREEN);
     rlPopMatrix();
 
     // Z axis — blue, rotate Y→Z
@@ -282,8 +293,11 @@ void EditorGizmo::drawSelectedGizmo(Vec3 objectPosition, Vec3 cameraPosition) co
     rlTranslatef(objectPosition.x, objectPosition.y, objectPosition.z);
     rlRotatef(90.0f, 1.0f, 0.0f, 0.0f);
     DrawCylinderEx({0, 0, 0}, {0, shaftLen, 0}, shaftRadius, shaftRadius, 12, BLUE);
-    DrawCone({0, shaftLen, 0}, coneRadius, 0.0f, coneLen, 12, BLUE);
+    DrawCylinder({0.0f, shaftLen + coneLen * 0.5f, 0.0f}, 0.0f, coneRadius, coneLen, 12, BLUE);
     rlPopMatrix();
+#else
+    (void)objectPosition;
+    (void)cameraPosition;
 #endif
 }
 
