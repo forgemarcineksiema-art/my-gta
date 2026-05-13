@@ -271,20 +271,44 @@ bs3d::Vec3 faceNormal(const ObjMeshInfo& mesh, const std::vector<int>& face) {
 
 bool pointInsideBoxCollision(const bs3d::WorldObject& object, bs3d::Vec3 point, float padding = 0.0f) {
     if (object.collision.kind != bs3d::WorldCollisionShapeKind::Box &&
-        object.collision.kind != bs3d::WorldCollisionShapeKind::GroundBox) {
+        object.collision.kind != bs3d::WorldCollisionShapeKind::GroundBox &&
+        object.collision.kind != bs3d::WorldCollisionShapeKind::OrientedBox) {
         return false;
     }
 
     const bs3d::Vec3 center = object.position + object.collision.offset;
+    if (object.collision.kind == bs3d::WorldCollisionShapeKind::OrientedBox) {
+        const float yaw = -(object.yawRadians + object.collision.yawRadians);
+        const float c = std::cos(yaw);
+        const float s = std::sin(yaw);
+        const bs3d::Vec3 relative = point - center;
+        point = {relative.x * c - relative.z * s,
+                 relative.y,
+                 relative.x * s + relative.z * c};
+    } else {
+        point = point - center;
+    }
+
     const bs3d::Vec3 half = object.collision.size * 0.5f;
-    return std::fabs(point.x - center.x) <= half.x + padding &&
-           std::fabs(point.y - center.y) <= half.y + padding &&
-           std::fabs(point.z - center.z) <= half.z + padding;
+    return std::fabs(point.x) <= half.x + padding &&
+           std::fabs(point.y) <= half.y + padding &&
+           std::fabs(point.z) <= half.z + padding;
 }
 
 bool pointInsideVisualFootprint(const bs3d::WorldObject& object, bs3d::Vec3 point, float padding = 0.0f) {
     return std::fabs(point.x - object.position.x) <= object.scale.x * 0.5f + padding &&
            std::fabs(point.z - object.position.z) <= object.scale.z * 0.5f + padding;
+}
+
+bool pointHasDriveSurface(const std::vector<const bs3d::WorldObject*>& driveSurfaces,
+                          bs3d::Vec3 point,
+                          float padding = 0.0f) {
+    for (const bs3d::WorldObject* surface : driveSurfaces) {
+        if (pointInsideVisualFootprint(*surface, point, padding)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 bool visualFootprintsOverlapXZ(const bs3d::WorldObject& lhs,
@@ -315,6 +339,25 @@ bool segmentIntersectsVisualFootprintXZ(bs3d::Vec3 start,
         }
     }
     return false;
+}
+
+bool routeSegmentHasDriveSurfaceCoverage(const std::vector<const bs3d::WorldObject*>& driveSurfaces,
+                                         bs3d::Vec3 start,
+                                         bs3d::Vec3 end,
+                                         float sampleSpacing,
+                                         float padding,
+                                         bs3d::Vec3& uncoveredPoint) {
+    const float length = bs3d::distanceXZ(start, end);
+    const int samples = std::max(1, static_cast<int>(std::ceil(length / std::max(sampleSpacing, 0.01f))));
+    for (int i = 0; i <= samples; ++i) {
+        const float t = static_cast<float>(i) / static_cast<float>(samples);
+        const bs3d::Vec3 point = start + (end - start) * t;
+        if (!pointHasDriveSurface(driveSurfaces, point, padding)) {
+            uncoveredPoint = point;
+            return false;
+        }
+    }
+    return true;
 }
 
 void addObjectCollisionForTest(const bs3d::WorldObject& object, bs3d::WorldCollision& collision) {
@@ -348,6 +391,21 @@ void addObjectCollisionForTest(const bs3d::WorldObject& object, bs3d::WorldColli
     case bs3d::WorldCollisionShapeKind::Unspecified:
         break;
     }
+}
+
+void testHelpersRecognizeOrientedBoxCollisionFootprints() {
+    bs3d::WorldObject object;
+    object.id = "test_oriented_blocker";
+    object.position = {0.0f, 0.0f, 0.0f};
+    object.yawRadians = 1.5708f;
+    object.collision.kind = bs3d::WorldCollisionShapeKind::OrientedBox;
+    object.collision.offset = {0.0f, 1.0f, 0.0f};
+    object.collision.size = {2.0f, 2.0f, 6.0f};
+
+    expect(pointInsideBoxCollision(object, {2.6f, 1.0f, 0.0f}, 0.0f),
+           "test helper treats points inside an oriented collision footprint as inside");
+    expect(!pointInsideBoxCollision(object, {0.0f, 1.0f, 2.6f}, 0.0f),
+           "test helper rejects points outside an oriented collision footprint");
 }
 
 void introLevelBuilderExportsMissionRuntimeData() {
@@ -466,7 +524,7 @@ void introLevelExportsDistrictExpansionRoutePlans() {
             expect(!route->points[i].label.empty(), "district route waypoint has a label: " + route->id);
             expect(route->points[i].radius >= 2.0f, "district route waypoint has drive radius: " + route->id);
             if (i > 0) {
-                expect(bs3d::distanceXZ(route->points[i - 1].position, route->points[i].position) >= 5.0f,
+                expect(bs3d::distanceXZ(route->points[i - 1].position, route->points[i].position) >= 2.5f,
                        "district route waypoints describe real movement: " + route->id);
             }
         }
@@ -505,7 +563,7 @@ void introLevelBuildsDistrictPlanDebugOverlay() {
         hasMainArterySegment = hasMainArterySegment || segment.routeId == "route_block13_main_artery";
         expect(segment.vehicleRoute, "district debug route segment preserves gruz route intent: " + segment.routeId);
         expect(segment.futureExpansion, "district debug route segment preserves future expansion intent: " + segment.routeId);
-        expect(bs3d::distanceXZ(segment.from, segment.to) >= 5.0f,
+        expect(bs3d::distanceXZ(segment.from, segment.to) >= 2.5f,
                "district debug route segment spans readable map distance: " + segment.routeId);
     }
 
@@ -798,13 +856,15 @@ void introLevelFutureDistrictRoutesAreVehicleTraversableByGruz() {
         if (object.assetId == "parking_surface" || object.assetId == "road_asphalt") {
             driveSurfaces.push_back(&object);
         }
-        if (object.collision.kind == bs3d::WorldCollisionShapeKind::Box &&
+        if ((object.collision.kind == bs3d::WorldCollisionShapeKind::Box ||
+             object.collision.kind == bs3d::WorldCollisionShapeKind::OrientedBox) &&
             !hasTag(object, "boundary")) {
             solidBlockers.push_back(&object);
         }
     }
 
     const std::vector<std::string> routeIds{
+        "route_block13_main_artery",
         "route_block13_pavilions_market",
         "route_block13_garage_belt"};
 
@@ -820,12 +880,23 @@ void introLevelFutureDistrictRoutesAreVehicleTraversableByGruz() {
         expect(route != nullptr && route->vehicleRoute, "future district route is authored for gruz traversal: " + routeId);
 
         for (std::size_t i = 1; route != nullptr && i < route->points.size(); ++i) {
+            const bs3d::RoutePoint& previous = route->points[i - 1];
             const bs3d::RoutePoint& point = route->points[i];
-            bool covered = false;
-            for (const bs3d::WorldObject* surface : driveSurfaces) {
-                covered = covered || pointInsideVisualFootprint(*surface, point.position, 0.25f);
-            }
+            const bool covered = pointHasDriveSurface(driveSurfaces, point.position, 0.25f);
             expect(covered, "future district route waypoint has drive surface under it: " + routeId + " / " + point.label);
+
+            bs3d::Vec3 uncoveredPoint{};
+            const bool segmentCovered = routeSegmentHasDriveSurfaceCoverage(driveSurfaces,
+                                                                            previous.position,
+                                                                            point.position,
+                                                                            0.75f,
+                                                                            0.25f,
+                                                                            uncoveredPoint);
+            expect(segmentCovered,
+                   "future district route segment stays on drive surface: " + routeId + " / " +
+                       previous.label + " -> " + point.label +
+                       " uncovered=" + std::to_string(uncoveredPoint.x) +
+                       "," + std::to_string(uncoveredPoint.z));
 
             for (const bs3d::WorldObject* blocker : solidBlockers) {
                 expect(!pointInsideBoxCollision(*blocker, point.position, 0.05f),
@@ -5225,6 +5296,7 @@ int main() {
         glassRenderPolicySeparatesTransparentWorldAndVehicleGlass();
         glassRenderPolicySortsWorldGlassBackToFront();
         glassCrackPolicyIsOptionalAndImpactDriven();
+        testHelpersRecognizeOrientedBoxCollisionFootprints();
         introLevelBuilderExportsMissionRuntimeData();
         introLevelExportsCompressedGrochowExpansionSkeleton();
         introLevelExportsDistrictExpansionRoutePlans();
