@@ -98,7 +98,7 @@ struct IntroLevelBuildConfig {
     Vec3 zenonPosition{17.2f, 0.0f, -21.2f};
     Vec3 lolekPosition{9.0f, 0.0f, -4.2f};
     Vec3 receiptHolderPosition{2.2f, 0.0f, -12.2f};
-    Vec3 dropoffPosition{-12.0f, 0.0f, -10.0f};
+    Vec3 dropoffPosition{-7.0f, 0.0f, 8.6f};
     Vec3 initialChaserPosition{20.0f, 0.0f, -24.0f};
 };
 
@@ -126,7 +126,7 @@ struct IntroLevelData {
     Vec3 zenonPosition{17.2f, 0.0f, -21.2f};
     Vec3 lolekPosition{9.0f, 0.0f, -4.2f};
     Vec3 receiptHolderPosition{2.2f, 0.0f, -12.2f};
-    Vec3 dropoffPosition{-12.0f, 0.0f, -10.0f};
+    Vec3 dropoffPosition{-7.0f, 0.0f, 8.6f};
     Vec3 initialChaserPosition{20.0f, 0.0f, -24.0f};
 };
 

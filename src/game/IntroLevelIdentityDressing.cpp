@@ -591,14 +591,14 @@ void addIdentityDressing(IntroLevelData& level) {
              "bollard_red",
              {12.0f, 0.0f, -9.8f},
              {0.25f, 1.05f, 0.25f},
-             WorldLocationTag::Parking,
-             {"parking_paint", "drive_readability"});
+             WorldLocationTag::RoadLoop,
+             {"road_readability", "drive_readability"});
     addDecor("parking_bollard_shop_1",
              "bollard_red",
              {15.8f, 0.0f, -9.8f},
              {0.25f, 1.05f, 0.25f},
-             WorldLocationTag::Parking,
-             {"parking_paint", "drive_readability"});
+             WorldLocationTag::RoadLoop,
+             {"road_readability", "drive_readability"});
     addDecor("parking_bollard_corner_left",
              "bollard_red",
              {-15.4f, 0.0f, 12.05f},
@@ -692,8 +692,8 @@ void addIdentityDressing(IntroLevelData& level) {
              "route_arrow_head",
              {level.parkingLanePosition.x, 0.075f, level.parkingLanePosition.z - 0.88f},
              {0.95f, 0.035f, 1.05f},
-             WorldLocationTag::Parking,
-             {"route_guidance", "drive_readability", "parking_paint"});
+             WorldLocationTag::RoadLoop,
+             {"route_guidance", "drive_readability"});
     addDecor("route_arrow_head_road_bend",
              "route_arrow_head",
              {level.roadBendPosition.x + 0.85f, 0.075f, level.roadBendPosition.z},

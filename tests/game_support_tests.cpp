@@ -462,6 +462,45 @@ void introLevelBuilderExportsMissionRuntimeData() {
                "dropoff trigger uses exported parking z");
 }
 
+void introLevelParkingDropoffAndPaintStayOnParkingLot() {
+    const bs3d::IntroLevelData level = bs3d::IntroLevelBuilder::build();
+    const bs3d::WorldObject* parkingSurface = findObject(level, "parking_surface");
+    expect(parkingSurface != nullptr, "parking surface exists for parking placement contracts");
+
+    const bs3d::MissionTriggerDefinition* dropoffTrigger = nullptr;
+    for (const bs3d::MissionTriggerDefinition& trigger : level.missionTriggers) {
+        if (trigger.id == "parking_dropoff_intro") {
+            dropoffTrigger = &trigger;
+            break;
+        }
+    }
+
+    const bs3d::WorldLandmark* dropoffLandmark = findLandmarkByRole(level, "dropoff");
+    expect(dropoffTrigger != nullptr, "parking dropoff trigger is exported");
+    expect(dropoffLandmark != nullptr, "parking dropoff landmark is exported");
+    if (parkingSurface != nullptr && dropoffTrigger != nullptr && dropoffLandmark != nullptr) {
+        expect(pointInsideVisualFootprint(*parkingSurface, level.dropoffPosition, 0.35f),
+               "exported dropoff position sits on the authored parking lot");
+        expect(pointInsideVisualFootprint(*parkingSurface, dropoffTrigger->position, 0.35f),
+               "parking dropoff trigger sits on the authored parking lot");
+        expect(pointInsideVisualFootprint(*parkingSurface, dropoffLandmark->position, 0.35f),
+               "parking dropoff landmark sits on the authored parking lot");
+    }
+
+    int parkingPaintObjects = 0;
+    if (parkingSurface != nullptr) {
+        for (const bs3d::WorldObject& object : level.objects) {
+            if (object.zoneTag != bs3d::WorldLocationTag::Parking || !hasTag(object, "parking_paint")) {
+                continue;
+            }
+            ++parkingPaintObjects;
+            expect(pointInsideVisualFootprint(*parkingSurface, object.position, 1.20f),
+                   "parking paint/readability object stays on or at the edge of the parking lot: " + object.id);
+        }
+    }
+    expect(parkingPaintObjects >= 10, "parking lot keeps bay paint and edge bollards covered by placement contract");
+}
+
 void introLevelExportsCompressedGrochowExpansionSkeleton() {
     const bs3d::IntroLevelData level = bs3d::IntroLevelBuilder::build();
 
@@ -5426,6 +5465,7 @@ int main() {
         glassCrackPolicyIsOptionalAndImpactDriven();
         testHelpersRecognizeOrientedBoxCollisionFootprints();
         introLevelBuilderExportsMissionRuntimeData();
+        introLevelParkingDropoffAndPaintStayOnParkingLot();
         introLevelExportsCompressedGrochowExpansionSkeleton();
         introLevelExportsDistrictExpansionRoutePlans();
         introLevelBuildsDistrictPlanDebugOverlay();
