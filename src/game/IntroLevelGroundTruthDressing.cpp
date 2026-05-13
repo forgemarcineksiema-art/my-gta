@@ -258,6 +258,83 @@ void addGroundTruthAndClutter(IntroLevelData& level) {
     addGroundPatch("grass_wear_garage_0", "irregular_grass_patch", {-18.0f, GroundPatchRenderY, 19.2f}, {4.2f, 0.007f, 1.25f}, WorldLocationTag::Garage, {"grass_patch", "garage_cluster"});
     addGroundPatch("grass_wear_block_side", "irregular_grass_patch", {-23.2f, GroundPatchRenderY, 8.0f}, {1.7f, 0.007f, 4.5f}, WorldLocationTag::Block, {"grass_patch", "block_cluster"});
     addGroundPatch("dirt_patch_under_fence", "irregular_dirt_patch", {-7.0f, GroundPatchRenderY, 12.25f}, {7.5f, 0.007f, 0.75f}, WorldLocationTag::Parking, {"grass_patch", "parking_frame"});
+
+    addClutter("lamp_block_front", "lamp_post_lowpoly", {-16.1f, 0.0f, 10.68f}, {0.18f, 3.0f, 0.18f}, WorldLocationTag::Block, {"vertical_readability", "block_cluster", "artkit_v2"});
+    addClutter("lamp_garage_mid", "lamp_post_lowpoly", {-18.0f, 0.0f, 20.48f}, {0.18f, 3.0f, 0.18f}, WorldLocationTag::Garage, {"vertical_readability", "garage_cluster", "artkit_v2"});
+    addClutter("lamp_trash_area", "lamp_post_lowpoly", {11.5f, 0.0f, -3.8f}, {0.18f, 2.8f, 0.18f}, WorldLocationTag::Trash, {"vertical_readability", "artkit_v2"});
+    addClutter("lamp_road_mid_south", "lamp_post_lowpoly", {4.5f, 0.0f, -21.5f}, {0.18f, 3.1f, 0.18f}, WorldLocationTag::RoadLoop, {"vertical_readability", "artkit_v2"});
+
+    addClutter("bollard_parking_mid_left", "bollard_red", {-10.5f, 0.0f, 4.70f}, {0.25f, 1.05f, 0.25f}, WorldLocationTag::Parking, {"drive_readability", "parking_frame"});
+    addClutter("bollard_parking_mid_right", "bollard_red", {-3.5f, 0.0f, 4.70f}, {0.25f, 1.05f, 0.25f}, WorldLocationTag::Parking, {"drive_readability", "parking_frame"});
+    addClutter("bollard_shop_approach", "bollard_red", {16.0f, 0.0f, -23.55f}, {0.25f, 1.05f, 0.25f}, WorldLocationTag::Shop, {"drive_readability", "shop_cluster"});
+
+    addClutter("fence_garage_boundary", "fence_panel", {-12.5f, 0.0f, 21.58f}, {3.2f, 0.82f, 0.10f}, WorldLocationTag::Garage, {"garage_identity", "garage_cluster"});
+    addClutter("fence_trash_boundary", "fence_panel", {11.2f, 0.0f, -3.25f}, {2.8f, 0.82f, 0.10f}, WorldLocationTag::Trash, {"trash_dressing", "trash_cluster"}, 1.5708f);
+    addClutter("fence_road_west_outer", "fence_panel", {-29.8f, 0.0f, 0.0f}, {2.8f, 0.82f, 0.10f}, WorldLocationTag::RoadLoop, {"drive_readability"});
+
+    addClutter("planter_shop_side_right", "planter_concrete", {12.5f, 0.0f, -22.98f}, {0.72f, 0.38f, 0.48f}, WorldLocationTag::Shop, {"shop_identity", "shop_cluster"});
+    addClutter("planter_block_entrance", "planter_concrete", {-13.8f, 0.0f, 10.68f}, {0.88f, 0.42f, 0.52f}, WorldLocationTag::Block, {"story_dressing", "block_cluster"});
+
+    addClutter("cardboard_garage_scatter", "cardboard_stack", {-15.5f, 0.0f, 20.72f}, {0.62f, 0.45f, 0.50f}, WorldLocationTag::Garage, {"garage_identity", "garage_cluster"});
+    addClutter("cardboard_block_corner", "cardboard_stack", {-23.5f, 0.0f, 10.80f}, {0.58f, 0.38f, 0.46f}, WorldLocationTag::Block, {"story_dressing", "block_cluster"});
+
+    addTintedDecor("garage_wall_stain_top",
+                   "wall_stain",
+                   {-18.5f, 0.72f, 20.88f},
+                   {1.55f, 0.28f, 0.040f},
+                   WorldLocationTag::Garage,
+                   {"garage_identity", "garage_cluster", "osiedle_clutter", "subtle_decal"},
+                   objectTint(74, 72, 66, 118));
+    addTintedDecor("garage_wall_stain_right",
+                   "wall_stain",
+                   {-13.2f, 0.58f, 20.85f},
+                   {1.20f, 0.24f, 0.040f},
+                   WorldLocationTag::Garage,
+                   {"garage_identity", "garage_cluster", "osiedle_clutter", "subtle_decal"},
+                   objectTint(70, 68, 62, 112));
+    addTintedDecor("block_side_stain_extra",
+                   "wall_stain",
+                   {-22.61f, 1.25f, 10.0f},
+                   {0.05f, 0.52f, 2.0f},
+                   WorldLocationTag::Block,
+                   {"block_side_facade", "story_dressing", "osiedle_clutter", "subtle_decal"},
+                   objectTint(76, 72, 64, 108));
+
+    addClutter("sign_garage_private", "street_sign", {-27.5f, 0.0f, 21.2f}, {0.52f, 1.35f, 0.08f}, WorldLocationTag::Garage, {"garage_identity", "vertical_readability", "garage_cluster"});
+    addClutter("sign_block_info_board", "street_sign", {-18.5f, 0.0f, 10.78f}, {0.55f, 1.55f, 0.08f}, WorldLocationTag::Block, {"vertical_readability", "story_dressing", "block_cluster"});
+
+    addClutter("barrier_road_edge_north", "concrete_barrier", {0.5f, 0.0f, -16.5f}, {1.80f, 0.55f, 0.42f}, WorldLocationTag::RoadLoop, {"drive_readability"});
+    addClutter("barrier_parking_side", "concrete_barrier", {2.2f, 0.0f, 5.8f}, {1.55f, 0.55f, 0.42f}, WorldLocationTag::Parking, {"drive_readability", "parking_frame"});
+
+    auto addOilStain = [&](std::string id, Vec3 position, Vec3 scale, WorldLocationTag tag, std::vector<std::string> tags) {
+        tags.push_back("ground_patch");
+        tags.push_back("artkit_v2");
+        addTintedDecor(std::move(id), "oil_stain", position, scale, tag, std::move(tags),
+                       objectTint(54, 56, 52, 118));
+    };
+    addOilStain("oil_stain_garage_0", {-17.5f, GroundPatchRenderY, 21.10f}, {1.30f, 0.008f, 0.65f}, WorldLocationTag::Garage, {"garage_cluster"});
+    addOilStain("oil_stain_garage_1", {-19.8f, GroundPatchRenderY, 21.20f}, {1.10f, 0.008f, 0.55f}, WorldLocationTag::Garage, {"garage_cluster"});
+    addOilStain("oil_stain_parking_0", {-11.5f, GroundPatchRenderY, 8.50f}, {0.75f, 0.008f, 1.05f}, WorldLocationTag::Parking, {"parking_frame"});
+    addOilStain("oil_stain_parking_1", {-4.2f, GroundPatchRenderY, 7.80f}, {0.68f, 0.008f, 0.95f}, WorldLocationTag::Parking, {"parking_frame"});
+    addOilStain("oil_stain_parking_2", {-8.5f, GroundPatchRenderY, 10.50f}, {0.58f, 0.008f, 0.82f}, WorldLocationTag::Parking, {"parking_frame"});
+    addOilStain("oil_stain_road_0", {3.5f, GroundPatchRenderY, -22.0f}, {0.88f, 0.008f, 0.62f}, WorldLocationTag::RoadLoop, {});
+    addOilStain("oil_stain_road_1", {9.0f, GroundPatchRenderY, -22.4f}, {0.78f, 0.008f, 0.58f}, WorldLocationTag::RoadLoop, {});
+
+    addGroundPatch("asphalt_patch_road_flat_0", "irregular_asphalt_patch", {6.0f, GroundPatchRenderY, -21.6f}, {4.8f, 0.009f, 0.75f}, WorldLocationTag::RoadLoop, {"asphalt_patch"});
+    addGroundPatch("asphalt_patch_road_flat_1", "irregular_asphalt_patch", {15.5f, GroundPatchRenderY, -25.5f}, {5.2f, 0.009f, 0.80f}, WorldLocationTag::RoadLoop, {"asphalt_patch"}, 0.18f);
+    addGroundPatch("asphalt_patch_parking_flat_0", "irregular_asphalt_patch", {-8.5f, GroundPatchRenderY, 9.5f}, {3.5f, 0.009f, 0.72f}, WorldLocationTag::Parking, {"asphalt_patch", "parking_frame"}, -0.10f);
+
+    addGroundPatch("dirt_patch_north_wall", "irregular_dirt_patch", {-4.5f, GroundPatchRenderY, -17.0f}, {2.8f, 0.007f, 0.62f}, WorldLocationTag::RoadLoop, {"grass_patch"});
+    addGroundPatch("dirt_patch_garage_wall", "irregular_dirt_patch", {-18.5f, GroundPatchRenderY, 21.32f}, {3.2f, 0.007f, 0.48f}, WorldLocationTag::Garage, {"grass_patch", "garage_cluster"});
+    addGroundPatch("dirt_patch_block_wall", "irregular_dirt_patch", {-16.5f, GroundPatchRenderY, 12.25f}, {4.5f, 0.007f, 0.44f}, WorldLocationTag::Block, {"grass_patch", "block_cluster"});
+
+    addGroundPatch("grass_wear_patch_road_0", "irregular_grass_patch", {2.5f, GroundPatchRenderY, -20.0f}, {3.2f, 0.007f, 0.85f}, WorldLocationTag::RoadLoop, {"grass_patch"});
+    addGroundPatch("grass_wear_patch_west", "irregular_grass_patch", {-30.5f, GroundPatchRenderY, -8.0f}, {1.8f, 0.007f, 3.8f}, WorldLocationTag::RoadLoop, {"grass_patch"});
+    addGroundPatch("grass_wear_patch_east", "irregular_grass_patch", {29.0f, GroundPatchRenderY, -5.0f}, {1.8f, 0.007f, 4.2f}, WorldLocationTag::RoadLoop, {"grass_patch"});
+
+    addGroundPatch("dirt_patch_parking_irregular", "irregular_dirt_patch", {-3.5f, GroundPatchRenderY, 5.5f}, {2.5f, 0.007f, 0.95f}, WorldLocationTag::Parking, {"grass_patch", "parking_frame"}, 0.30f);
+    addGroundPatch("grass_wear_parking_border", "irregular_grass_patch", {-14.2f, GroundPatchRenderY, 6.2f}, {1.8f, 0.007f, 2.2f}, WorldLocationTag::Parking, {"grass_patch", "parking_frame"}, -0.10f);
+    addGroundPatch("irregular_dirt_road_edge", "irregular_dirt_patch", {10.5f, GroundPatchRenderY, -18.5f}, {2.2f, 0.007f, 0.85f}, WorldLocationTag::RoadLoop, {"grass_patch"}, 0.22f);
 }
 
 } // namespace bs3d::IntroLevelDressingSections
