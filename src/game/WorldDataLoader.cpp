@@ -593,6 +593,7 @@ WorldDataApplyResult applyWorldDataCatalogWithRegistry(IntroLevelData& level,
                                 : IntroLevelBuilder::build(config);
     if (catalog.editorOverlay.loaded) {
         const EditorOverlayApplyResult overlay = applyEditorOverlay(level, catalog.editorOverlay.document);
+        IntroLevelBuilder::normalizeCollisionAuthoring(level, registry);
         result.appliedEditorOverlayOverrides = overlay.appliedOverrides;
         result.appliedEditorOverlayInstances = overlay.appliedInstances;
         result.warnings.insert(result.warnings.end(), overlay.warnings.begin(), overlay.warnings.end());

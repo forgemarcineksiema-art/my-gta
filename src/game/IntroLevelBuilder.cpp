@@ -196,7 +196,7 @@ void normalizeCollisionAuthoring(WorldObject& object, const WorldAssetRegistry* 
     applyAssetCollisionMetadata(object, registry);
 }
 
-void normalizeCollisionAuthoring(IntroLevelData& level, const WorldAssetRegistry* registry) {
+void normalizeLevelCollisionAuthoring(IntroLevelData& level, const WorldAssetRegistry* registry) {
     for (WorldObject& object : level.objects) {
         normalizeCollisionAuthoring(object, registry);
     }
@@ -228,7 +228,7 @@ IntroLevelData IntroLevelBuilder::build(const IntroLevelBuildConfig& config) {
     IntroLevelAuthoring::addCoreLayout(level);
     IntroLevelAuthoring::addDressing(level);
     IntroLevelAuthoring::addGameplayData(level);
-    normalizeCollisionAuthoring(level, nullptr);
+    normalizeLevelCollisionAuthoring(level, nullptr);
     return level;
 }
 
@@ -252,8 +252,12 @@ IntroLevelData IntroLevelBuilder::build(const IntroLevelBuildConfig& config, con
     IntroLevelAuthoring::addCoreLayout(level);
     IntroLevelAuthoring::addDressing(level);
     IntroLevelAuthoring::addGameplayData(level);
-    normalizeCollisionAuthoring(level, &registry);
+    normalizeLevelCollisionAuthoring(level, &registry);
     return level;
+}
+
+void IntroLevelBuilder::normalizeCollisionAuthoring(IntroLevelData& level, const WorldAssetRegistry* registry) {
+    normalizeLevelCollisionAuthoring(level, registry);
 }
 
 DistrictPlanDebugOverlay buildDistrictPlanDebugOverlay(const IntroLevelData& level) {

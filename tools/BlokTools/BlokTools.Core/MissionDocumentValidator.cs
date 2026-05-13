@@ -2,7 +2,10 @@ namespace BlokTools.Core;
 
 public static class MissionDocumentValidator
 {
-    public static IEnumerable<ValidationIssue> Validate(MissionDocument mission, ObjectOutcomeCatalog? outcomeCatalog = null)
+    public static IEnumerable<ValidationIssue> Validate(
+        MissionDocument mission,
+        ObjectOutcomeCatalog? outcomeCatalog = null,
+        MissionLocalization? localization = null)
     {
         var outcomeKeys = outcomeCatalog?.Outcomes
             .Select(outcome => outcome.Key)
@@ -92,6 +95,12 @@ public static class MissionDocumentValidator
             {
                 yield return new ValidationIssue("mission.dialogue.text", "Dialogue line needs text or a localization lineKey.");
             }
+            if (hasLineKey && localization is not null && !localization.HasLine(line.LineKey))
+            {
+                yield return new ValidationIssue(
+                    "mission.dialogue.lineKey",
+                    $"Dialogue lineKey '{line.LineKey}' is not defined in mission localization.");
+            }
             if (line.DurationSeconds <= 0.0)
             {
                 yield return new ValidationIssue("mission.dialogue.duration", "Dialogue duration must be positive.");
@@ -120,6 +129,12 @@ public static class MissionDocumentValidator
             if (!hasText && !hasLineKey)
             {
                 yield return new ValidationIssue("mission.npcReactions.text", "NPC reaction line needs text or a localization lineKey.");
+            }
+            if (hasLineKey && localization is not null && !localization.HasLine(line.LineKey))
+            {
+                yield return new ValidationIssue(
+                    "mission.npcReactions.lineKey",
+                    $"NPC reaction lineKey '{line.LineKey}' is not defined in mission localization.");
             }
             if (line.DurationSeconds <= 0.0)
             {
@@ -153,6 +168,12 @@ public static class MissionDocumentValidator
             if (!hasText && !hasLineKey)
             {
                 yield return new ValidationIssue("mission.cutscenes.text", "Cutscene line needs text or a localization lineKey.");
+            }
+            if (hasLineKey && localization is not null && !localization.HasLine(line.LineKey))
+            {
+                yield return new ValidationIssue(
+                    "mission.cutscenes.lineKey",
+                    $"Cutscene lineKey '{line.LineKey}' is not defined in mission localization.");
             }
             if (line.DurationSeconds <= 0.0)
             {

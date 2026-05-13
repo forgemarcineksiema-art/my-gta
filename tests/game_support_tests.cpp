@@ -3419,6 +3419,43 @@ void worldDataCatalogAppliesEditorOverlayAfterBaseMap() {
            "editor overlay instance exists after catalog apply");
 }
 
+void worldDataCatalogNormalizesEditorOverlayInstancesWithManifestRegistry() {
+    bs3d::WorldAssetRegistry registry;
+    const bs3d::AssetManifestLoadResult manifest = registry.loadManifest("data/assets/asset_manifest.txt");
+    expect(manifest.loaded, "overlay normalization test loads asset manifest");
+
+    bs3d::IntroLevelData level = bs3d::IntroLevelBuilder::build();
+    bs3d::WorldDataCatalog catalog;
+    catalog.loaded = true;
+    catalog.world.loaded = true;
+    catalog.mission.loaded = true;
+    catalog.world.playerSpawn = level.playerStart;
+    catalog.world.vehicleSpawn = level.vehicleStart;
+    catalog.world.npcSpawn = level.npcPosition;
+    catalog.world.shopPosition = level.shopPosition;
+    catalog.world.dropoffPosition = level.dropoffPosition;
+    catalog.mission.phases.push_back({"ReachVehicle", "Enter the car.", "player_enters_vehicle"});
+    catalog.editorOverlay.loaded = true;
+    catalog.editorOverlay.document.instances.push_back(
+        {"editor_catalog_lamp_collision",
+         "lamp_post_lowpoly",
+         {3.0f, 0.0f, -24.0f},
+         {0.18f, 3.1f, 0.18f},
+         0.0f,
+         bs3d::WorldLocationTag::RoadLoop,
+         {"vertical_readability"}});
+
+    const bs3d::WorldDataApplyResult result = bs3d::applyWorldDataCatalog(level, catalog, registry);
+
+    const bs3d::WorldObject* object = findObject(level, "editor_catalog_lamp_collision");
+    expect(result.applied, "world data catalog applies before overlay normalization check");
+    expect(object != nullptr, "editor overlay instance exists after manifest-aware catalog apply");
+    expect(object != nullptr && object->collision.kind != bs3d::WorldCollisionShapeKind::None,
+           "editor overlay instance participates in normalized collision authoring");
+    expect(object != nullptr && hasTag(*object, "physical_prop"),
+           "editor overlay instance inherits physical prop behavior from manifest asset");
+}
+
 void runtimeMapEditorEditsSelectedObjectAndTracksDirtyState() {
     bs3d::IntroLevelData level = bs3d::IntroLevelBuilder::build();
     bs3d::RuntimeMapEditor editor;
@@ -5222,6 +5259,7 @@ int main() {
         worldDataApplyRebuildsDerivedIntroLevelAuthoring();
         worldDataApplyCanRebuildWithManifestRegistry();
         worldDataCatalogAppliesEditorOverlayAfterBaseMap();
+        worldDataCatalogNormalizesEditorOverlayInstancesWithManifestRegistry();
         runtimeMapEditorEditsSelectedObjectAndTracksDirtyState();
         runtimeMapEditorAddsManifestInstance();
         runtimeMapEditorAddsDefinitionInstanceWithManifestTags();

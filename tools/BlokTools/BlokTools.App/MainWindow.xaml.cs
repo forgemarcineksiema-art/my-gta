@@ -123,9 +123,10 @@ public sealed class MainWindowModel : INotifyPropertyChanged
         var workspaceRoot = FindWorkspaceRoot(AppContext.BaseDirectory);
         var missionPath = Path.Combine(workspaceRoot, "data", "mission_driving_errand.json");
         var outcomes = ObjectOutcomeCatalogStore.Load(Path.Combine(workspaceRoot, "data", "world", "object_outcome_catalog.json"));
+        var localization = MissionLocalizationStore.Load(Path.Combine(workspaceRoot, "data", "world", "mission_localization_pl.json"));
         var shopPath = Path.Combine(workspaceRoot, "data", "world", "shop_items_catalog.json");
         var shopSession = ShopCatalogEditorSession.Load(shopPath);
-        var session = MissionEditorSession.Load(missionPath, outcomes);
+        var session = MissionEditorSession.Load(missionPath, outcomes, localization);
 
         var model = new MainWindowModel(session, shopSession, outcomes)
         {

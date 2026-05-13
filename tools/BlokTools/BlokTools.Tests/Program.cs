@@ -12,6 +12,7 @@ var tests = new (string Name, Action Body)[]
     ("mission dialogue line with lineKey only passes validation", MissionDocumentValidationAllowsDialogueLineKey),
     ("mission npc reaction line with lineKey only passes validation", MissionDocumentValidationAllowsNpcReactionLineKey),
     ("mission cutscene line with lineKey only passes validation", MissionDocumentValidationAllowsCutsceneLineKey),
+    ("mission document validation rejects unknown localization lineKey", MissionDocumentValidationRejectsUnknownLocalizationLineKey),
     ("mission editor session binds step trigger to object outcome", MissionEditorSessionBindsStepTriggerToObjectOutcome),
     ("mission editor session adds npc reaction and cutscene", MissionEditorSessionAddsNpcReactionAndCutscene),
     ("mission editor session rejects unknown outcome triggers", MissionEditorSessionRejectsUnknownOutcomeTriggers),
@@ -462,6 +463,8 @@ static void WorkspaceSnapshotPresentsMissionEditorSurface()
         "first mission node includes trigger");
     AssertTrue(snapshot.MissionNodes.Any(node => node.Text.Contains("player_enters_vehicle", StringComparison.Ordinal)),
         "mission nodes include vehicle entry trigger");
+    AssertTrue(snapshot.DialogueLines.Any(line => line.Text.Contains("Zenona", StringComparison.Ordinal)),
+        "snapshot resolves dialogue lineKey text from mission localization");
     AssertTrue(snapshot.ObjectOutcomeHooks.Any(hook => hook.Text.Contains("shop_door_checked", StringComparison.Ordinal)),
         "snapshot includes shop door hook");
     AssertTrue(snapshot.ObjectOutcomeHooks.Any(hook =>
@@ -507,10 +510,38 @@ static void WorkspaceLoaderValidatesMissionOutcomeTriggersAgainstCatalog()
             },
         });
     CreateMinimalShopCatalog(root);
+    CreateMinimalMissionLocalization(root);
 
     var snapshot = BlokWorkspaceLoader.Load(root);
 
     AssertIssue(snapshot.Issues, "mission.step.trigger.outcome");
+}
+
+static void MissionDocumentValidationRejectsUnknownLocalizationLineKey()
+{
+    var mission = ValidTestMission();
+    mission.NpcReactions.Add(new MissionNpcReaction { Phase = "ReachVehicle", Speaker = "NPC", DurationSeconds = 2.0 });
+    mission.Cutscenes.Add(new MissionCutsceneLine { Cutscene = "test_cutscene", Phase = "ReachVehicle", Speaker = "Narrator", DurationSeconds = 2.0 });
+    mission.Dialogue[0].Text = "";
+    mission.Dialogue[0].LineKey = "mission.missing";
+    mission.NpcReactions[0].Text = "";
+    mission.NpcReactions[0].LineKey = "mission.npc_missing";
+    mission.Cutscenes[0].Text = "";
+    mission.Cutscenes[0].LineKey = "mission.cutscene_missing";
+    var localization = new MissionLocalization
+    {
+        SchemaVersion = 1,
+        Lines =
+        {
+            ["mission.present"] = "Present line.",
+        },
+    };
+
+    var issues = MissionDocumentValidator.Validate(mission, null, localization).ToList();
+
+    AssertIssue(issues, "mission.dialogue.lineKey");
+    AssertIssue(issues, "mission.npcReactions.lineKey");
+    AssertIssue(issues, "mission.cutscenes.lineKey");
 }
 
 static void CreateMinimalShopCatalog(string root)
@@ -545,6 +576,21 @@ static void CreateMinimalShopCatalog(string root)
                     Currency = "zl",
                     Description = "fixture product",
                 },
+            },
+        });
+}
+
+static void CreateMinimalMissionLocalization(string root)
+{
+    MissionLocalizationStore.Save(
+        Path.Combine(root, "data", "world", "mission_localization_pl.json"),
+        new MissionLocalization
+        {
+            SchemaVersion = 1,
+            Lines =
+            {
+                ["mission.test"] = "Test line.",
+                ["mission.bogus_intro"] = "Mission intro.",
             },
         });
 }

@@ -27,8 +27,9 @@ public static class BlokWorkspaceLoader
         var mission = MissionDocumentStore.Load(Path.Combine(root, "data", "mission_driving_errand.json"));
         var outcomes = ObjectOutcomeCatalogStore.Load(Path.Combine(root, "data", "world", "object_outcome_catalog.json"));
         var shops = ShopItemsCatalogStore.Load(Path.Combine(root, "data", "world", "shop_items_catalog.json"));
+        var localization = MissionLocalizationStore.Load(Path.Combine(root, "data", "world", "mission_localization_pl.json"));
         var issues = new List<ValidationIssue>();
-        issues.AddRange(MissionDocumentValidator.Validate(mission, outcomes));
+        issues.AddRange(MissionDocumentValidator.Validate(mission, outcomes, localization));
         issues.AddRange(ObjectOutcomeCatalogValidator.Validate(outcomes));
         issues.AddRange(ShopItemsCatalogValidator.Validate(shops));
 
@@ -40,13 +41,13 @@ public static class BlokWorkspaceLoader
                 .Select(step => new EditorRow(step.Phase, $"{step.Phase}: {step.Objective} -> {step.Trigger}"))
                 .ToList(),
             DialogueLines = mission.Dialogue
-                .Select((line, index) => new EditorRow($"{index:000}", $"{line.Speaker}: {line.Text}"))
+                .Select((line, index) => new EditorRow($"{index:000}", $"{line.Speaker}: {ResolveText(line.Text, line.LineKey, localization)}"))
                 .ToList(),
             NpcReactions = mission.NpcReactions
-                .Select((line, index) => new EditorRow($"{index:000}", $"{line.Phase} / {line.Speaker}: {line.Text}"))
+                .Select((line, index) => new EditorRow($"{index:000}", $"{line.Phase} / {line.Speaker}: {ResolveText(line.Text, line.LineKey, localization)}"))
                 .ToList(),
             CutsceneLines = mission.Cutscenes
-                .Select((line, index) => new EditorRow($"{index:000}", $"{line.Cutscene}:{line.Phase} / {line.Speaker}: {line.Text}"))
+                .Select((line, index) => new EditorRow($"{index:000}", $"{line.Cutscene}:{line.Phase} / {line.Speaker}: {ResolveText(line.Text, line.LineKey, localization)}"))
                 .ToList(),
             Shops = shops.Shops.Select(shop => new EditorRow(shop.Id, ShopFormatter.ShopEditorText(shop))).ToList(),
             ShopItems = shops.Items
@@ -57,5 +58,15 @@ public static class BlokWorkspaceLoader
                 .ToList(),
             Issues = issues,
         };
+    }
+
+    private static string ResolveText(string text, string lineKey, MissionLocalization localization)
+    {
+        if (!string.IsNullOrWhiteSpace(text))
+        {
+            return text;
+        }
+
+        return string.IsNullOrWhiteSpace(lineKey) ? "" : localization.Resolve(lineKey);
     }
 }
