@@ -138,6 +138,20 @@ def test_unknown_outcome_trigger_fails() -> None:
     with_context(run)
 
 
+def test_outcome_pattern_trigger_accepts_concrete_runtime_id() -> None:
+    def run(mission_path: Path, localization_path: Path, catalog_path: Path, policy_path: Path) -> None:
+        mission = {**BASE_MISSION}
+        mission["steps"] = [
+            {"phase": "ReachVehicle", "objective": "go", "trigger": "outcome:shop_prices_read_shop_price_card_0"},
+            {"phase": "WalkToShop", "objective": "read", "trigger": "outcome:shop_prices_read_*"},
+        ]
+        write_json(mission_path, mission)
+        issues = validator.validate_mission(mission_path, localization_path, catalog_path, policy_path)
+        assert issues == []
+
+    with_context(run)
+
+
 def test_dialogue_requires_known_phase() -> None:
     def run(mission_path: Path, localization_path: Path, catalog_path: Path, policy_path: Path) -> None:
         mission = {**BASE_MISSION}
@@ -242,6 +256,7 @@ def main() -> int:
         test_valid_mission_passes,
         test_unknown_phase_fails,
         test_unknown_outcome_trigger_fails,
+        test_outcome_pattern_trigger_accepts_concrete_runtime_id,
         test_dialogue_requires_known_phase,
         test_bad_dialogue_duration_fails,
         test_missing_line_and_line_key_fails,

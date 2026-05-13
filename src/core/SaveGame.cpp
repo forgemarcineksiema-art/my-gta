@@ -3,6 +3,7 @@
 #include "bs3d/core/WorldServiceState.h"
 
 #include <algorithm>
+#include <cerrno>
 #include <cstdlib>
 #include <cmath>
 #include <filesystem>
@@ -54,18 +55,92 @@ std::unordered_map<std::string, std::string> parseLines(const std::string& text)
     return values;
 }
 
-int asInt(const std::unordered_map<std::string, std::string>& values, const std::string& key, int fallback) {
-    const auto found = values.find(key);
-    return found == values.end() ? fallback : std::atoi(found->second.c_str());
+void addParseError(std::vector<std::string>* errors,
+                   const std::string& key,
+                   const std::string& value,
+                   const std::string& expected) {
+    if (errors == nullptr) {
+        return;
+    }
+    errors->push_back("malformed save scalar '" + key + "' expected " + expected + " but got '" + value + "'");
 }
 
-float asFloat(const std::unordered_map<std::string, std::string>& values, const std::string& key, float fallback) {
-    const auto found = values.find(key);
-    return found == values.end() ? fallback : std::strtof(found->second.c_str(), nullptr);
+bool parseStrictInt(const std::string& text, int& out) {
+    if (text.empty()) {
+        return false;
+    }
+    errno = 0;
+    char* end = nullptr;
+    const long parsed = std::strtol(text.c_str(), &end, 10);
+    if (end == text.c_str() || *end != '\0' || errno == ERANGE ||
+        parsed < static_cast<long>(std::numeric_limits<int>::min()) ||
+        parsed > static_cast<long>(std::numeric_limits<int>::max())) {
+        return false;
+    }
+    out = static_cast<int>(parsed);
+    return true;
 }
 
-bool asBool(const std::unordered_map<std::string, std::string>& values, const std::string& key, bool fallback) {
-    return asInt(values, key, fallback ? 1 : 0) != 0;
+bool parseStrictFloat(const std::string& text, float& out) {
+    if (text.empty()) {
+        return false;
+    }
+    errno = 0;
+    char* end = nullptr;
+    const float parsed = std::strtof(text.c_str(), &end);
+    if (end == text.c_str() || *end != '\0' || errno == ERANGE || !std::isfinite(parsed)) {
+        return false;
+    }
+    out = parsed;
+    return true;
+}
+
+int asInt(const std::unordered_map<std::string, std::string>& values,
+          const std::string& key,
+          int fallback,
+          std::vector<std::string>* errors = nullptr) {
+    const auto found = values.find(key);
+    if (found == values.end()) {
+        return fallback;
+    }
+    int parsed = fallback;
+    if (!parseStrictInt(found->second, parsed)) {
+        addParseError(errors, key, found->second, "integer");
+        return fallback;
+    }
+    return parsed;
+}
+
+float asFloat(const std::unordered_map<std::string, std::string>& values,
+              const std::string& key,
+              float fallback,
+              std::vector<std::string>* errors = nullptr) {
+    const auto found = values.find(key);
+    if (found == values.end()) {
+        return fallback;
+    }
+    float parsed = fallback;
+    if (!parseStrictFloat(found->second, parsed)) {
+        addParseError(errors, key, found->second, "finite float");
+        return fallback;
+    }
+    return parsed;
+}
+
+bool asBool(const std::unordered_map<std::string, std::string>& values,
+            const std::string& key,
+            bool fallback,
+            std::vector<std::string>* errors = nullptr) {
+    const auto found = values.find(key);
+    if (found == values.end()) {
+        return fallback;
+    }
+    int parsed = fallback ? 1 : 0;
+    if (!parseStrictInt(found->second, parsed) || (parsed != 0 && parsed != 1)) {
+        addParseError(errors, key, found->second, "0 or 1");
+        return fallback;
+    }
+    return parsed != 0;
 }
 
 std::string asText(const std::unordered_map<std::string, std::string>& values,
@@ -229,71 +304,81 @@ std::string serializeSaveGame(const SaveGame& save) {
 SaveGame deserializeSaveGame(const std::string& text) {
     const std::unordered_map<std::string, std::string> values = parseLines(text);
     SaveGame save;
-    save.version = asInt(values, "version", 1);
-    save.story.visitedShopOnFoot = asBool(values, "story.visitedShopOnFoot", false);
-    save.story.gruzUnlocked = asBool(values, "story.gruzUnlocked", false);
-    save.story.introCompleted = asBool(values, "story.introCompleted", false);
-    save.story.shopTroubleSeen = asBool(values, "story.shopTroubleSeen", false);
-    save.story.paragonCompleted = asBool(values, "story.paragonCompleted", false);
-    save.story.shopBanActive = asBool(values, "story.shopBanActive", false);
-    save.story.paragonSolution = static_cast<ParagonSolution>(asInt(values, "story.paragonSolution", 0));
-    save.mission.phase = static_cast<MissionPhase>(asInt(values, "mission.phase", 0));
-    save.mission.phaseSeconds = asFloat(values, "mission.phaseSeconds", 0.0f);
+    auto intValue = [&](const std::string& key, int fallback) {
+        return asInt(values, key, fallback, &save.parseErrors);
+    };
+    auto floatValue = [&](const std::string& key, float fallback) {
+        return asFloat(values, key, fallback, &save.parseErrors);
+    };
+    auto boolValue = [&](const std::string& key, bool fallback) {
+        return asBool(values, key, fallback, &save.parseErrors);
+    };
+
+    save.version = intValue("version", 1);
+    save.story.visitedShopOnFoot = boolValue("story.visitedShopOnFoot", false);
+    save.story.gruzUnlocked = boolValue("story.gruzUnlocked", false);
+    save.story.introCompleted = boolValue("story.introCompleted", false);
+    save.story.shopTroubleSeen = boolValue("story.shopTroubleSeen", false);
+    save.story.paragonCompleted = boolValue("story.paragonCompleted", false);
+    save.story.shopBanActive = boolValue("story.shopBanActive", false);
+    save.story.paragonSolution = static_cast<ParagonSolution>(intValue("story.paragonSolution", 0));
+    save.mission.phase = static_cast<MissionPhase>(intValue("mission.phase", 0));
+    save.mission.phaseSeconds = floatValue("mission.phaseSeconds", 0.0f);
     save.mission.checkpointId = asText(values, "checkpoint");
-    save.paragonPhase = static_cast<ParagonMissionPhase>(asInt(values, "paragon.phase", 0));
+    save.paragonPhase = static_cast<ParagonMissionPhase>(intValue("paragon.phase", 0));
     save.playerPosition = parseVec3(asText(values, "player.position", "0,0,0"));
-    save.playerYawRadians = asFloat(values, "player.yaw", 0.0f);
-    save.playerInVehicle = asBool(values, "player.inVehicle", false);
+    save.playerYawRadians = floatValue("player.yaw", 0.0f);
+    save.playerInVehicle = boolValue("player.inVehicle", false);
     save.vehiclePosition = parseVec3(asText(values, "vehicle.position", "0,0,0"));
-    save.vehicleYawRadians = asFloat(values, "vehicle.yaw", 0.0f);
-    save.vehicleCondition = asFloat(values, "vehicle.condition", 100.0f);
-    save.przypalValue = asFloat(values, "przypal.value", 0.0f);
-    save.przypalDecayDelayRemaining = asFloat(values, "przypal.decayDelayRemaining", 0.0f);
+    save.vehicleYawRadians = floatValue("vehicle.yaw", 0.0f);
+    save.vehicleCondition = floatValue("vehicle.condition", 100.0f);
+    save.przypalValue = floatValue("przypal.value", 0.0f);
+    save.przypalDecayDelayRemaining = floatValue("przypal.decayDelayRemaining", 0.0f);
     save.przypalBand = static_cast<PrzypalBand>(
-        asInt(values, "przypal.band", static_cast<int>(PrzypalSystem::bandForValue(save.przypalValue))));
-    save.przypalBandPulseAvailable = asBool(values, "przypal.bandPulseAvailable", false);
+        intValue("przypal.band", static_cast<int>(PrzypalSystem::bandForValue(save.przypalValue))));
+    save.przypalBandPulseAvailable = boolValue("przypal.bandPulseAvailable", false);
     const int contributorCount =
-        std::clamp(asInt(values, "przypal.contributors.count", 0), 0, MaxSavedPrzypalContributors);
+        std::clamp(intValue("przypal.contributors.count", 0), 0, MaxSavedPrzypalContributors);
     // Cap parsed count to prevent excessive allocation from tampered/corrupt files.
     save.przypalContributors.reserve(static_cast<std::size_t>(contributorCount));
     for (int index = 0; index < contributorCount; ++index) {
         const std::string prefix = "przypal.contributor." + std::to_string(index) + ".";
         PrzypalContributor contributor;
-        contributor.type = static_cast<WorldEventType>(asInt(values, prefix + "type", 0));
-        contributor.location = static_cast<WorldLocationTag>(asInt(values, prefix + "location", 0));
-        contributor.heat = asFloat(values, prefix + "heat", 0.0f);
-        contributor.ageSeconds = asFloat(values, prefix + "ageSeconds", 0.0f);
+        contributor.type = static_cast<WorldEventType>(intValue(prefix + "type", 0));
+        contributor.location = static_cast<WorldLocationTag>(intValue(prefix + "location", 0));
+        contributor.heat = floatValue(prefix + "heat", 0.0f);
+        contributor.ageSeconds = floatValue(prefix + "ageSeconds", 0.0f);
         save.przypalContributors.push_back(contributor);
     }
-    const int eventCount = std::clamp(asInt(values, "world.events.count", 0), 0, MaxSavedWorldEvents);
+    const int eventCount = std::clamp(intValue("world.events.count", 0), 0, MaxSavedWorldEvents);
     save.worldEvents.reserve(static_cast<std::size_t>(eventCount));
     for (int index = 0; index < eventCount; ++index) {
         const std::string prefix = "world.event." + std::to_string(index) + ".";
         WorldEvent event;
-        event.id = asInt(values, prefix + "id", 0);
-        event.type = static_cast<WorldEventType>(asInt(values, prefix + "type", 0));
-        event.location = static_cast<WorldLocationTag>(asInt(values, prefix + "location", 0));
+        event.id = intValue(prefix + "id", 0);
+        event.type = static_cast<WorldEventType>(intValue(prefix + "type", 0));
+        event.location = static_cast<WorldLocationTag>(intValue(prefix + "location", 0));
         event.position = parseVec3(asText(values, prefix + "position", "0,0,0"));
-        event.intensity = asFloat(values, prefix + "intensity", 0.0f);
-        event.remainingSeconds = asFloat(values, prefix + "remainingSeconds", 0.0f);
+        event.intensity = floatValue(prefix + "intensity", 0.0f);
+        event.remainingSeconds = floatValue(prefix + "remainingSeconds", 0.0f);
         event.source = asText(values, prefix + "source");
-        event.stackCount = asInt(values, prefix + "stackCount", 1);
-        event.ageSeconds = asFloat(values, prefix + "ageSeconds", 0.0f);
+        event.stackCount = intValue(prefix + "stackCount", 1);
+        event.ageSeconds = floatValue(prefix + "ageSeconds", 0.0f);
         save.worldEvents.push_back(event);
     }
     const int cooldownCount =
-        std::clamp(asInt(values, "world.cooldowns.count", 0), 0, MaxSavedEventCooldowns);
+        std::clamp(intValue("world.cooldowns.count", 0), 0, MaxSavedEventCooldowns);
     save.eventCooldowns.reserve(static_cast<std::size_t>(cooldownCount));
     for (int index = 0; index < cooldownCount; ++index) {
         const std::string prefix = "world.cooldown." + std::to_string(index) + ".";
         WorldEventEmitterCooldownSnapshot cooldown;
-        cooldown.type = static_cast<WorldEventType>(asInt(values, prefix + "type", 0));
+        cooldown.type = static_cast<WorldEventType>(intValue(prefix + "type", 0));
         cooldown.source = asText(values, prefix + "source");
-        cooldown.remainingSeconds = asFloat(values, prefix + "remainingSeconds", 0.0f);
+        cooldown.remainingSeconds = floatValue(prefix + "remainingSeconds", 0.0f);
         save.eventCooldowns.push_back(cooldown);
     }
     const int completedFavorCount =
-        std::clamp(asInt(values, "local.favors.completed.count", 0), 0, MaxSavedCompletedLocalRewirFavors);
+        std::clamp(intValue("local.favors.completed.count", 0), 0, MaxSavedCompletedLocalRewirFavors);
     save.completedLocalRewirFavorIds.reserve(static_cast<std::size_t>(completedFavorCount));
     for (int index = 0; index < completedFavorCount; ++index) {
         save.completedLocalRewirFavorIds.push_back(
@@ -304,6 +389,9 @@ SaveGame deserializeSaveGame(const std::string& text) {
 
 SaveGameValidation validateSaveGame(const SaveGame& save) {
     SaveGameValidation validation;
+    for (const std::string& parseError : save.parseErrors) {
+        addError(validation, parseError);
+    }
     // Version lock: reject unknown format versions to prevent misparse.
     if (save.version != 1) {
         addError(validation, "unsupported save version: " + std::to_string(save.version));

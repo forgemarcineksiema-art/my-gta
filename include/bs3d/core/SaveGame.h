@@ -36,6 +36,7 @@ struct SaveGame {
     std::vector<WorldEvent> worldEvents;
     std::vector<WorldEventEmitterCooldownSnapshot> eventCooldowns;
     std::vector<std::string> completedLocalRewirFavorIds;
+    std::vector<std::string> parseErrors;
 };
 
 struct SaveGameValidation {

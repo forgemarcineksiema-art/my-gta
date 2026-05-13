@@ -23,7 +23,7 @@ See also:
 | 6a–6c | CpuMeshLoader minimal OBJ, D3D11GameShell --load-mesh, modelPath sidecar upload | DONE |
 | Option A | Broader WorldAssetRegistry integration (seed limit 16) | DONE |
 
-D3D11 pipeline is **parked** — dev tooling is stable, all smokes pass. Resume only with a concrete driving need for GLTF, materials, textures, or main-renderer D3D11.
+D3D11 pipeline is **parked** — dev tooling is stable, with shadow/capture smokes kept as separate pre-work checks. Resume only with a concrete driving need for GLTF, materials, textures, or main-renderer D3D11.
 
 ### Runtime / gameplay systems checkpoint (complete)
 
@@ -48,10 +48,10 @@ D3D11 pipeline is **parked** — dev tooling is stable, all smokes pass. Resume 
 - Raylib is the sole active main runtime renderer
 - `--renderer d3d11` returns a clear error — NOT implemented
 - `--renderframe-shadow` + `--renderframe-shadow-meshes` extract and emit Mesh commands
-- `--d3d11-shadow-window` renders shadow frames through D3D11Renderer (Box + 36 cached Meshes)
+- `--d3d11-shadow-window` renders shadow frames through D3D11Renderer (one-time seed limit 16; sample captures may draw more mesh commands)
 - `D3D11GameShell --load-mesh` loads OBJ files and renders through standalone D3D11
 - `renderframe_capture_replay.ps1` validates the full capture/replay pipeline (7 passes)
-- All CI passes (ci-core 11/11, ci 12/12, ci_smoke, d3d11_shadow_smoke, capture_replay)
+- Standard CTest/quality gate covers ci/dev-tools tests and `ci_smoke` through `tools/ci_verify.ps1`; D3D shadow/capture scripts remain explicit dev-only pre-work checks
 - `WorldModelCache` unchanged — raylib `Model` loading is the production path
 
 ## Recommended next work

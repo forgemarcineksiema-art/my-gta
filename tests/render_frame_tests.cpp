@@ -152,9 +152,12 @@ void fallbackBoxAddsOnePrimitiveCommand() {
     expectNear(command.transform.position.y, 3.25f, 0.001f, "fallback box centers bottom-origin box on y");
     expectNear(command.transform.position.z, -3.5f, 0.001f, "fallback box applies visual offset z");
     expectNear(command.transform.yawRadians, 0.75f, 0.001f, "fallback box keeps yaw");
-    expectNear(command.size.x, 3.0f, 0.001f, "fallback box scales size x");
-    expectNear(command.size.y, 6.0f, 0.001f, "fallback box scales size y");
-    expectNear(command.size.z, 2.0f, 0.001f, "fallback box scales size z");
+    expectNear(command.size.x, 1.5f, 0.001f, "fallback box keeps unscaled size x");
+    expectNear(command.size.y, 2.0f, 0.001f, "fallback box keeps unscaled size y");
+    expectNear(command.size.z, 0.5f, 0.001f, "fallback box keeps unscaled size z");
+    expectNear(command.transform.scale.x, 2.0f, 0.001f, "fallback box stores transform scale x");
+    expectNear(command.transform.scale.y, 3.0f, 0.001f, "fallback box stores transform scale y");
+    expectNear(command.transform.scale.z, 4.0f, 0.001f, "fallback box stores transform scale z");
     expect(command.tint.r == 10 && command.tint.g == 20 && command.tint.b == 30 && command.tint.a == 220,
            "fallback box adapts definition tint to RenderColor");
 }
@@ -173,6 +176,36 @@ void fallbackBoxUsesTintOverride() {
     const bs3d::RenderPrimitiveCommand& command = frame.primitives.front();
     expect(command.tint.r == 100 && command.tint.g == 110 && command.tint.b == 120 && command.tint.a == 130,
            "fallback box adapts object tint override to RenderColor");
+}
+
+void builderFallbackBoxKeepsSizeAndScaleSeparate() {
+    bs3d::WorldObject object;
+    object.id = "scaled_builder_box";
+    object.assetId = "scaled_asset";
+    object.position = {};
+    object.scale = {2.0f, 3.0f, 4.0f};
+
+    bs3d::WorldAssetDefinition definition;
+    definition.id = "scaled_asset";
+    definition.fallbackSize = {1.5f, 2.0f, 0.5f};
+    definition.renderBucket = "Opaque";
+
+    bs3d::WorldRenderList renderList;
+    renderList.opaque = {&object};
+    const std::vector<bs3d::WorldAssetDefinition> definitions = {definition};
+
+    bs3d::RenderFrameBuilder builder;
+    bs3d::addWorldRenderListFallbackBoxes(builder, renderList, definitions);
+    const bs3d::RenderFrame frame = builder.build();
+
+    expect(frame.primitives.size() == 1, "builder emits scaled fallback box");
+    const bs3d::RenderPrimitiveCommand& command = frame.primitives.front();
+    expectNear(command.size.x, 1.5f, 0.001f, "builder fallback box keeps unscaled size x");
+    expectNear(command.size.y, 2.0f, 0.001f, "builder fallback box keeps unscaled size y");
+    expectNear(command.size.z, 0.5f, 0.001f, "builder fallback box keeps unscaled size z");
+    expectNear(command.transform.scale.x, 2.0f, 0.001f, "builder fallback box stores transform scale x");
+    expectNear(command.transform.scale.y, 3.0f, 0.001f, "builder fallback box stores transform scale y");
+    expectNear(command.transform.scale.z, 4.0f, 0.001f, "builder fallback box stores transform scale z");
 }
 
 void debugLineAddsOneLineCommand() {
@@ -3096,6 +3129,7 @@ int main() {
     emptyRenderFrameHasNoCommands();
     fallbackBoxAddsOnePrimitiveCommand();
     fallbackBoxUsesTintOverride();
+    builderFallbackBoxKeepsSizeAndScaleSeparate();
     debugLineAddsOneLineCommand();
     bucketAndKindValuesAreStable();
     emptyWorldRenderListExtractionProducesNoCommands();

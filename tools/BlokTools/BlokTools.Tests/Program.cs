@@ -15,6 +15,7 @@ var tests = new (string Name, Action Body)[]
     ("mission editor session binds step trigger to object outcome", MissionEditorSessionBindsStepTriggerToObjectOutcome),
     ("mission editor session adds npc reaction and cutscene", MissionEditorSessionAddsNpcReactionAndCutscene),
     ("mission editor session rejects unknown outcome triggers", MissionEditorSessionRejectsUnknownOutcomeTriggers),
+    ("mission document validation accepts concrete outcome covered by pattern", MissionDocumentValidationAcceptsConcreteOutcomeCoveredByPattern),
     ("shop catalog fixture validates and loads", ShopCatalogFixtureLoadsAndValidates),
     ("object outcome catalog loads stable object hooks", ObjectOutcomeCatalogLoadsStableObjectHooks),
     ("object outcome catalog validates world event metadata", ObjectOutcomeCatalogValidatesWorldEventMetadata),
@@ -314,6 +315,33 @@ static void MissionEditorSessionRejectsUnknownOutcomeTriggers()
 
     AssertTrue(!result.Saved, "unknown outcome trigger should not save");
     AssertIssue(result.Issues, "mission.step.trigger.outcome");
+}
+
+static void MissionDocumentValidationAcceptsConcreteOutcomeCoveredByPattern()
+{
+    var mission = ValidTestMission();
+    mission.Steps[0].Trigger = "outcome:shop_prices_read_shop_price_card_0";
+    var catalog = new ObjectOutcomeCatalog
+    {
+        SchemaVersion = 1,
+        Outcomes =
+        {
+            new ObjectOutcomeDefinition
+            {
+                IdPattern = "shop_prices_read_*",
+                Label = "Shop prices read",
+                Source = "tag:shop_price_card",
+                Category = "object_use",
+                Location = "Shop",
+                Speaker = "Kartka",
+                Line = "line",
+            },
+        },
+    };
+
+    var issues = MissionDocumentValidator.Validate(mission, catalog).ToList();
+
+    AssertEmpty(issues, "concrete outcome trigger covered by idPattern should validate");
 }
 
 static void ShopCatalogFixtureLoadsAndValidates()

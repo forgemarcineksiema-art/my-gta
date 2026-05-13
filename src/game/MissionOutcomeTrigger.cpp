@@ -8,6 +8,20 @@ std::string outcomeTriggerId(const std::string& outcomeId) {
     return "outcome:" + outcomeId;
 }
 
+bool outcomeTriggerMatches(const std::string& authoredTrigger, const std::string& outcomeId) {
+    const std::string concreteTrigger = outcomeTriggerId(outcomeId);
+    if (authoredTrigger == concreteTrigger) {
+        return true;
+    }
+    if (authoredTrigger.size() <= std::string("outcome:*").size() ||
+        authoredTrigger.rfind("outcome:", 0) != 0 ||
+        authoredTrigger.back() != '*') {
+        return false;
+    }
+    const std::string prefix = authoredTrigger.substr(0, authoredTrigger.size() - 1);
+    return concreteTrigger.rfind(prefix, 0) == 0;
+}
+
 MissionTriggerAction actionForOutcomePhase(MissionPhase phase) {
     switch (phase) {
     case MissionPhase::WalkToShop:
@@ -43,13 +57,13 @@ MissionTriggerResult missionOutcomeTriggerForCurrentPhase(const MissionData& mis
         return {};
     }
 
-    const std::string triggerId = outcomeTriggerId(outcomeId);
     for (const MissionPhaseData& phase : missionData.phases) {
-        if (missionPhaseFromDataName(phase.phase) != currentPhase || phase.trigger != triggerId) {
+        if (missionPhaseFromDataName(phase.phase) != currentPhase ||
+            !outcomeTriggerMatches(phase.trigger, outcomeId)) {
             continue;
         }
 
-        return {true, triggerId, action, outcomePosition, outcomeRadius};
+        return {true, phase.trigger, action, outcomePosition, outcomeRadius};
     }
 
     return {};

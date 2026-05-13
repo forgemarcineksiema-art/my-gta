@@ -8,6 +8,11 @@ public static class MissionDocumentValidator
             .Select(outcome => outcome.Key)
             .Where(key => !string.IsNullOrWhiteSpace(key))
             .ToHashSet(StringComparer.Ordinal);
+        var outcomePatternPrefixes = outcomeCatalog?.Outcomes
+            .Select(outcome => outcome.IdPattern)
+            .Where(pattern => !string.IsNullOrWhiteSpace(pattern) && pattern.EndsWith("*", StringComparison.Ordinal))
+            .Select(pattern => pattern[..^1])
+            .ToList();
 
         var missionPhases = mission.Steps.Select(step => step.Phase).ToHashSet(StringComparer.Ordinal);
 
@@ -53,7 +58,10 @@ public static class MissionDocumentValidator
             else if (outcomeKeys is not null && step.Trigger.StartsWith("outcome:", StringComparison.Ordinal))
             {
                 var outcomeKey = step.Trigger["outcome:".Length..];
-                if (!outcomeKeys.Contains(outcomeKey))
+                var exactMatch = outcomeKeys.Contains(outcomeKey);
+                var patternMatch = outcomePatternPrefixes is not null &&
+                    outcomePatternPrefixes.Any(prefix => outcomeKey.StartsWith(prefix, StringComparison.Ordinal));
+                if (!exactMatch && !patternMatch)
                 {
                     yield return new ValidationIssue(
                         "mission.step.trigger.outcome",

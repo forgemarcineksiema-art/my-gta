@@ -371,8 +371,8 @@ void introLevelBuilderExportsMissionRuntimeData() {
     expect(level.driveRoute.size() >= 5, "intro level exports staged drive route points");
 
     expect(level.missionTriggers[0].id == "shop_walk_intro", "first trigger is on-foot shop visit");
-    expect(level.missionTriggers[1].id == "shop_vehicle_intro", "second trigger is vehicle shop visit");
-    expect(level.missionTriggers[2].id == "parking_dropoff_intro", "third trigger is parking dropoff");
+    expect(level.missionTriggers[1].id == "vehicle_reaches_shop_marker", "second trigger is vehicle shop visit");
+    expect(level.missionTriggers[2].id == "vehicle_reaches_dropoff_marker", "third trigger is parking dropoff");
 
     expectNear(level.missionTriggers[0].position.x, level.shopEntrancePosition.x, 0.001f,
                "walk shop trigger uses exported shop entrance x");
@@ -1596,6 +1596,22 @@ void worldDataMissionDefinesCompletePlayableVerticalSlice() {
     expect(mission.phase() == bs3d::MissionPhase::Completed, "dropoff completes the vertical slice");
 }
 
+void runtimeMissionTriggerIdsStayAlignedWithAuthoredMissionData() {
+    const bs3d::WorldDataCatalog catalog = bs3d::loadWorldDataCatalog("data");
+    const bs3d::IntroLevelData level = bs3d::IntroLevelBuilder::build();
+    std::unordered_set<std::string> authoredTriggers;
+    for (const bs3d::MissionPhaseData& phase : catalog.mission.phases) {
+        authoredTriggers.insert(phase.trigger);
+    }
+
+    expect(catalog.loaded && catalog.mission.loaded, "mission data loads before trigger contract check");
+    expect(!level.missionTriggers.empty(), "intro level exposes runtime mission triggers");
+    for (const bs3d::MissionTriggerDefinition& trigger : level.missionTriggers) {
+        expect(authoredTriggers.find(trigger.id) != authoredTriggers.end(),
+               "runtime mission trigger id is authored in mission data: " + trigger.id);
+    }
+}
+
 void worldDataLoaderParsesJsonSchemaWithoutFieldOrderCoupling() {
     const std::filesystem::path root = std::filesystem::path("artifacts") / "schema_order_test";
     std::filesystem::create_directories(root);
@@ -1614,7 +1630,7 @@ void worldDataLoaderParsesJsonSchemaWithoutFieldOrderCoupling() {
                 << "  \"id\": \"mission_order_test\",\n"
                 << "  \"phases\": [\n"
                 << "    {\"trigger\": \"shop_walk_intro\", \"objective\": \"Data objective A\", \"phase\": \"WalkToShop\"},\n"
-                << "    {\"objective\": \"Data objective B\", \"phase\": \"DriveToShop\", \"trigger\": \"shop_vehicle_intro\"}\n"
+                << "    {\"objective\": \"Data objective B\", \"phase\": \"DriveToShop\", \"trigger\": \"vehicle_reaches_shop_marker\"}\n"
                 << "  ],\n"
                 << "  \"dialogue\": [\n"
                 << "    {\"speaker\": \"Zenon\", \"lineKey\": \"driving.zenon\", \"phase\": \"WalkToShop\"}\n"
@@ -1682,7 +1698,7 @@ void worldDataLoaderAppliesMissionPhaseLinesToMissionController() {
                 << "  \"id\": \"mission_phase_lines\",\n"
                 << "  \"steps\": [\n"
                 << "    {\"phase\": \"WalkToShop\", \"objective\": \"Cel: Wejdz do Zenona\", \"trigger\": \"shop_walk_intro\"},\n"
-                << "    {\"phase\": \"DriveToShop\", \"objective\": \"Cel: Podejrzany ruch\", \"trigger\": \"shop_vehicle_intro\"}\n"
+                << "    {\"phase\": \"DriveToShop\", \"objective\": \"Cel: Podejrzany ruch\", \"trigger\": \"vehicle_reaches_shop_marker\"}\n"
                 << "  ],\n"
                 << "  \"dialogue\": [\n"
                 << "    {\"speaker\": \"Guide\", \"phase\": \"WalkToShop\", \"text\": \"Misja: idz do drzwi\", \"durationSeconds\": 1.2}\n"
@@ -3129,7 +3145,7 @@ void introLevelV092HasReadableMissionTargetsAndDriveRoute() {
            "shop landmark sits at the readable entrance/apron, not inside the building collision");
 
     for (const bs3d::MissionTriggerDefinition& trigger : level.missionTriggers) {
-        if (trigger.id == "shop_walk_intro" || trigger.id == "shop_vehicle_intro") {
+        if (trigger.id == "shop_walk_intro" || trigger.id == "vehicle_reaches_shop_marker") {
             expect(!pointInsideBoxCollision(*shop, trigger.position, 0.05f),
                    "shop mission trigger sits outside the shop collision");
         }
@@ -4972,7 +4988,7 @@ void missionRuntimeBridgeMapsVehicleAndDropoffTriggers() {
 
     const bs3d::MissionRuntimeBridgeResult vehicleResult = bridge.handleTrigger(
         {true,
-         "shop_vehicle_intro",
+         "vehicle_reaches_shop_marker",
          bs3d::MissionTriggerAction::ShopReachedByVehicle,
          bs3d::Vec3{18.0f, 0.0f, -18.0f},
          5.0f},
@@ -4988,7 +5004,7 @@ void missionRuntimeBridgeMapsVehicleAndDropoffTriggers() {
     mission.onChaseEscaped();
     const bs3d::MissionRuntimeBridgeResult dropoffResult = bridge.handleTrigger(
         {true,
-         "parking_dropoff_intro",
+         "vehicle_reaches_dropoff_marker",
          bs3d::MissionTriggerAction::DropoffReached,
          bs3d::Vec3{-12.0f, 0.0f, -10.0f},
          5.0f},
@@ -5026,6 +5042,31 @@ void missionOutcomeTriggerResolvesDataAuthoredObjectOutcome() {
         bs3d::Vec3{},
         1.0f);
     expect(!wrongOutcome.triggered, "unmatched outcome does not trigger mission data");
+}
+
+void missionOutcomeTriggerMatchesAuthoredWildcardOutcomePattern() {
+    bs3d::MissionData missionData;
+    missionData.loaded = true;
+    missionData.phases.push_back({"WalkToShop", "Przeczytaj ceny Zenona.", "outcome:shop_prices_read_*"});
+
+    const bs3d::MissionTriggerResult trigger = bs3d::missionOutcomeTriggerForCurrentPhase(
+        missionData,
+        bs3d::MissionPhase::WalkToShop,
+        "shop_prices_read_shop_price_card_0",
+        bs3d::Vec3{18.0f, 0.0f, -18.0f},
+        2.2f);
+
+    expect(trigger.triggered, "data-authored wildcard outcome resolves concrete runtime outcome id");
+    expect(trigger.id == "outcome:shop_prices_read_*",
+           "wildcard outcome trigger keeps authored trigger id for mission bridge");
+
+    const bs3d::MissionTriggerResult wrongPrefix = bs3d::missionOutcomeTriggerForCurrentPhase(
+        missionData,
+        bs3d::MissionPhase::WalkToShop,
+        "garage_door_checked_garage_door_0",
+        bs3d::Vec3{},
+        1.0f);
+    expect(!wrongPrefix.triggered, "wildcard outcome trigger does not match unrelated prefixes");
 }
 
 void objectOutcomeCatalogResolvesWorldEventsForEnrichedOutcomes() {
@@ -5101,6 +5142,7 @@ int main() {
         raylibContainmentKeepsDataAndAssetHeadersBackendAgnostic();
         worldDataLoaderReadsRuntimeWorldAndMissionSchema();
         worldDataMissionDefinesCompletePlayableVerticalSlice();
+        runtimeMissionTriggerIdsStayAlignedWithAuthoredMissionData();
         worldDataLoaderParsesJsonSchemaWithoutFieldOrderCoupling();
         worldDataLoaderAppliesMissionPhaseLinesToMissionController();
         objectAffordanceWorldEventsPreferLoadedOutcomeData();
@@ -5233,6 +5275,7 @@ int main() {
         missionRuntimeBridgeMapsShopWalkTriggerToStoryAndEvent();
         missionRuntimeBridgeMapsVehicleAndDropoffTriggers();
         missionOutcomeTriggerResolvesDataAuthoredObjectOutcome();
+        missionOutcomeTriggerMatchesAuthoredWildcardOutcomePattern();
         objectOutcomeCatalogResolvesWorldEventsForEnrichedOutcomes();
     } catch (const std::exception& ex) {
         std::cerr << "Test failed: " << ex.what() << '\n';
