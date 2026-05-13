@@ -30,7 +30,11 @@ bool isSmallPhysicalAsset(const WorldObject& object) {
            object.assetId == "bollard_red" ||
            object.assetId == "trash_bin_lowpoly" ||
            object.assetId == "cardboard_stack" ||
-           object.assetId == "concrete_barrier";
+           object.assetId == "concrete_barrier" ||
+           object.assetId == "trzepak" ||
+           object.assetId == "swing_set" ||
+           object.assetId == "slide_small" ||
+           object.assetId == "basketball_hoop";
 }
 
 bool isDynamicPropAsset(const WorldObject& object) {
