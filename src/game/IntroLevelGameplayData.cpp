@@ -34,6 +34,7 @@ void IntroLevelAuthoring::addGameplayData(IntroLevelData& level) {
         {"zone_trash", WorldLocationTag::Trash, {9.0f, 0.0f, -4.0f}, {7.0f, 2.0f, 5.0f}, 6.0f, 85, WorldZoneShapeKind::Sphere},
         {"zone_road_loop", WorldLocationTag::RoadLoop, {0.0f, 0.0f, 0.0f}, {80.0f, 2.0f, 72.0f}, 42.0f, 60, WorldZoneShapeKind::Sphere},
         {"zone_main_artery", WorldLocationTag::RoadLoop, {5.0f, 0.0f, -30.0f}, {82.0f, 2.0f, 14.0f}, 38.0f, 76, WorldZoneShapeKind::Sphere},
+        {"zone_bus_stop", WorldLocationTag::RoadLoop, {22.0f, 0.0f, -25.65f}, {6.0f, 2.0f, 4.5f}, 5.0f, 82, WorldZoneShapeKind::Sphere},
         {"zone_pavilions", WorldLocationTag::Shop, {25.0f, 0.0f, -36.0f}, {18.0f, 3.0f, 8.0f}, 12.0f, 90, WorldZoneShapeKind::Sphere},
         {"zone_block13", WorldLocationTag::Block, {-16.0f, 0.0f, 16.0f}, {18.0f, 3.0f, 13.0f}, 10.0f, 40, WorldZoneShapeKind::Sphere},
         {"zone_block11", WorldLocationTag::Block, {5.0f, 0.0f, 17.0f}, {16.0f, 3.0f, 10.0f}, 9.0f, 35, WorldZoneShapeKind::Sphere},

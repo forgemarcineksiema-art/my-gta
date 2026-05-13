@@ -153,6 +153,15 @@ const bs3d::WorldLandmark* findLandmarkByRole(const bs3d::IntroLevelData& level,
     return nullptr;
 }
 
+const bs3d::WorldZone* findZoneById(const bs3d::IntroLevelData& level, const std::string& id) {
+    for (const bs3d::WorldZone& zone : level.zones) {
+        if (zone.id == id) {
+            return &zone;
+        }
+    }
+    return nullptr;
+}
+
 std::string readTextFile(const std::string& path) {
     const std::vector<std::string> candidates{
         path,
@@ -728,6 +737,47 @@ void introLevelPavilionsMarketAnchorsMatchMaterializedPavilionStrip() {
     const float arterySouthEdge = artery->position.z - artery->scale.z * 0.5f;
     expect(pavilionNorthEdge <= arterySouthEdge + 0.05f,
            "pavilion building footprint sits beside the artery instead of on the drive surface");
+}
+
+void introLevelDistrictAnchorsStayOnMaterializedObjects() {
+    const bs3d::IntroLevelData level = bs3d::IntroLevelBuilder::build();
+
+    struct AnchorContract {
+        const char* objectId = "";
+        const char* landmarkRole = "";
+        const char* zoneId = "";
+        bs3d::WorldLocationTag zoneTag = bs3d::WorldLocationTag::Unknown;
+        float landmarkPadding = 0.0f;
+        float zonePadding = 0.0f;
+    };
+
+    const AnchorContract contracts[]{
+        {"main_artery_spine", "main_artery", "zone_main_artery", bs3d::WorldLocationTag::RoadLoop, 0.35f, 0.35f},
+        {"pavilion_row", "pavilions", "zone_pavilions", bs3d::WorldLocationTag::Shop, 0.35f, 0.35f},
+        {"garage_lane", "garage_belt", "zone_garage_belt", bs3d::WorldLocationTag::Garage, 0.35f, 0.35f},
+        {"bus_stop", "bus_stop", "zone_bus_stop", bs3d::WorldLocationTag::RoadLoop, 0.35f, 0.35f}};
+
+    for (const AnchorContract& contract : contracts) {
+        const bs3d::WorldObject* object = findObject(level, contract.objectId);
+        expect(object != nullptr, "anchor contract object exists: " + std::string{contract.objectId});
+
+        const bs3d::WorldLandmark* landmark = findLandmarkByRole(level, contract.landmarkRole);
+        expect(landmark != nullptr, "materialized object exports landmark role: " + std::string{contract.landmarkRole});
+        if (object != nullptr && landmark != nullptr) {
+            expect(pointInsideVisualFootprint(*object, landmark->position, contract.landmarkPadding),
+                   "landmark stays on materialized object footprint: " + std::string{contract.landmarkRole});
+        }
+
+        const bs3d::WorldZone* zone = findZoneById(level, contract.zoneId);
+        expect(zone != nullptr, "materialized object exports navigation/memory zone: " + std::string{contract.zoneId});
+        if (object != nullptr && zone != nullptr) {
+            expect(zone->tag == contract.zoneTag,
+                   "materialized object zone keeps expected location tag: " + std::string{contract.zoneId});
+            expect(pointInsideVisualFootprint(*object, zone->center, contract.zonePadding),
+                   "zone center stays on materialized object footprint: " + std::string{contract.zoneId});
+            expect(zone->radius >= 3.0f, "materialized object zone has readable radius: " + std::string{contract.zoneId});
+        }
+    }
 }
 
 void introLevelFlatDriveSurfacesUseSeparatedRenderHeights() {
@@ -5376,6 +5426,7 @@ int main() {
         introLevelBuildsDistrictPlanDebugOverlay();
         introLevelMaterializesMainArteryAsDriveableExpansion();
         introLevelPavilionsMarketAnchorsMatchMaterializedPavilionStrip();
+        introLevelDistrictAnchorsStayOnMaterializedObjects();
         introLevelFlatDriveSurfacesUseSeparatedRenderHeights();
         introLevelMainArteryExpansionHasReadableRouteGuidance();
         introLevelMainArteryRouteIsVehicleTraversableByGruz();
