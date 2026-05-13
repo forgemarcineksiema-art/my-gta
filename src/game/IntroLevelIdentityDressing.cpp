@@ -5,6 +5,13 @@
 #include <string>
 #include <utility>
 
+// Art-direction pivot 2026-05: identity dressing builds the readable landmark
+// character of each hero location. Target is stylized mid-poly with:
+// - shop front: modelled windows, door, sign, awning, posters, lights, depth
+// - block facade: recessed windows, entrance, balconies, stains, pipes, notices
+// - garage row: doors with seams, handles, lamps, wear, number plates
+// Collision is off for all dressing objects — core layout handles collision.
+
 namespace bs3d::IntroLevelDressingSections {
 
 void addIdentityDressing(IntroLevelData& level) {
@@ -50,7 +57,7 @@ void addIdentityDressing(IntroLevelData& level) {
     addDecor("shop_sign_zenona_front",
              "shop_sign_zenona",
              {level.shopPosition.x, 2.72f, shopFrontZ - 0.04f},
-             {6.8f, 0.42f, 0.08f},
+             {6.8f, 0.80f, 0.08f},
              WorldLocationTag::Shop,
              {"shop_identity", "landmark"});
     addDecor("shop_awning_red",
@@ -65,27 +72,123 @@ void addIdentityDressing(IntroLevelData& level) {
              {1.65f, 1.15f, 0.08f},
              WorldLocationTag::Shop,
              {"shop_identity", "glass_surface"});
+    // Window frame bars (thin fence_panels around glass edge)
+    addTintedDecor("shop_window_left_frame_top",
+                   "fence_panel",
+                   {level.shopPosition.x - 2.45f, 1.44f, shopFrontZ - 0.05f},
+                   {1.55f, 0.025f, 0.025f},
+                   WorldLocationTag::Shop,
+                   {"shop_identity", "shop_hero_v2", "midpoly_target"},
+                   objectTint(55, 53, 50));
+    addTintedDecor("shop_window_left_frame_bottom",
+                   "fence_panel",
+                   {level.shopPosition.x - 2.45f, 0.28f, shopFrontZ - 0.04f},
+                   {1.60f, 0.030f, 0.030f},
+                   WorldLocationTag::Shop,
+                   {"shop_identity", "shop_hero_v2", "midpoly_target"},
+                   objectTint(55, 53, 50));
+    addTintedDecor("shop_window_left_frame_L",
+                   "fence_panel",
+                   {level.shopPosition.x - 3.27f, 0.86f, shopFrontZ - 0.05f},
+                   {0.025f, 1.10f, 0.025f},
+                   WorldLocationTag::Shop,
+                   {"shop_identity", "shop_hero_v2", "midpoly_target"},
+                   objectTint(55, 53, 50));
+    addTintedDecor("shop_window_left_frame_R",
+                   "fence_panel",
+                   {level.shopPosition.x - 1.63f, 0.86f, shopFrontZ - 0.05f},
+                   {0.025f, 1.10f, 0.025f},
+                   WorldLocationTag::Shop,
+                   {"shop_identity", "shop_hero_v2", "midpoly_target"},
+                   objectTint(55, 53, 50));
+    // Window sill (curb piece below)
+    addTintedDecor("shop_window_left_sill",
+                   "curb_lowpoly",
+                   {level.shopPosition.x - 2.45f, 0.26f, shopFrontZ - 0.02f},
+                   {1.70f, 0.06f, 0.10f},
+                   WorldLocationTag::Shop,
+                   {"shop_identity", "shop_hero_v2", "midpoly_target", "artkit_v2"},
+                   objectTint(98, 96, 90));
     addDecor("shop_window_right",
              "shop_window",
              {level.shopPosition.x + 2.45f, 0.86f, shopFrontZ - 0.06f},
              {1.65f, 1.15f, 0.08f},
              WorldLocationTag::Shop,
              {"shop_identity", "glass_surface"});
+    // Mirror frames for right window
+    addTintedDecor("shop_window_right_frame_top",
+                   "fence_panel",
+                   {level.shopPosition.x + 2.45f, 1.44f, shopFrontZ - 0.05f},
+                   {1.55f, 0.025f, 0.025f},
+                   WorldLocationTag::Shop,
+                   {"shop_identity", "shop_hero_v2", "midpoly_target"},
+                   objectTint(55, 53, 50));
+    addTintedDecor("shop_window_right_frame_bottom",
+                   "fence_panel",
+                   {level.shopPosition.x + 2.45f, 0.28f, shopFrontZ - 0.04f},
+                   {1.60f, 0.030f, 0.030f},
+                   WorldLocationTag::Shop,
+                   {"shop_identity", "shop_hero_v2", "midpoly_target"},
+                   objectTint(55, 53, 50));
+    addTintedDecor("shop_window_right_frame_L",
+                   "fence_panel",
+                   {level.shopPosition.x + 1.63f, 0.86f, shopFrontZ - 0.05f},
+                   {0.025f, 1.10f, 0.025f},
+                   WorldLocationTag::Shop,
+                   {"shop_identity", "shop_hero_v2", "midpoly_target"},
+                   objectTint(55, 53, 50));
+    addTintedDecor("shop_window_right_frame_R",
+                   "fence_panel",
+                   {level.shopPosition.x + 3.27f, 0.86f, shopFrontZ - 0.05f},
+                   {0.025f, 1.10f, 0.025f},
+                   WorldLocationTag::Shop,
+                   {"shop_identity", "shop_hero_v2", "midpoly_target"},
+                   objectTint(55, 53, 50));
+    addTintedDecor("shop_window_right_sill",
+                   "curb_lowpoly",
+                   {level.shopPosition.x + 2.45f, 0.26f, shopFrontZ - 0.02f},
+                   {1.70f, 0.06f, 0.10f},
+                   WorldLocationTag::Shop,
+                   {"shop_identity", "shop_hero_v2", "midpoly_target", "artkit_v2"},
+                   objectTint(98, 96, 90));
     addDecor("shop_door_front",
              "shop_door",
              {level.shopPosition.x, 0.0f, shopFrontZ - 0.08f},
              {1.25f, 2.05f, 0.10f},
              WorldLocationTag::Shop,
              {"shop_identity", "entrance"});
+    // Door frame verticals
+    addTintedDecor("shop_door_frame_left",
+                   "bollard_red",
+                   {level.shopPosition.x - 0.60f, 1.02f, shopFrontZ - 0.06f},
+                   {0.05f, 2.05f, 0.05f},
+                   WorldLocationTag::Shop,
+                   {"shop_identity", "shop_hero_v2", "midpoly_target"},
+                   objectTint(52, 50, 46));
+    addTintedDecor("shop_door_frame_right",
+                   "bollard_red",
+                   {level.shopPosition.x + 0.60f, 1.02f, shopFrontZ - 0.06f},
+                   {0.05f, 2.05f, 0.05f},
+                   WorldLocationTag::Shop,
+                   {"shop_identity", "shop_hero_v2", "midpoly_target"},
+                   objectTint(52, 50, 46));
+    // Door frame header
+    addTintedDecor("shop_door_frame_top",
+                   "fence_panel",
+                   {level.shopPosition.x, 2.08f, shopFrontZ - 0.05f},
+                   {1.20f, 0.030f, 0.025f},
+                   WorldLocationTag::Shop,
+                   {"shop_identity", "shop_hero_v2", "midpoly_target"},
+                   objectTint(52, 50, 46));
     addDecor("shop_security_camera",
              "security_camera",
              {level.shopPosition.x + 3.55f, 2.35f, shopFrontZ - 0.28f},
-             {0.36f, 0.24f, 0.55f},
+             {0.36f, 0.24f, 0.25f},
              WorldLocationTag::Shop,
              {"shop_identity", "world_memory"});
     addDecor("shop_graffiti_panel",
              "graffiti_panel",
-             {level.shopPosition.x - 3.45f, 0.35f, shopFrontZ - 0.09f},
+             {level.shopPosition.x - 3.85f, 0.35f, shopFrontZ - 0.03f},
              {0.80f, 0.48f, 0.06f},
              WorldLocationTag::Shop,
              {"shop_identity", "story_dressing"});
@@ -104,33 +207,33 @@ void addIdentityDressing(IntroLevelData& level) {
                    {"shop_identity", "shop_hero_v2"},
                    objectTint(218, 188, 96));
     addTintedDecor("shop_price_cards_left",
-                   "shop_poster",
-                   {level.shopPosition.x - 2.45f, 1.12f, shopFrontZ - 0.115f},
-                   {0.72f, 0.34f, 0.040f},
-                   WorldLocationTag::Shop,
-                   {"shop_identity", "shop_hero_v2", "shop_cluster", "shop_price_card"},
-                   objectTint(235, 222, 154));
+                    "shop_poster",
+                    {level.shopPosition.x - 2.45f, 1.12f, shopFrontZ - 0.065f},
+                    {0.72f, 0.34f, 0.040f},
+                    WorldLocationTag::Shop,
+                    {"shop_identity", "shop_hero_v2", "shop_cluster", "shop_price_card"},
+                    objectTint(235, 222, 154));
     addTintedDecor("shop_price_cards_right",
-                   "shop_poster",
-                   {level.shopPosition.x + 2.45f, 1.12f, shopFrontZ - 0.115f},
-                   {0.72f, 0.34f, 0.040f},
-                   WorldLocationTag::Shop,
-                   {"shop_identity", "shop_hero_v2", "shop_cluster", "shop_price_card"},
-                   objectTint(235, 222, 154));
+                    "shop_poster",
+                    {level.shopPosition.x + 2.45f, 1.12f, shopFrontZ - 0.065f},
+                    {0.72f, 0.34f, 0.040f},
+                    WorldLocationTag::Shop,
+                    {"shop_identity", "shop_hero_v2", "shop_cluster", "shop_price_card"},
+                    objectTint(235, 222, 154));
     addTintedDecor("shop_window_dirt_left",
-                   "wall_stain",
-                   {level.shopPosition.x - 2.45f, 0.60f, shopFrontZ - 0.13f},
-                   {1.30f, 0.28f, 0.035f},
-                   WorldLocationTag::Shop,
-                   {"shop_identity", "shop_hero_v2", "subtle_decal"},
-                   objectTint(73, 66, 54, 118));
+                    "wall_stain",
+                    {level.shopPosition.x - 2.45f, 0.60f, shopFrontZ - 0.080f},
+                    {1.30f, 0.28f, 0.035f},
+                    WorldLocationTag::Shop,
+                    {"shop_identity", "shop_hero_v2", "subtle_decal"},
+                    objectTint(73, 66, 54, 118));
     addTintedDecor("shop_window_dirt_right",
-                   "wall_stain",
-                   {level.shopPosition.x + 2.45f, 0.58f, shopFrontZ - 0.13f},
-                   {1.20f, 0.25f, 0.035f},
-                   WorldLocationTag::Shop,
-                   {"shop_identity", "shop_hero_v2", "subtle_decal"},
-                   objectTint(73, 66, 54, 112));
+                    "wall_stain",
+                    {level.shopPosition.x + 2.45f, 0.58f, shopFrontZ - 0.080f},
+                    {1.20f, 0.25f, 0.035f},
+                    WorldLocationTag::Shop,
+                    {"shop_identity", "shop_hero_v2", "subtle_decal"},
+                    objectTint(73, 66, 54, 112));
     addTintedDecor("shop_window_repair_patch",
                    "wall_stain",
                    {level.shopPosition.x - 2.45f, 0.58f, shopFrontZ - 0.14f},
@@ -175,51 +278,51 @@ void addIdentityDressing(IntroLevelData& level) {
                    objectTint(80, 126, 84, 210));
 
     addTintedDecor("shop_side_wall_stain_left",
-                   "wall_stain",
-                   {14.48f, 1.25f, shopFrontZ + 2.90f},
-                   {1.60f, 0.42f, 0.040f},
-                   WorldLocationTag::Shop,
-                   {"shop_identity", "shop_hero_v2", "subtle_decal"},
-                   objectTint(72, 65, 54, 106));
+                    "wall_stain",
+                    {13.22f, 1.25f, shopFrontZ + 2.90f},
+                    {0.04f, 0.42f, 1.60f},
+                    WorldLocationTag::Shop,
+                    {"shop_identity", "shop_hero_v2", "subtle_decal"},
+                    objectTint(72, 65, 54, 106));
     addTintedDecor("shop_side_wall_stain_right",
-                   "wall_stain",
-                   {21.52f, 1.58f, shopFrontZ + 2.90f},
-                   {1.45f, 0.38f, 0.040f},
-                   WorldLocationTag::Shop,
-                   {"shop_identity", "shop_hero_v2", "subtle_decal"},
-                   objectTint(70, 63, 53, 100));
+                    "wall_stain",
+                    {22.78f, 1.58f, shopFrontZ + 2.90f},
+                    {0.04f, 0.38f, 1.45f},
+                    WorldLocationTag::Shop,
+                    {"shop_identity", "shop_hero_v2", "subtle_decal"},
+                    objectTint(70, 63, 53, 100));
     addTintedDecor("shop_rear_wall_stain",
-                   "wall_stain",
-                   {19.25f, 0.72f, shopFrontZ + 5.92f},
-                   {1.80f, 0.36f, 0.040f},
-                   WorldLocationTag::Shop,
-                   {"shop_identity", "shop_hero_v2", "subtle_decal"},
-                   objectTint(74, 68, 56, 102));
+                    "wall_stain",
+                    {19.25f, 0.72f, -14.47f},
+                    {1.80f, 0.36f, 0.04f},
+                    WorldLocationTag::Shop,
+                    {"shop_identity", "shop_hero_v2", "subtle_decal"},
+                    objectTint(74, 68, 56, 102));
     addTintedDecor("shop_side_graffiti_right",
-                   "graffiti_panel",
-                   {21.65f, 0.52f, shopFrontZ + 2.94f},
-                   {0.72f, 0.55f, 0.055f},
-                   WorldLocationTag::Shop,
-                   {"shop_identity", "shop_hero_v2", "lived_in_microdetail", "story_dressing"},
-                   objectTint(187, 62, 84));
+                    "graffiti_panel",
+                    {22.78f, 0.52f, shopFrontZ + 2.94f},
+                    {0.055f, 0.55f, 0.72f},
+                    WorldLocationTag::Shop,
+                    {"shop_identity", "shop_hero_v2", "lived_in_microdetail", "story_dressing"},
+                    objectTint(187, 62, 84));
     addTintedDecor("shop_side_poster_left",
-                   "shop_poster",
-                   {14.42f, 1.38f, shopFrontZ + 2.90f},
-                   {0.56f, 0.72f, 0.035f},
-                   WorldLocationTag::Shop,
-                   {"shop_identity", "shop_hero_v2", "lived_in_microdetail", "surface_breakup"},
-                   objectTint(232, 215, 122));
+                    "shop_poster",
+                    {13.22f, 1.38f, shopFrontZ + 2.90f},
+                    {0.035f, 0.72f, 0.56f},
+                    WorldLocationTag::Shop,
+                    {"shop_identity", "shop_hero_v2", "lived_in_microdetail", "surface_breakup"},
+                    objectTint(232, 215, 122));
     addTintedDecor("shop_side_poster_right",
-                   "shop_poster",
-                   {21.58f, 1.56f, shopFrontZ + 2.90f},
-                   {0.48f, 0.62f, 0.035f},
-                   WorldLocationTag::Shop,
-                   {"shop_identity", "shop_hero_v2", "lived_in_microdetail", "surface_breakup"},
-                   objectTint(235, 162, 74));
+                    "shop_poster",
+                    {22.78f, 1.56f, shopFrontZ + 2.90f},
+                    {0.035f, 0.62f, 0.48f},
+                    WorldLocationTag::Shop,
+                    {"shop_identity", "shop_hero_v2", "lived_in_microdetail", "surface_breakup"},
+                    objectTint(235, 162, 74));
     addTintedDecor("shop_threshold_floor_worn",
-                   "wall_stain",
-                   {19.55f, 0.07f, shopFrontZ + 0.10f},
-                   {1.35f, 0.06f, 0.26f},
+                    "wall_stain",
+                    {level.shopPosition.x, 0.07f, shopFrontZ + 0.10f},
+                    {1.35f, 0.06f, 0.26f},
                    WorldLocationTag::Shop,
                    {"shop_identity", "shop_hero_v2", "lived_in_microdetail", "subtle_decal"},
                    objectTint(55, 50, 42, 138));
@@ -233,29 +336,29 @@ void addIdentityDressing(IntroLevelData& level) {
 
     const float blockFrontZ = 16.0f - 3.58f;
     for (int floor = 0; floor < 3; ++floor) {
-        const float y = 1.70f + static_cast<float>(floor) * 2.15f;
+        const float y = 2.20f + static_cast<float>(floor) * 2.60f;
         addDecor("block13_window_left_" + std::to_string(floor),
                  "block_window_strip",
                  {-20.1f, y, blockFrontZ},
-                 {2.20f, 0.72f, 0.08f},
+                 {2.20f, 1.20f, 0.08f},
                  WorldLocationTag::Block,
                  {"block_facade", "glass_surface"});
         addDecor("block13_window_mid_" + std::to_string(floor),
                  "block_window_strip",
                  {-16.4f, y, blockFrontZ},
-                 {2.20f, 0.72f, 0.08f},
+                 {2.20f, 1.20f, 0.08f},
                  WorldLocationTag::Block,
                  {"block_facade", "glass_surface"});
         addDecor("block13_window_right_" + std::to_string(floor),
                  "block_window_strip",
                  {-12.8f, y, blockFrontZ},
-                 {2.20f, 0.72f, 0.08f},
+                 {2.20f, 1.20f, 0.08f},
                  WorldLocationTag::Block,
                  {"block_facade", "glass_surface"});
         addDecor("block13_balcony_" + std::to_string(floor),
                  "balcony_stack",
-                 {-11.45f, y - 0.18f, blockFrontZ - 0.23f},
-                 {1.65f, 0.58f, 0.62f},
+                 {-11.45f, y - 0.18f, blockFrontZ - 0.42f},
+                 {1.65f, 1.0f, 1.0f},
                  WorldLocationTag::Block,
                  {"block_facade", "halina_windows"});
     }
@@ -301,19 +404,19 @@ void addIdentityDressing(IntroLevelData& level) {
                    {"block_facade", "block_hero_v2", "front_facade_stain", "subtle_decal"},
                    objectTint(72, 66, 58, 98));
     addTintedDecor("block13_balcony_clutter_0",
-                   "cardboard_stack",
-                   {-11.00f, 1.22f, blockFrontZ - 0.58f},
-                   {0.34f, 0.24f, 0.22f},
-                   WorldLocationTag::Block,
-                   {"block_facade", "block_hero_v2", "halina_windows"},
-                   objectTint(116, 98, 73));
+                    "cardboard_stack",
+                    {-11.00f, 1.22f, blockFrontZ - 0.40f},
+                    {0.34f, 0.24f, 0.22f},
+                    WorldLocationTag::Block,
+                    {"block_facade", "block_hero_v2", "halina_windows"},
+                    objectTint(116, 98, 73));
     addTintedDecor("block13_balcony_clutter_1",
-                   "planter_concrete",
-                   {-11.92f, 3.35f, blockFrontZ - 0.58f},
-                   {0.38f, 0.22f, 0.24f},
-                   WorldLocationTag::Block,
-                   {"block_facade", "block_hero_v2", "halina_windows"},
-                   objectTint(78, 96, 66));
+                    "planter_concrete",
+                    {-11.92f, 3.35f, blockFrontZ - 0.40f},
+                    {0.38f, 0.22f, 0.24f},
+                    WorldLocationTag::Block,
+                    {"block_facade", "block_hero_v2", "halina_windows"},
+                    objectTint(78, 96, 66));
     addTintedDecor("block13_entry_notice",
                    "notice_board",
                    {-15.52f, 1.54f, blockFrontZ - 0.16f},
@@ -384,23 +487,23 @@ void addIdentityDressing(IntroLevelData& level) {
                    {"block_facade", "block_hero_v2", "lived_in_microdetail", "surface_breakup", "story_dressing", "readable_notice", "block_notice"},
                    objectTint(238, 233, 200));
     addTintedDecor("block13_balcony_rug_0",
-                   "shop_poster",
-                   {-10.90f, 1.56f, blockFrontZ - 0.70f},
-                   {0.62f, 0.08f, 0.48f},
-                   WorldLocationTag::Block,
-                   {"block_facade", "block_hero_v2", "lived_in_microdetail", "halina_windows"},
-                   objectTint(165, 90, 72, 206));
+                    "shop_poster",
+                    {-10.90f, 1.56f, blockFrontZ - 0.30f},
+                    {0.62f, 0.08f, 0.48f},
+                    WorldLocationTag::Block,
+                    {"block_facade", "block_hero_v2", "lived_in_microdetail", "halina_windows"},
+                    objectTint(165, 90, 72, 206));
     addTintedDecor("block13_balcony_rug_1",
-                   "shop_poster",
-                   {-11.15f, 3.70f, blockFrontZ - 0.70f},
-                   {0.56f, 0.08f, 0.44f},
-                   WorldLocationTag::Block,
-                   {"block_facade", "block_hero_v2", "lived_in_microdetail", "halina_windows"},
-                   objectTint(82, 132, 118, 200));
+                    "shop_poster",
+                    {-11.15f, 3.70f, blockFrontZ - 0.30f},
+                    {0.56f, 0.08f, 0.44f},
+                    WorldLocationTag::Block,
+                    {"block_facade", "block_hero_v2", "lived_in_microdetail", "halina_windows"},
+                    objectTint(82, 132, 118, 200));
     addTintedDecor("block13_balcony_clutter_2",
-                   "cardboard_stack",
-                   {-11.02f, 5.78f, blockFrontZ - 0.60f},
-                   {0.30f, 0.22f, 0.20f},
+                    "cardboard_stack",
+                    {-11.02f, 5.78f, blockFrontZ - 0.40f},
+                    {0.30f, 0.22f, 0.20f},
                    WorldLocationTag::Block,
                    {"block_facade", "block_hero_v2", "halina_windows"},
                    objectTint(126, 108, 82));

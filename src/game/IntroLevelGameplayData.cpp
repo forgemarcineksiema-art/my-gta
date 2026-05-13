@@ -30,10 +30,14 @@ void IntroLevelAuthoring::addGameplayData(IntroLevelData& level) {
         {"zone_shop", WorldLocationTag::Shop, level.shopPosition, {9.0f, 3.0f, 9.0f}, 9.0f, 100, WorldZoneShapeKind::Sphere},
         {"zone_parking", WorldLocationTag::Parking, {-7.0f, 0.0f, 8.6f}, {19.0f, 2.0f, 12.0f}, 11.5f, 80, WorldZoneShapeKind::Sphere},
         {"zone_garages", WorldLocationTag::Garage, {-18.0f, 0.0f, 23.0f}, {16.0f, 2.0f, 6.0f}, 8.0f, 90, WorldZoneShapeKind::Sphere},
+        {"zone_garage_belt", WorldLocationTag::Garage, {-33.0f, 0.0f, 19.0f}, {30.0f, 3.0f, 24.0f}, 18.0f, 85, WorldZoneShapeKind::Sphere},
         {"zone_trash", WorldLocationTag::Trash, {9.0f, 0.0f, -4.0f}, {7.0f, 2.0f, 5.0f}, 6.0f, 85, WorldZoneShapeKind::Sphere},
-        {"zone_road_loop", WorldLocationTag::RoadLoop, {0.0f, 0.0f, 0.0f}, {60.0f, 2.0f, 48.0f}, 32.0f, 60, WorldZoneShapeKind::Sphere},
-        {"zone_main_artery", WorldLocationTag::RoadLoop, {22.0f, 0.0f, -30.0f}, {30.0f, 2.0f, 12.0f}, 14.0f, 76, WorldZoneShapeKind::Sphere},
-        {"zone_block13", WorldLocationTag::Block, {-16.0f, 0.0f, 16.0f}, {18.0f, 3.0f, 13.0f}, 10.0f, 40, WorldZoneShapeKind::Sphere}
+        {"zone_road_loop", WorldLocationTag::RoadLoop, {0.0f, 0.0f, 0.0f}, {80.0f, 2.0f, 72.0f}, 42.0f, 60, WorldZoneShapeKind::Sphere},
+        {"zone_main_artery", WorldLocationTag::RoadLoop, {5.0f, 0.0f, -30.0f}, {82.0f, 2.0f, 14.0f}, 38.0f, 76, WorldZoneShapeKind::Sphere},
+        {"zone_pavilions", WorldLocationTag::Shop, {25.0f, 0.0f, -32.0f}, {18.0f, 3.0f, 8.0f}, 10.0f, 90, WorldZoneShapeKind::Sphere},
+        {"zone_block13", WorldLocationTag::Block, {-16.0f, 0.0f, 16.0f}, {18.0f, 3.0f, 13.0f}, 10.0f, 40, WorldZoneShapeKind::Sphere},
+        {"zone_block11", WorldLocationTag::Block, {5.0f, 0.0f, 17.0f}, {16.0f, 3.0f, 10.0f}, 9.0f, 35, WorldZoneShapeKind::Sphere},
+        {"zone_playground", WorldLocationTag::Block, {-6.0f, 0.0f, 14.0f}, {12.0f, 3.0f, 10.0f}, 7.0f, 50, WorldZoneShapeKind::Sphere}
     };
 
     level.landmarks = {
@@ -42,8 +46,13 @@ void IntroLevelAuthoring::addGameplayData(IntroLevelData& level) {
         {"lm_gruz", "Gruz Ryska", level.vehicleStart, "vehicle"},
         {"lm_parking", "Parking", level.dropoffPosition, "dropoff"},
         {"lm_garages", "Garaże Ryska", {-18.0f, 0.0f, 23.0f}, "future_base"},
-        {"lm_main_artery", "Glowna arteria", {22.0f, 0.0f, -30.0f}, "main_artery"},
-        {"lm_trash", "Śmietniki", {9.0f, 0.0f, -4.0f}, "chaos_playground"}
+        {"lm_main_artery", "Glowna arteria", {5.0f, 0.0f, -30.0f}, "main_artery"},
+        {"lm_trash", "Smietniki", {9.0f, 0.0f, -4.0f}, "chaos_playground"},
+        {"lm_block11", "Blok 11", {5.0f, 0.0f, 17.0f}, "block11"},
+        {"lm_playground", "Plac zabaw", {-6.0f, 0.0f, 14.0f}, "playground"},
+        {"lm_pavilions", "Pawilony", {25.0f, 0.0f, -34.0f}, "pavilions"},
+        {"lm_bus_stop", "Przystanek", {22.0f, 0.0f, -29.2f}, "bus_stop"},
+        {"lm_garage_belt", "Pasaz Garazowy", {-33.0f, 0.0f, 19.0f}, "garage_belt"}
     };
 
     level.districtRewirs = {
@@ -59,11 +68,11 @@ void IntroLevelAuthoring::addGameplayData(IntroLevelData& level) {
          true,
          "",
          {"return point", "local services", "world memory lab", "intro mission loop"}},
-        {"main_artery",
-         "Glowna arteria",
-         "Compressed district spine for readable travel, chases, transit noise, and escalation.",
-         {22.0f, 0.0f, -30.0f},
-         24.0f,
+         {"main_artery",
+          "Glowna arteria",
+          "Compressed district spine for readable travel, chases, transit noise, and escalation.",
+          {5.0f, 0.0f, -30.0f},
+          38.0f,
          false,
          false,
          true,

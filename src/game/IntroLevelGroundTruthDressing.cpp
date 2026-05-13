@@ -5,6 +5,13 @@
 #include <string>
 #include <utility>
 
+// Art-direction pivot 2026-05: ground-truth dressing places the physical
+// infrastructure that makes the osiedle read as a real place: curbs, lamps,
+// signs, fences, bollards, footpath wear, ground patches, oil stains.
+// Target is stylized mid-poly with beveled curb edges, lamp post detail,
+// and broken-up surface materials (asphalt cracks, worn paint, dirt).
+// Collision is off for all dressing objects — core layout handles collision.
+
 namespace bs3d::IntroLevelDressingSections {
 
 namespace {
@@ -72,10 +79,10 @@ void addGroundTruthAndClutter(IntroLevelData& level) {
     addCurb("curb_shop_apron_right", {24.18f, 0.055f, -22.35f}, {0.10f, 0.08f, 1.78f}, WorldLocationTag::Shop);
     addCurb("curb_block_walk_front", {-16.0f, 0.055f, 10.88f}, {15.6f, 0.08f, 0.10f}, WorldLocationTag::Block);
     addCurb("curb_block_walk_back", {-16.0f, 0.055f, 12.18f}, {15.6f, 0.08f, 0.10f}, WorldLocationTag::Block);
-    addCurb("curb_road_south_inner", {3.0f, 0.050f, -20.95f}, {48.5f, 0.075f, 0.095f}, WorldLocationTag::RoadLoop);
-    addCurb("curb_road_south_outer", {3.0f, 0.050f, -25.35f}, {48.5f, 0.075f, 0.095f}, WorldLocationTag::RoadLoop);
-    addCurb("curb_road_west_inner", {-28.80f, 0.050f, 0.0f}, {0.095f, 0.075f, 42.5f}, WorldLocationTag::RoadLoop);
-    addCurb("curb_road_east_inner", {27.80f, 0.050f, 0.0f}, {0.095f, 0.075f, 45.5f}, WorldLocationTag::RoadLoop);
+    addCurb("curb_road_south_inner", {3.0f, 0.050f, -21.45f}, {48.5f, 0.075f, 0.095f}, WorldLocationTag::RoadLoop);
+    addCurb("curb_road_south_outer", {3.0f, 0.050f, -26.55f}, {48.5f, 0.075f, 0.095f}, WorldLocationTag::RoadLoop);
+    addCurb("curb_road_west_inner", {-28.30f, 0.050f, 0.0f}, {0.095f, 0.075f, 42.5f}, WorldLocationTag::RoadLoop);
+    addCurb("curb_road_east_inner", {27.30f, 0.050f, 0.0f}, {0.095f, 0.075f, 45.5f}, WorldLocationTag::RoadLoop);
     addCurb("curb_garage_lane", {-18.0f, 0.052f, 20.95f}, {14.4f, 0.08f, 0.10f}, WorldLocationTag::Garage);
 
     auto addParkingFrame = [&](std::string id, std::string assetId, Vec3 position, Vec3 scale, float yawRadians = 0.0f) {
@@ -98,7 +105,7 @@ void addGroundTruthAndClutter(IntroLevelData& level) {
         addParkingFrame("parking_fence_back_" + std::to_string(fence),
                         "fence_panel",
                         {-13.6f + static_cast<float>(fence) * 3.2f, 0.0f, 12.38f},
-                        {2.45f, 0.82f, 0.10f});
+                        {2.45f, 1.30f, 0.10f});
     }
     addParkingFrame("parking_planter_left", "planter_concrete", {-15.80f, 0.0f, 5.10f}, {0.95f, 0.52f, 0.62f});
     addParkingFrame("parking_planter_right", "planter_concrete", {1.85f, 0.0f, 5.10f}, {0.95f, 0.52f, 0.62f});
@@ -114,16 +121,16 @@ void addGroundTruthAndClutter(IntroLevelData& level) {
     };
 
     for (int floor = 0; floor < 3; ++floor) {
-        const float y = 1.55f + static_cast<float>(floor) * 2.15f;
+        const float y = 2.0f + static_cast<float>(floor) * 2.60f;
         addFacade("block13_side_windows_w_" + std::to_string(floor),
                   "block_window_strip",
                   {-22.58f, y, 16.5f},
-                  {0.08f, 0.62f, 2.25f});
+                  {0.08f, 1.20f, 2.25f});
         level.objects.back().gameplayTags.push_back("glass_surface");
         addFacade("block13_rear_windows_" + std::to_string(floor),
                   "block_window_strip",
                   {-16.0f, y, 19.58f},
-                  {2.35f, 0.62f, 0.08f});
+                  {2.35f, 1.20f, 0.08f});
         level.objects.back().gameplayTags.push_back("glass_surface");
         addFacade("block13_side_stain_w_" + std::to_string(floor),
                   "wall_stain",
@@ -268,9 +275,9 @@ void addGroundTruthAndClutter(IntroLevelData& level) {
     addClutter("bollard_parking_mid_right", "bollard_red", {-3.5f, 0.0f, 4.70f}, {0.25f, 1.05f, 0.25f}, WorldLocationTag::Parking, {"drive_readability", "parking_frame"});
     addClutter("bollard_shop_approach", "bollard_red", {16.0f, 0.0f, -23.55f}, {0.25f, 1.05f, 0.25f}, WorldLocationTag::Shop, {"drive_readability", "shop_cluster"});
 
-    addClutter("fence_garage_boundary", "fence_panel", {-12.5f, 0.0f, 21.58f}, {3.2f, 0.82f, 0.10f}, WorldLocationTag::Garage, {"garage_identity", "garage_cluster"});
-    addClutter("fence_trash_boundary", "fence_panel", {11.2f, 0.0f, -3.25f}, {2.8f, 0.82f, 0.10f}, WorldLocationTag::Trash, {"trash_dressing", "trash_cluster"}, 1.5708f);
-    addClutter("fence_road_west_outer", "fence_panel", {-29.8f, 0.0f, 0.0f}, {2.8f, 0.82f, 0.10f}, WorldLocationTag::RoadLoop, {"drive_readability"});
+    addClutter("fence_garage_boundary", "fence_panel", {-12.5f, 0.0f, 21.58f}, {3.2f, 1.30f, 0.10f}, WorldLocationTag::Garage, {"garage_identity", "garage_cluster"});
+    addClutter("fence_trash_boundary", "fence_panel", {11.2f, 0.0f, -3.25f}, {2.8f, 1.30f, 0.10f}, WorldLocationTag::Trash, {"trash_dressing", "trash_cluster"}, 1.5708f);
+    addClutter("fence_road_west_outer", "fence_panel", {-29.8f, 0.0f, 0.0f}, {2.8f, 1.30f, 0.10f}, WorldLocationTag::RoadLoop, {"drive_readability"});
 
     addClutter("planter_shop_side_right", "planter_concrete", {12.5f, 0.0f, -22.98f}, {0.72f, 0.38f, 0.48f}, WorldLocationTag::Shop, {"shop_identity", "shop_cluster"});
     addClutter("planter_block_entrance", "planter_concrete", {-13.8f, 0.0f, 10.68f}, {0.88f, 0.42f, 0.52f}, WorldLocationTag::Block, {"story_dressing", "block_cluster"});
@@ -338,3 +345,5 @@ void addGroundTruthAndClutter(IntroLevelData& level) {
 }
 
 } // namespace bs3d::IntroLevelDressingSections
+
+

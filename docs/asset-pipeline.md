@@ -11,8 +11,8 @@ Asset authoring follows the shared [Production Truth Contract](production-truth-
 
 ## Current Formats
 
-- `.obj` is the fast prototype format for simple static meshes. The runtime recolors these models from `fallbackColor` in `data/assets/asset_manifest.txt`.
-- `.gltf` is the preferred direction for hero assets and future Blender exports because it can carry authored materials. `vehicle_gruz_e36` is the current example.
+- `.obj` is the fast prototype format for simple static meshes. The runtime recolors these models from `fallbackColor` in `data/assets/asset_manifest.txt`. Simple props and blocking geometry stay as `.obj`.
+- `.gltf` is the preferred direction for hero assets and future Blender exports because it can carry authored materials. `vehicle_gruz_e36` is the current example. Hero identity assets (shop fronts, block entrances, garage rows, signage, character variants) should move toward `.gltf` for richer authored geometry and material support.
 - `.bin` files are treated as glTF companion buffers and must be referenced by a `.gltf`.
 - Texture files are not a mainline workflow yet. Current materials are mostly palette/fallback-color based.
 
@@ -70,7 +70,9 @@ The validator checks:
 
 ## Direction
 
-Keep `.obj` for quick blocking and tiny reusable props. Move important Grochow identity assets toward Blender-authored `.gltf`: shop fronts, block entrances, garage rows, signage, larger street pieces, and eventually character/vehicle variants.
+Keep `.obj` for quick blocking and tiny reusable props. Move important Grochow identity assets toward Blender-authored `.gltf`: shop fronts, block entrances, garage rows, signage, larger street pieces, curbs/lamp-posts/bins with beveled detail, and eventually character/vehicle variants.
+
+The art direction target is now stylized mid-poly (early PS3 / late PS2 readability with modelled detail and material identity), not primitive low-poly blockout. See `docs/art-direction-pivot-stylized-mid-poly.md` for the full target.
 
 The intended toolchain is:
 

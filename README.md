@@ -10,15 +10,15 @@ This README is a project overview. For exact build/run workflow use [DEVELOPMENT
 
 ## What is implemented
 
-- One low-poly block-estate loop map built from authored art-kit model instances: Block 13 facade dressing, Zenon's lived-in shop front, Rysiek's garage row, parking paint, muted route guidance, low-poly curbs/lamps/bins, irregular asphalt/grass/dirt patches, fences, bollards, centralized sky/ground/haze presentation styling, and primitive debug/fallback rendering. The current visual-identity pass focuses on making the slice read as a dirty osiedlowy GTA-like rather than a blocky toy prototype.
+- One stylized mid-poly block-estate loop map built from authored art-kit model instances: Block 13 facade dressing, Zenon's lived-in shop front, Rysiek's garage row, parking paint, muted route guidance, stylized curbs/lamps/bins, irregular asphalt/grass/dirt patches, fences, bollards, centralized sky/ground/haze presentation styling, and primitive debug/fallback rendering. The current visual-identity pass focuses on making the slice read as a dirty osiedlowy GTA-like rather than a blocky toy prototype — targeting PS2/early-PS3 era readability with stylized mid-poly silhouettes and modeled detail.
 - Visual baseline data for start/Bogus, shop, parking, garages, road loop, rear block, plus v2 close-up QA views for Zenon's storefront, gruz wear, and the Block 13 front/intercom, so future art passes can be judged from repeatable angles instead of memory.
 - Runtime world authoring now has a JSON data catalog: `data/map_block_loop.json` and `data/mission_driving_errand.json` are loaded at boot and applied before the intro slice starts.
 - Dev builds include a Dear ImGui runtime map editor: `F10` opens object selection, transform editing, undo/redo, metadata-searchable manifest asset placement, and overlay save/load via `data/world/block13_editor_overlay.json`.
 - The first C# external editor seed lives in `tools/BlokTools`: it loads the current mission/dialogue JSON plus `data/world/object_outcome_catalog.json`, validates editor data against the runtime phase catalog, opens a WPF surface for editing/adding mission steps and dialogue, shows quiet vs Przypal/world-memory outcome consequences, and can bind a step trigger to an object outcome through `outcome:<id>` with guarded `.bak` saves.
 - App-layer asset registry validates `data/assets/asset_manifest.txt` at startup, fails fast on missing authored models, and reports model-load warnings.
 - GTA V PC-style third-person camera, camera-relative walking, vehicle enter/exit, and simple car driving.
-- Code-driven player foundation: input intent, kinematic motor, step/slope ground checks, wall slide, coyote jump, and procedural low-poly movement feedback.
-- Modular low-poly character rendering now supports named visual profiles plus v2 silhouette details such as cap brim, brows, cuffs, pockets, trouser stripes, and face/ear landmarks, so key NPCs can share the same readable body model while keeping distinct palettes.
+- Code-driven player foundation: input intent, kinematic motor, step/slope ground checks, wall slide, coyote jump, and procedural stylized movement feedback.
+- Modular stylized mid-poly character rendering now supports named visual profiles plus v2 silhouette details such as cap brim, brows, cuffs, pockets, trouser stripes, and face/ear landmarks, so key NPCs can share the same readable body model while keeping distinct palettes.
 - Camera boom collision shortens the camera against blocking geometry and returns smoothly.
 - Walaszek-style feel layer: panic sprint presentation, short bump/stagger reactions, comedy event zoom/shake cooldown, and chase-driven camera tension.
 - On-foot feel pass: Ctrl walk, default jog, Shift sprint, quick-turn assist, jump buffer, and closer upper-body camera framing.
@@ -191,7 +191,7 @@ ctest --preset ci
 
 ## Performance target
 
-The game opens at 1280x720, supports `F11` fullscreen toggle, and simulates gameplay through a clamped 60 Hz fixed-step accumulator. The art direction is intentionally low-poly and stylized so it can run on weaker laptops while still reading as a specific block-estate place.
+The game opens at 1280x720, supports `F11` fullscreen toggle, and simulates gameplay through a clamped 60 Hz fixed-step accumulator. The art direction targets stylized mid-poly readability inspired by early PS3/late PS2 era aesthetics — chunky readable silhouettes with modeled detail, beveled edges, and material identity — optimized to run on weaker laptops while still reading as a specific block-estate place.
 
 ## Known current limitations
 

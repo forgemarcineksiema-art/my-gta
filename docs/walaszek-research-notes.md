@@ -73,12 +73,15 @@ Dialogue should be:
 
 The 3D style should not chase realism. It should use:
 
-- low/mid-poly blocks and props;
+- stylized mid-poly blocks and props with beveled/chamfered edges and modeled detail;
+- recessed windows, doors, and shop frontage with real depth;
 - exaggerated faces and body shapes later;
 - clear readable colors;
 - intentionally crude animation;
-- dirty estate props;
-- strong silhouettes over asset detail.
+- dirty estate props with material identity: concrete, dirty plaster, asphalt, metal, glass;
+- environmental dirt: stains, cracks, posters, oil marks, chipped curbs;
+- strong silhouettes over asset detail;
+- target readability: early PS3 / late PS2 era, but cleaner — not photorealistic, not ultra-low-poly.
 
 ### Systems Over Volume
 

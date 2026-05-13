@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Generate the low-poly Blok 13 gruz coupe-sedan glTF asset.
+"""Generate the stylized mid-poly Blok 13 gruz coupe-sedan glTF asset.
 
 The file is intentionally procedural so the asset can be rebuilt without a DCC
-dependency while the project is still in prototype art-kit mode.
-"""
+dependency while the art-kit pipeline evolves toward richer authored geometry.
+Target quality: chunky readable silhouette with modelled detail (beveled edges,
+wheel-arch definition, lamp recesses, trim depth). Maintains current box/cylinder
+construction but documents the target direction for future authoring passes."""
 
 from __future__ import annotations
 
@@ -179,6 +181,71 @@ PARTS = [
     ("Bumper_Scuff_Rear", "box", "road_dirt_matte", (0.52, 0.43, -1.675), (0.50, 0.065, 0.030), 0.0),
     ("Collider_Body", "box", "collider_debug_transparent", (0.0, 0.62, 0.0), (1.90, 1.18, 3.38), 0.0),
     ("Collider_Wheels", "box", "collider_debug_transparent", (0.0, 0.35, 0.0), (2.05, 0.72, 2.70), 0.0),
+]
+
+# Mid-poly detail parts added v0.10: wheel arches, light recesses, door seams,
+# rocker panels, bumper corners, hood/trunk gaps, grille depth, front lip, exhaust tip.
+# All dark_trim boxes. Each part is ~0.02-0.04m thick — readable at game distance.
+DETAILS = [
+    # === Wheel arch inner shadow boxes (dark void behind each tire) ===
+    ("ArchInner_FL", "box", "dark_trim", (-0.93, 0.42, 1.05), (0.08, 0.26, 0.58), 0.0),
+    ("ArchInner_FR", "box", "dark_trim", (0.93, 0.42, 1.05), (0.08, 0.26, 0.58), 0.0),
+    ("ArchInner_RL", "box", "dark_trim", (-0.93, 0.42, -1.05), (0.08, 0.26, 0.58), 0.0),
+    ("ArchInner_RR", "box", "dark_trim", (0.93, 0.42, -1.05), (0.08, 0.26, 0.58), 0.0),
+    # === Wheel arch top bars (horizontal cap defining arch peak) ===
+    ("ArchTop_FL", "box", "dark_trim", (-0.98, 0.60, 1.05), (0.03, 0.03, 0.36), 0.0),
+    ("ArchTop_FR", "box", "dark_trim", (0.98, 0.60, 1.05), (0.03, 0.03, 0.36), 0.0),
+    ("ArchTop_RL", "box", "dark_trim", (-0.98, 0.60, -1.05), (0.03, 0.03, 0.36), 0.0),
+    ("ArchTop_RR", "box", "dark_trim", (0.98, 0.60, -1.05), (0.03, 0.03, 0.36), 0.0),
+    # === Wheel arch front/rear diagonal edges (trace arch curve from body up to peak) ===
+    ("ArchFr_FL", "box", "dark_trim", (-0.91, 0.40, 1.22), (0.03, 0.24, 0.024), 0.42),
+    ("ArchRr_FL", "box", "dark_trim", (-0.91, 0.40, 0.88), (0.03, 0.24, 0.024), -0.42),
+    ("ArchFr_FR", "box", "dark_trim", (0.91, 0.40, 1.22), (0.03, 0.24, 0.024), -0.42),
+    ("ArchRr_FR", "box", "dark_trim", (0.91, 0.40, 0.88), (0.03, 0.24, 0.024), 0.42),
+    ("ArchFr_RL", "box", "dark_trim", (-0.91, 0.40, -0.88), (0.03, 0.24, 0.024), -0.42),
+    ("ArchRr_RL", "box", "dark_trim", (-0.91, 0.40, -1.22), (0.03, 0.24, 0.024), 0.42),
+    ("ArchFr_RR", "box", "dark_trim", (0.91, 0.40, -0.88), (0.03, 0.24, 0.024), 0.42),
+    ("ArchRr_RR", "box", "dark_trim", (0.91, 0.40, -1.22), (0.03, 0.24, 0.024), -0.42),
+    # === Light recess housings (depth pocket behind head/taillights) ===
+    ("HL_House_L", "box", "dark_trim", (-0.42, 0.57, 1.63), (0.38, 0.15, 0.030), 0.0),
+    ("HL_House_R", "box", "dark_trim", (0.42, 0.57, 1.63), (0.38, 0.15, 0.030), 0.0),
+    ("TL_House_L", "box", "dark_trim", (-0.50, 0.56, -1.63), (0.32, 0.15, 0.030), 0.0),
+    ("TL_House_R", "box", "dark_trim", (0.50, 0.56, -1.63), (0.32, 0.15, 0.030), 0.0),
+    # === Door panel gaps (thin dark strips at door edges for visible seams) ===
+    ("DoorGap_L_F", "box", "dark_trim", (-0.93, 0.66, 0.36), (0.018, 0.48, 0.014), 0.0),
+    ("DoorGap_L_R", "box", "dark_trim", (-0.93, 0.66, -0.60), (0.018, 0.48, 0.014), 0.0),
+    ("DoorGap_R_F", "box", "dark_trim", (0.93, 0.66, 0.36), (0.018, 0.48, 0.014), 0.0),
+    ("DoorGap_R_R", "box", "dark_trim", (0.93, 0.66, -0.60), (0.018, 0.48, 0.014), 0.0),
+    # === Rocker panels (dark trim below doors between wheel arches) ===
+    ("Rocker_L", "box", "dark_trim", (-0.94, 0.33, -0.08), (0.030, 0.10, 1.24), 0.0),
+    ("Rocker_R", "box", "dark_trim", (0.94, 0.33, -0.08), (0.030, 0.10, 1.24), 0.0),
+    # === Hood and trunk panel gaps ===
+    ("HoodGap_L", "box", "dark_trim", (-0.73, 0.843, 1.38), (0.014, 0.020, 0.10), 0.0),
+    ("HoodGap_R", "box", "dark_trim", (0.73, 0.843, 1.38), (0.014, 0.020, 0.10), 0.0),
+    ("HoodGap_F", "box", "dark_trim", (0.0, 0.843, 1.39), (0.50, 0.018, 0.014), 0.0),
+    ("TrunkGap_L", "box", "dark_trim", (-0.73, 0.833, -0.82), (0.014, 0.018, 0.09), 0.0),
+    ("TrunkGap_R", "box", "dark_trim", (0.73, 0.833, -0.82), (0.014, 0.018, 0.09), 0.0),
+    # === Grille recess (dark pocket behind grille surface) ===
+    ("Grille_House", "box", "dark_trim", (0.0, 0.57, 1.67), (0.40, 0.16, 0.028), 0.0),
+    # === License plate recess (dark pocket in rear bumper) ===
+    ("Plate_Rec", "box", "dark_trim", (0.0, 0.48, -1.67), (0.34, 0.12, 0.026), 0.0),
+    # === Bumper wrap corners ===
+    ("Bump_FL", "box", "dark_trim", (-0.88, 0.43, 1.41), (0.06, 0.22, 0.08), 0.18),
+    ("Bump_FR", "box", "dark_trim", (0.88, 0.43, 1.41), (0.06, 0.22, 0.08), -0.18),
+    ("Bump_RL", "box", "dark_trim", (-0.88, 0.43, -1.41), (0.06, 0.22, 0.08), -0.18),
+    ("Bump_RR", "box", "dark_trim", (0.88, 0.43, -1.41), (0.06, 0.22, 0.08), 0.18),
+    # === Front lower lip / splitter strip ===
+    ("FrontLip", "box", "dark_trim", (0.0, 0.31, 1.62), (1.52, 0.016, 0.06), 0.0),
+    # === Exhaust tip (secondary pipe at muffler exit) ===
+    ("ExhaustTip", "cylinder_x", "dark_trim", (-0.54, 0.29, -1.75), (0.06, 0.10, 0.10), 0.0),
+    # === Mirror arms (connecting body to mirror heads) ===
+    ("MirArm_L", "cylinder_x", "dark_trim", (-0.94, 0.91, 0.30), (0.12, 0.035, 0.035), 0.0),
+    ("MirArm_R", "cylinder_x", "dark_trim", (0.94, 0.91, 0.30), (0.12, 0.035, 0.035), 0.0),
+    # === Side sill lower trim strips ===
+    ("SillLow_L", "box", "dark_trim", (-0.91, 0.40, -0.08), (0.022, 0.035, 1.10), 0.0),
+    ("SillLow_R", "box", "dark_trim", (0.91, 0.40, -0.08), (0.022, 0.035, 1.10), 0.0),
+    # === Rear diffuser hint strip ===
+    ("Diffuser", "box", "dark_trim", (0.0, 0.31, -1.62), (1.30, 0.014, 0.05), 0.0),
 ]
 
 PANEL_PARTS = [
@@ -365,7 +432,7 @@ def main():
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
     gltf = {
-        "asset": {"version": "2.0", "generator": "Blok 13 procedural gruz generator"},
+        "asset": {"version": "2.0", "generator": "Blok 13 gruz generator v2 mid-poly"},
         "scene": 0,
         "scenes": [{"name": "Gruz_E36_Runtime", "nodes": []}],
         "nodes": [],
@@ -380,6 +447,18 @@ def main():
     for name, shape, material, translation, size, rotation_x in PARTS:
         if name.startswith("Collider_"):
             continue
+        mesh = add_mesh(gltf, blob, name, shape, material, size)
+        node = {
+            "name": name,
+            "mesh": mesh,
+            "translation": list(translation),
+        }
+        if abs(rotation_x) > 0.0001:
+            node["rotation"] = x_rotation_quaternion(rotation_x)
+        gltf["scenes"][0]["nodes"].append(len(gltf["nodes"]))
+        gltf["nodes"].append(node)
+
+    for name, shape, material, translation, size, rotation_x in DETAILS:
         mesh = add_mesh(gltf, blob, name, shape, material, size)
         node = {
             "name": name,
@@ -407,6 +486,7 @@ def main():
         for kind, material, size in (
             ("Tire", "rubber_dark", (0.24, 0.58, 0.58)),
             ("Rim", "rim_dull_alloy", (0.27, 0.34, 0.34)),
+            ("Hub", "rim_dull_alloy", (0.04, 0.08, 0.08)),
         ):
             node_name = f"{kind}_{suffix}"
             mesh = add_mesh(gltf, blob, node_name, "cylinder_x", material, size)

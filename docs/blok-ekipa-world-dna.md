@@ -59,7 +59,7 @@ This is:
 - one estate as the main character;
 - a local story about parking, debt, garages, shop access, gossip, and developer pressure;
 - an original cast of useful, memorable idiots with motivations;
-- rough, expressive 3D used as intentional style;
+- rough, expressive stylized mid-poly 3D used as intentional style;
 - movement that may look stupid but must play well;
 - short dialogue, quick escalation, ugly local conflicts, and visible consequences.
 
@@ -67,7 +67,7 @@ The design motto is:
 
 ```txt
 Rockstar structure. Walaszek bite. Bully scale. Saints Row tempo.
-It can look stupid. It cannot control stupidly.
+It can look crude. It cannot control stupidly.
 ```
 
 ## Rockstar Standard, Not Rockstar Scale
@@ -316,7 +316,7 @@ Use for arcade tempo, activity clarity, and absurd mission escalation. Do not im
 
 ## Known Current Limitations
 
-- The estate is still a primitive readability map, not a finished district.
+- The estate is still a readability-focused stylized mid-poly map, not a finished district.
 - There is no minimap, save game, economy, combat, traffic, full police, or persistent reputation.
 - World Memory is runtime-only and short-term.
 - Camera pitch is clamped; camera collision is basic; indoor/stair/shop camera modes are future quality gates.
