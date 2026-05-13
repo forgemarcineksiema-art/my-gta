@@ -373,6 +373,8 @@ def validate_map(data_root: Path, entries: dict[str, ManifestEntry]) -> list[str
         if not isinstance(raw_objects, list):
             issues.append(f"{path}: objects must be an array when present")
         else:
+            if raw_objects:
+                issues.append(f"{path}: map objects are not loaded by runtime yet; use editor overlay objects")
             seen: set[str] = set()
             for index, raw_object in enumerate(raw_objects):
                 record, object_issues = object_from_data(f"map object[{index}]", raw_object)

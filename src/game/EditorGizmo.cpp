@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <utility>
 
 // raylib 3D drawing is only available in dev tools builds
 #if defined(BS3D_ENABLE_DEV_TOOLS) && BS3D_ENABLE_DEV_TOOLS
@@ -22,6 +23,7 @@ inline Vec3 cross(Vec3 a, Vec3 b) {
     return {a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x};
 }
 inline float lengthVec(Vec3 v) { return std::sqrt(dot(v, v)); }
+inline bool sameVec3(Vec3 a, Vec3 b) { return a.x == b.x && a.y == b.y && a.z == b.z; }
 inline Vec3 normalize(Vec3 v) {
     const float len = lengthVec(v);
     if (len < 0.00001f) return {0, 0, 0};
@@ -151,6 +153,15 @@ GizmoDragState EditorGizmo::dragState() const { return dragState_; }
 void EditorGizmo::resetDrag() {
     grabbedAxis_ = GizmoAxis::None;
     dragState_ = GizmoDragState::Idle;
+    hasDragStartState_ = false;
+    dragMoved_ = false;
+}
+
+void EditorGizmo::finishDrag(RuntimeMapEditor& editor) {
+    if (hasDragStartState_ && dragMoved_) {
+        editor.commitCapturedEdit(std::move(dragStartState_));
+    }
+    resetDrag();
 }
 
 void EditorGizmo::update(const InputState& input, RuntimeMapEditor& editor, Vec3 cameraPosition, Vec3 cameraTarget,
@@ -170,10 +181,7 @@ void EditorGizmo::update(const InputState& input, RuntimeMapEditor& editor, Vec3
 
     if (dragState_ == GizmoDragState::Dragging) {
         if (!primaryDown_) {
-            if (const WorldObject* sel = editor.selectedObject()) {
-                editor.setSelectedPosition(sel->position);
-            }
-            resetDrag();
+            finishDrag(editor);
         }
         return;
     }
@@ -210,10 +218,7 @@ void EditorGizmo::processFrame(RuntimeMapEditor& editor, Vec3 cameraPos, Vec3 ca
     // Handle drag continuation
     if (dragState_ == GizmoDragState::Dragging) {
         if (!primaryDown_) {
-            if (const WorldObject* sel = editor.selectedObject()) {
-                editor.setSelectedPosition(sel->position);
-            }
-            resetDrag();
+            finishDrag(editor);
             return;
         }
         // Continue drag
@@ -223,8 +228,10 @@ void EditorGizmo::processFrame(RuntimeMapEditor& editor, Vec3 cameraPos, Vec3 ca
             return;
         }
         const Vec3 newCenter = projectDrag(rayOrigin, rayDir, grabbedAxis_, sel->position, cameraPos);
-        sel->position = newCenter;
-        editor.markSelectedBaseObjectEdited();
+        if (!sameVec3(sel->position, newCenter)) {
+            editor.setSelectedPositionSilent(newCenter);
+            dragMoved_ = true;
+        }
         return;
     }
 
@@ -242,6 +249,9 @@ void EditorGizmo::processFrame(RuntimeMapEditor& editor, Vec3 cameraPos, Vec3 ca
         if (hit != GizmoAxis::None) {
             grabbedAxis_ = hit;
             dragState_ = GizmoDragState::Dragging;
+            dragStartState_ = editor.captureState();
+            hasDragStartState_ = true;
+            dragMoved_ = false;
             return;
         }
     }

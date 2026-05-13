@@ -1,7 +1,7 @@
 # Current State
 
 Status: LIVE
-Last verified against code: 2026-05-10
+Last verified against code: 2026-05-13
 Owner: project workflow
 
 This document is a compact map of what the project currently appears to support. It is not a replacement for code, tests, validators, CMake, run scripts, or actual runtime smoke tests. If this file disagrees with implementation evidence, implementation evidence wins and this file should be updated.
@@ -63,6 +63,7 @@ As of this pass, the project has CTest-backed or script-backed gates for:
 - **Implemented:** object outcome validation through `tools/validate_object_outcomes.py`.
 - **Implemented:** mission validation through `tools/validate_mission.py`.
 - **Implemented:** CI preset build/test/smoke workflow through `cmake --preset ci`, `cmake --build --preset ci`, `ctest --preset ci`, and `tools/ci_smoke.ps1`.
+- **Implemented:** dev-tools build and CTest coverage through `cmake --preset dev-tools`, `cmake --build --preset dev-tools`, and `ctest --preset dev-tools`; `tools/ci_verify.ps1` runs this gate after the normal CI preset.
 
 Recent smoke/build validation confirmed:
 
@@ -71,6 +72,9 @@ Recent smoke/build validation confirmed:
 - `cmake --preset ci`
 - `cmake --build --preset ci`
 - `ctest --preset ci`
+- `cmake --preset dev-tools`
+- `cmake --build --preset dev-tools`
+- `ctest --preset dev-tools`
 - `tools\ci_smoke.ps1 -Preset ci -SmokeFrames 3`
 - `tools\run_release_smoke.ps1 -SmokeFrames 3`
 - `tools\run_dev.ps1 -GameArgs '--no-audio','--no-save','--smoke-frames','1'`
@@ -89,7 +93,7 @@ Recent smoke/build validation confirmed:
 
 - **Partial:** world-object affordances and object outcome catalog exist for selected slice objects, not a complete open-world interaction library.
 - **Partial:** Przypal/world-memory consequences are present for current low-stakes outcome hooks, but long-term story memory is not final production scope.
-- **Partial:** runtime data/editor pipeline exists around JSON, overlay validation, and dev-tools workflow, but the broader authoring loop should still be treated as stabilizing.
+- **Partial:** runtime data/editor pipeline exists around JSON, overlay validation, and dev-tools workflow, but the broader authoring loop should still be treated as stabilizing. Map `objects` in `data/map_block_loop.json` are intentionally rejected by the world contract until runtime loading support exists; use editor overlay objects for current authoring.
 - **Partial:** asset pipeline has manifest metadata, validation, and runtime registry rules, but it is still a small art-kit pipeline rather than a final content pipeline.
 - **Partial:** mission/data-driven flow exists for the current intro slice and validated data, not a full campaign authoring stack.
 - **Partial:** vehicle gruz feel is a tuned arcade slice for one current vehicle, not full traffic, law, parking, or systemic vehicle simulation.

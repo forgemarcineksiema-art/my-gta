@@ -38,21 +38,25 @@ def extract_runtime_mission_phases(policy_path: Path) -> set[str]:
     return {match for match in matches}
 
 
-def load_mission_localization_lines(path: Path) -> dict[str, str]:
+def load_mission_localization_lines(path: Path) -> tuple[dict[str, str], list[str]]:
     localization_text = load_json(path)
+    issues: list[str] = []
     if not isinstance(localization_text, dict):
-        return {}
+        return {}, ["mission localization root must be an object"]
+
+    if localization_text.get("schemaVersion") != 1:
+        issues.append("mission localization schemaVersion must be 1")
 
     lines = localization_text.get("lines")
     if not isinstance(lines, dict):
-        return {}
+        return {}, [*issues, "mission localization lines must be an object"]
 
     result: dict[str, str] = {}
     for key, value in lines.items():
         text = as_non_empty_str(value)
         if key and text:
             result[key] = text
-    return result
+    return result, issues
 
 
 def load_outcome_trigger_keys(catalog_path: Path) -> tuple[set[str], list[str]]:
@@ -185,9 +189,10 @@ def validate_mission(
 ) -> list[str]:
     issues: list[str] = []
     mission_text = load_json(mission_path)
-    localization = load_mission_localization_lines(localization_path)
+    localization, localization_issues = load_mission_localization_lines(localization_path)
     outcome_exact, outcome_issues = load_outcome_trigger_keys(outcome_catalog_path)
     outcome_prefixes = [key[:-1] for key in outcome_exact if key.endswith("*")]
+    issues.extend(localization_issues)
     issues.extend(outcome_issues)
     if not isinstance(mission_text, dict):
         issues.append("mission root must be an object")

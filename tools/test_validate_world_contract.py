@@ -156,6 +156,25 @@ class WorldContractValidatorTests(unittest.TestCase):
 
         self.assertTrue(any("spawn.player.y must be 0.0" in issue for issue in issues), issues)
 
+    def test_map_objects_are_rejected_until_runtime_loads_them(self) -> None:
+        map_data = valid_map()
+        map_data["objects"] = [
+            {
+                "id": "map_only_bench",
+                "assetId": "bench",
+                "position": [0, 0, 0],
+                "scale": [1, 1, 1],
+                "gameplayTags": ["seating"],
+            }
+        ]
+        issues = self.validate(
+            [*hero_shop_manifest_lines(),
+             "bench|models/bench.obj|1,1,1|180,180,180|type=SolidProp;origin=bottom_center;render=Opaque;collision=Prop"],
+            map_data=map_data,
+        )
+
+        self.assertTrue(any("map objects are not loaded by runtime" in issue for issue in issues), issues)
+
     def test_elevated_instance_requires_allow_floating(self) -> None:
         issues = self.validate(
             [*hero_shop_manifest_lines(),

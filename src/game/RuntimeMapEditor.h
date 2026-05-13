@@ -11,6 +11,7 @@ namespace bs3d {
 struct WorldAssetDefinition;
 
 Vec3 runtimeEditorPlacementPosition(Vec3 anchor, float yawRadians, float distanceMeters = 3.0f);
+std::string runtimeEditorOverlayPathForDataRoot(const std::string& dataRoot);
 bool runtimeEditorAssetMatchesFilter(const WorldAssetDefinition& asset, const std::string& filter);
 
 class RuntimeMapEditor {
@@ -51,6 +52,7 @@ public:
     void markSelectedBaseObjectEdited();
     HistoryState captureState() const;
     void pushHistory(HistoryState before);
+    bool commitCapturedEdit(HistoryState before);
 
 private:
     struct HistoryEntry {

@@ -9,7 +9,10 @@ namespace bs3d {
 
 class RuntimeMapEditorImGui {
 public:
-    void draw(RuntimeMapEditor& editor, const WorldAssetRegistry& registry, Vec3 placementPosition);
+    void draw(RuntimeMapEditor& editor,
+              const WorldAssetRegistry& registry,
+              Vec3 placementPosition,
+              const std::string& overlayPath);
     bool showCollision() const;
 
 private:

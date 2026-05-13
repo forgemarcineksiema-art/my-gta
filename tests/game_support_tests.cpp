@@ -743,6 +743,14 @@ void editorOverlayCodecRejectsBadSchema() {
     expect(!loaded.warnings.empty(), "unsupported schema reports warning");
 }
 
+void editorOverlayCodecRejectsTrailingGarbage() {
+    const bs3d::EditorOverlayLoadResult loaded =
+        bs3d::parseEditorOverlay("{\"schemaVersion\":1,\"overrides\":[],\"instances\":[]} trailing");
+
+    expect(!loaded.success, "editor overlay parser rejects trailing garbage after root object");
+    expect(!loaded.warnings.empty(), "trailing garbage reports parse warning");
+}
+
 void editorOverlayCodecRoundTripsMinimalDocument() {
     bs3d::EditorOverlayDocument document;
     bs3d::EditorOverlayObject instance;
@@ -3437,6 +3445,16 @@ void runtimeMapEditorComputesPlacementInFrontOfCamera() {
     expectNear(placement.z, 4.0f, 0.001f, "runtime editor placement uses camera forward z");
 }
 
+void runtimeEditorOverlayPathUsesDataRoot() {
+    const std::string overlayPath = bs3d::runtimeEditorOverlayPathForDataRoot("C:/slice/data");
+
+    expect(overlayPath.find("C:/slice/data") != std::string::npos,
+           "runtime editor overlay path starts from configured data root");
+    expect(overlayPath.find("world") != std::string::npos &&
+               overlayPath.find("block13_editor_overlay.json") != std::string::npos,
+           "runtime editor overlay path points at the editor overlay under world data");
+}
+
 void runtimeMapEditorEditsSelectedMetadata() {
     bs3d::IntroLevelData level = bs3d::IntroLevelBuilder::build();
     bs3d::RuntimeMapEditor editor;
@@ -3543,6 +3561,55 @@ void runtimeMapEditorUndoRedoRestoresBaseEditsAndOverlayTracking() {
     expectNear(redoneObject->position.z, 6.0f, 0.001f, "runtime editor redo restores edited z");
     expect(editor.buildOverlayDocument().overrides.size() == 1,
            "runtime editor redo restores base override tracking");
+}
+
+void runtimeMapEditorCommitsSilentDragAsUndoableEdit() {
+    bs3d::IntroLevelData level = bs3d::IntroLevelBuilder::build();
+    const bs3d::WorldObject* originalObject = findObject(level, "sign_no_parking");
+    expect(originalObject != nullptr, "runtime editor silent drag test finds base object");
+    const bs3d::Vec3 originalPosition = originalObject->position;
+
+    bs3d::RuntimeMapEditor editor;
+    editor.attach(level);
+    expect(editor.selectObject("sign_no_parking"), "runtime editor selects base object for silent drag");
+
+    bs3d::RuntimeMapEditor::HistoryState beforeDrag = editor.captureState();
+    expect(editor.setSelectedPositionSilent({-4.0f, 0.0f, 6.0f}), "silent drag updates selected position");
+    expect(!editor.canUndo(), "silent drag stays uncommitted while pointer is still down");
+
+    expect(editor.commitCapturedEdit(std::move(beforeDrag)), "runtime editor commits silent drag edit");
+    expect(editor.dirty(), "committed silent drag marks editor dirty");
+    expect(editor.canUndo(), "committed silent drag becomes undoable");
+    expect(editor.buildOverlayDocument().overrides.size() == 1,
+           "committed silent drag exports base object override");
+
+    expect(editor.undo(), "runtime editor undoes committed silent drag");
+    const bs3d::WorldObject* undoneObject = findObject(level, "sign_no_parking");
+    expect(undoneObject != nullptr, "undo keeps dragged object");
+    expectNear(undoneObject->position.x, originalPosition.x, 0.001f, "undo restores pre-drag x");
+    expectNear(undoneObject->position.z, originalPosition.z, 0.001f, "undo restores pre-drag z");
+}
+
+void runtimeMapEditorCommitsSilentDragForEditorInstance() {
+    bs3d::IntroLevelData level = bs3d::IntroLevelBuilder::build();
+    bs3d::WorldObject editorObject;
+    editorObject.id = "editor_lamp_manual";
+    editorObject.assetId = "lamp_post_lowpoly";
+    editorObject.position = {1.0f, 0.0f, 2.0f};
+    level.objects.push_back(editorObject);
+
+    bs3d::RuntimeMapEditor editor;
+    editor.attach(level);
+    expect(editor.selectObject("editor_lamp_manual"), "runtime editor selects editor instance for silent drag");
+
+    bs3d::RuntimeMapEditor::HistoryState beforeDrag = editor.captureState();
+    expect(editor.setSelectedPositionSilent({3.0f, 0.0f, 4.0f}), "silent drag updates editor instance");
+    expect(editor.commitCapturedEdit(std::move(beforeDrag)), "runtime editor commits editor instance drag");
+
+    expect(editor.dirty(), "committed editor instance drag marks dirty");
+    expect(editor.canUndo(), "committed editor instance drag is undoable");
+    expect(editor.buildOverlayDocument().instances.size() == 1,
+           "committed editor instance drag remains in overlay instances");
 }
 
 void runtimeMapEditorUndoRedoRestoresInstanceAddAndDelete() {
@@ -4908,6 +4975,7 @@ int main() {
         editorOverlayDataDefaultsAreSafe();
         editorOverlayCodecParsesValidOverlay();
         editorOverlayCodecRejectsBadSchema();
+        editorOverlayCodecRejectsTrailingGarbage();
         editorOverlayCodecRoundTripsMinimalDocument();
         editorOverlayApplyOverridesExistingObject();
         editorOverlayApplyAppendsNewManifestInstance();
@@ -4939,11 +5007,14 @@ int main() {
         runtimeMapEditorAddsDefinitionInstanceWithManifestTags();
         runtimeEditorAssetFilterMatchesManifestMetadata();
         runtimeMapEditorComputesPlacementInFrontOfCamera();
+        runtimeEditorOverlayPathUsesDataRoot();
         runtimeMapEditorEditsSelectedMetadata();
         runtimeMapEditorBuildsOverlayForEditedObjects();
         runtimeMapEditorPreservesLoadedBaseOverridesOnSave();
         runtimeMapEditorOnlyAllowsDeletingOverlayInstances();
         runtimeMapEditorUndoRedoRestoresBaseEditsAndOverlayTracking();
+        runtimeMapEditorCommitsSilentDragAsUndoableEdit();
+        runtimeMapEditorCommitsSilentDragForEditorInstance();
         runtimeMapEditorUndoRedoRestoresInstanceAddAndDelete();
         introLevelV092DecorativeDressingIsCameraSafe();
         introLevelGlassIsExplicitlyNonBlockingDressing();

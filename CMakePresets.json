@@ -100,6 +100,14 @@
       "output": {
         "outputOnFailure": true
       }
+    },
+    {
+      "name": "dev-tools",
+      "configurePreset": "dev-tools",
+      "configuration": "Debug",
+      "output": {
+        "outputOnFailure": true
+      }
     }
   ]
 }

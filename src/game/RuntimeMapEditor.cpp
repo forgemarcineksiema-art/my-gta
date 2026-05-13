@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <filesystem>
 #include <sstream>
 #include <utility>
 
@@ -65,6 +66,10 @@ std::vector<std::string> filterTokens(const std::string& filter) {
 
 Vec3 runtimeEditorPlacementPosition(Vec3 anchor, float yawRadians, float distanceMeters) {
     return anchor + forwardFromYaw(yawRadians) * distanceMeters;
+}
+
+std::string runtimeEditorOverlayPathForDataRoot(const std::string& dataRoot) {
+    return (std::filesystem::path(dataRoot) / "world" / "block13_editor_overlay.json").string();
 }
 
 bool runtimeEditorAssetMatchesFilter(const WorldAssetDefinition& asset, const std::string& filter) {
@@ -425,6 +430,14 @@ void RuntimeMapEditor::pushHistory(HistoryState before) {
     }
     redoStack_.clear();
     dirty_ = true;
+}
+
+bool RuntimeMapEditor::commitCapturedEdit(HistoryState before) {
+    if (level_ == nullptr) {
+        return false;
+    }
+    pushHistory(std::move(before));
+    return true;
 }
 
 void RuntimeMapEditor::markSelectedBaseObjectEdited() {

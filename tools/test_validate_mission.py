@@ -197,6 +197,22 @@ def test_missing_localization_key_fails() -> None:
     with_context(run)
 
 
+def test_bad_localization_schema_version_fails() -> None:
+    def run(mission_path: Path, localization_path: Path, catalog_path: Path, policy_path: Path) -> None:
+        write_json(localization_path, {"schemaVersion": 2, "lines": BASE_LOCALIZATION["lines"]})
+        mission = {**BASE_MISSION}
+        mission["dialogue"] = [
+            {"phase": "ReachVehicle", "speaker": "Misja", "lineKey": "mission.start_hint", "durationSeconds": 2.0},
+        ]
+        write_json(mission_path, mission)
+
+        issues = validator.validate_mission(mission_path, localization_path, catalog_path, policy_path)
+
+        assert_issue(issues, "mission localization schemaVersion must be 1")
+
+    with_context(run)
+
+
 def test_duplicate_phase_fails() -> None:
     def run(mission_path: Path, localization_path: Path, catalog_path: Path, policy_path: Path) -> None:
         mission = {**BASE_MISSION}
@@ -230,6 +246,7 @@ def main() -> int:
         test_bad_dialogue_duration_fails,
         test_missing_line_and_line_key_fails,
         test_missing_localization_key_fails,
+        test_bad_localization_schema_version_fails,
         test_duplicate_phase_fails,
         test_bad_policy_fails_fast,
     ]

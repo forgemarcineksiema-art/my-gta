@@ -2189,7 +2189,10 @@ struct Runtime {
             const Vec3 placementPosition =
                 runtimeEditorPlacementPosition(placementAnchor, renderSnapshot.cameraYawRadians);
             rlImGuiBegin();
-            runtimeEditorUi.draw(runtimeEditor, assetRegistry, placementPosition);
+            runtimeEditorUi.draw(runtimeEditor,
+                                 assetRegistry,
+                                 placementPosition,
+                                 runtimeEditorOverlayPathForDataRoot(dataRoot));
             rlImGuiEnd();
         }
 #endif

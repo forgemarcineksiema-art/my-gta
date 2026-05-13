@@ -1,7 +1,7 @@
 # Development Workflow
 
 Status: LIVE
-Last verified against code: 2026-05-12
+Last verified against code: 2026-05-13
 Owner: project workflow
 
 See also: `docs/d3d11-modernization-milestone.md` for D3D11 renderer modernization status and boundaries.
@@ -48,6 +48,9 @@ python tools\validate_world_contract.py data --asset-root data\assets
 cmake --preset ci
 cmake --build --preset ci
 ctest --preset ci
+cmake --preset dev-tools
+cmake --build --preset dev-tools
+ctest --preset dev-tools
 .\tools\ci_smoke.ps1 -Preset ci
 ```
 
@@ -56,6 +59,8 @@ Or run the combined CI helper:
 ```powershell
 .\tools\ci_verify.ps1 -Preset ci
 ```
+
+The combined helper also builds and tests the `dev-tools` preset so Dear ImGui/runtime-editor code cannot drift outside the normal quality gate.
 
 ## D3D11 shadow sidecar smoke (dev-only, Windows)
 

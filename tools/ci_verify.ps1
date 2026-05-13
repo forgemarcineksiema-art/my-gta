@@ -32,6 +32,7 @@ Invoke-CheckedNative ctest --preset $Preset
 if ($Preset -ne "dev-tools") {
     Invoke-CheckedNative cmake --preset dev-tools
     Invoke-CheckedNative cmake --build --preset dev-tools
+    Invoke-CheckedNative ctest --preset dev-tools
 }
 Invoke-CheckedNative dotnet run --project (Join-Path $PSScriptRoot "BlokTools\BlokTools.Tests\BlokTools.Tests.csproj")
 Invoke-CheckedNative dotnet build (Join-Path $PSScriptRoot "BlokTools\BlokTools.App\BlokTools.App.csproj")

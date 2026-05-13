@@ -95,7 +95,10 @@ bool RuntimeMapEditorImGui::showCollision() const {
     return showCollision_;
 }
 
-void RuntimeMapEditorImGui::draw(RuntimeMapEditor& editor, const WorldAssetRegistry& registry, Vec3 placementPosition) {
+void RuntimeMapEditorImGui::draw(RuntimeMapEditor& editor,
+                                 const WorldAssetRegistry& registry,
+                                 Vec3 placementPosition,
+                                 const std::string& overlayPath) {
 #if defined(BS3D_ENABLE_DEV_TOOLS) && BS3D_ENABLE_DEV_TOOLS
     ImGui::Begin("Objects");
     static char filter[128] = "";
@@ -198,8 +201,8 @@ void RuntimeMapEditorImGui::draw(RuntimeMapEditor& editor, const WorldAssetRegis
     }
     if (ImGui::Button("Save Overlay")) {
         std::vector<std::string> warnings;
-        if (editor.saveOverlay("data/world/block13_editor_overlay.json", warnings)) {
-            lastStatus_ = "Saved data/world/block13_editor_overlay.json";
+        if (editor.saveOverlay(overlayPath, warnings)) {
+            lastStatus_ = "Saved " + overlayPath;
         } else {
             lastStatus_ = warnings.empty() ? "Save failed" : warnings.front();
         }
@@ -239,6 +242,7 @@ void RuntimeMapEditorImGui::draw(RuntimeMapEditor& editor, const WorldAssetRegis
     (void)editor;
     (void)registry;
     (void)placementPosition;
+    (void)overlayPath;
 #endif
 }
 

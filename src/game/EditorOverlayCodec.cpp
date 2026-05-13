@@ -34,12 +34,20 @@ public:
 
     JsonValue parse() {
         skipWhitespace();
-        return parseValue();
+        JsonValue value = parseValue();
+        skipWhitespace();
+        if (cursor_ < source_.size()) {
+            trailingInput_ = true;
+        }
+        return value;
     }
+
+    bool trailingInput() const { return trailingInput_; }
 
 private:
     const std::string& source_;
     std::size_t cursor_ = 0;
+    bool trailingInput_ = false;
 
     void skipWhitespace() {
         while (cursor_ < source_.size() &&
@@ -413,7 +421,12 @@ EditorOverlayLoadResult parseEditorOverlay(const std::string& text) {
         result.success = true;
         return result;
     }
-    const JsonValue root = JsonParser(text).parse();
+    JsonParser parser(text);
+    const JsonValue root = parser.parse();
+    if (parser.trailingInput()) {
+        result.warnings.push_back("editor overlay JSON has trailing content after root value");
+        return result;
+    }
     if (root.type != JsonType::Object) {
         result.warnings.push_back("editor overlay root must be an object");
         return result;

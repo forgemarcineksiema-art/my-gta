@@ -23,6 +23,7 @@ var tests = new (string Name, Action Body)[]
     ("workspace loader validates mission outcome triggers against catalog", WorkspaceLoaderValidatesMissionOutcomeTriggersAgainstCatalog),
     ("ci verify builds BlokTools app", CiVerifyBuildsBlokToolsApp),
     ("ci verify builds dev-tools preset", CiVerifyBuildsDevToolsPreset),
+    ("ci verify runs dev-tools tests", CiVerifyRunsDevToolsTests),
     ("ci verify fails on native command errors", CiVerifyFailsOnNativeCommandErrors),
 };
 
@@ -535,6 +536,21 @@ static void CiVerifyBuildsDevToolsPreset()
         script.Contains("--preset dev-tools", StringComparison.Ordinal) &&
         script.Contains("cmake --build --preset dev-tools", StringComparison.Ordinal),
         "ci_verify.ps1 should include the dev-tools build in the quality gate");
+}
+
+static void CiVerifyRunsDevToolsTests()
+{
+    var root = WorkspaceRoot();
+    var script = File.ReadAllText(Path.Combine(root, "tools", "ci_verify.ps1"));
+    var presets = File.ReadAllText(Path.Combine(root, "CMakePresets.json"));
+
+    AssertTrue(
+        presets.Contains("\"name\": \"dev-tools\"", StringComparison.Ordinal) &&
+        presets.Contains("\"testPresets\"", StringComparison.Ordinal),
+        "CMakePresets.json should expose a dev-tools test preset");
+    AssertTrue(
+        script.Contains("ctest --preset dev-tools", StringComparison.Ordinal),
+        "ci_verify.ps1 should run dev-tools tests after building the dev-tools preset");
 }
 
 static void CiVerifyFailsOnNativeCommandErrors()

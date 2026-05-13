@@ -27,6 +27,7 @@ public:
     GizmoDragState dragState() const;
 
 private:
+    void finishDrag(RuntimeMapEditor& editor);
     GizmoAxis hitTestAxis(Vec3 rayOrigin, Vec3 rayDir, Vec3 gizmoCenter, float gizmoScale) const;
     Vec3 projectDrag(Vec3 rayOrigin, Vec3 rayDir, GizmoAxis axis, Vec3 gizmoCenter,
                      Vec3 cameraPosition) const;
@@ -39,6 +40,9 @@ private:
     bool primaryPressed_ = false;
     bool primaryDown_ = false;
     bool pendingClick_ = false;
+    RuntimeMapEditor::HistoryState dragStartState_{};
+    bool hasDragStartState_ = false;
+    bool dragMoved_ = false;
 };
 
 // Standalone raycast utilities

@@ -1,7 +1,7 @@
 # Blok 13: Rewir
 
 Status: CURRENT
-Last verified against code: 2026-05-10
+Last verified against code: 2026-05-13
 Owner: project overview
 
 Dirty-stylized desktop 3D vertical slice in C++17, CMake, and raylib 6.0.
@@ -122,6 +122,12 @@ cmake --build --preset release
 cmake --preset ci
 cmake --build --preset ci
 ctest --preset ci
+```
+
+The combined CI helper also builds and tests the `dev-tools` preset:
+
+```powershell
+.\tools\ci_verify.ps1 -Preset ci
 ```
 
 The game executable is `blokowa_satyra`. CMake fetches raylib 6.0 automatically.
