@@ -1351,6 +1351,29 @@ void WorldRenderer::drawWorldCollisionDebug(const std::vector<WorldObject>& obje
     }
 }
 
+void WorldRenderer::drawSelectionHighlight(const WorldObject& object) {
+    const Vec3 center = object.position + object.collision.offset;
+    const Color selColor = color(80, 210, 255);
+    const float offset = 0.02f;
+    switch (object.collision.kind) {
+    case WorldCollisionShapeKind::Box:
+    case WorldCollisionShapeKind::GroundBox:
+    case WorldCollisionShapeKind::TriggerBox:
+        DrawCubeWiresV(toRay(center), toRay(object.collision.size + Vec3{offset, offset, offset}), selColor);
+        break;
+    case WorldCollisionShapeKind::OrientedBox:
+        rlPushMatrix();
+        rlTranslatef(center.x, center.y, center.z);
+        rlRotatef(radiansToDegrees(object.collision.yawRadians + object.yawRadians), 0.0f, 1.0f, 0.0f);
+        DrawCubeWiresV({0.0f, 0.0f, 0.0f}, toRay(object.collision.size + Vec3{offset, offset, offset}), selColor);
+        rlPopMatrix();
+        break;
+    default:
+        DrawCubeWiresV(toRay(center), toRay(object.collision.size + Vec3{offset, offset, offset}), selColor);
+        break;
+    }
+}
+
 void WorldRenderer::drawMarker(Vec3 position, float radius, RenderColor markerColor) {
     DrawCylinder(toRay(position + Vec3{0.0f, 0.025f, 0.0f}), radius, radius, 0.05f, 28, toColor(markerColor));
     DrawCylinderWires(toRay(position + Vec3{0.0f, 0.065f, 0.0f}), radius, radius, 0.06f, 28, Fade(RAYWHITE, 0.72f));

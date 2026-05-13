@@ -337,6 +337,7 @@ public:
                                  const WorldModelCache& modelCache,
                                  WorldRenderIsolationMode mode);
     static void drawWorldCollisionDebug(const std::vector<WorldObject>& objects);
+    static void drawSelectionHighlight(const WorldObject& object);
     static void drawMarker(Vec3 position, float radius, RenderColor markerColor);
     static void drawMemoryHotspotDebugMarkers(const std::vector<MemoryHotspotDebugMarker>& markers,
                                               float elapsedSeconds);

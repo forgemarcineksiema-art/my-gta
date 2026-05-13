@@ -162,6 +162,19 @@ bool RuntimeMapEditor::setSelectedPosition(Vec3 position) {
     return true;
 }
 
+bool RuntimeMapEditor::setSelectedPositionSilent(Vec3 position) {
+    WorldObject* object = selectedObject();
+    if (object == nullptr) {
+        return false;
+    }
+    if (sameVec3(object->position, position)) {
+        return true;
+    }
+    object->position = position;
+    markSelectedBaseObjectEdited();
+    return true;
+}
+
 bool RuntimeMapEditor::setSelectedScale(Vec3 scale) {
     WorldObject* object = selectedObject();
     if (object == nullptr) {

@@ -234,6 +234,7 @@ if(BS3D_BUILD_GAME)
         src/game/IntroLevelPlaygroundDressing.cpp
         src/game/IntroLevelArteryDressing.cpp
         src/game/IntroLevelGarageBeltDressing.cpp
+        src/game/EditorGizmo.cpp
         src/game/IntroLevelPresentation.cpp
         src/game/IntroLevelPresentationRender.cpp
         src/game/MissionRuntimeBridge.cpp

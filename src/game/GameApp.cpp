@@ -31,6 +31,7 @@
 #if defined(BS3D_ENABLE_DEV_TOOLS) && BS3D_ENABLE_DEV_TOOLS
 #include "RuntimeMapEditor.h"
 #include "RuntimeMapEditorImGui.h"
+#include "EditorGizmo.h"
 #include "rlImGui.h"
 #endif
 
@@ -413,6 +414,7 @@ struct Runtime {
 #if defined(BS3D_ENABLE_DEV_TOOLS) && BS3D_ENABLE_DEV_TOOLS
     RuntimeMapEditor runtimeEditor;
     RuntimeMapEditorImGui runtimeEditorUi;
+    EditorGizmo gizmo;
     bool runtimeEditorOpen = false;
 #endif
 
@@ -1071,6 +1073,7 @@ struct Runtime {
             input.mouseLookActive = false;
             input.mouseDeltaX = 0.0f;
             input.mouseDeltaY = 0.0f;
+            gizmo.update(input, runtimeEditor, rigState.position, rigState.target, level.objects);
         }
 #endif
         lastRawInput = rawInput;
@@ -2154,6 +2157,26 @@ struct Runtime {
                 buildRewirPressureDebugMarkers(debugRewirPressure),
                 elapsedSeconds);
         }
+#if defined(BS3D_ENABLE_DEV_TOOLS) && BS3D_ENABLE_DEV_TOOLS
+        if (!debugEnabled && runtimeEditorOpen && runtimeEditorUi.showCollision()) {
+            WorldRenderer::drawWorldCollisionDebug(level.objects);
+        }
+#endif
+#if defined(BS3D_ENABLE_DEV_TOOLS) && BS3D_ENABLE_DEV_TOOLS
+        if (runtimeEditorOpen) {
+            gizmo.processFrame(runtimeEditor,
+                              {renderSnapshot.camera.position.x, renderSnapshot.camera.position.y,
+                               renderSnapshot.camera.position.z},
+                              {renderSnapshot.camera.target.x, renderSnapshot.camera.target.y,
+                               renderSnapshot.camera.target.z},
+                              renderSnapshot.camera.fovy, level.objects);
+            if (runtimeEditor.selectedObject() != nullptr) {
+                WorldRenderer::drawSelectionHighlight(*runtimeEditor.selectedObject());
+                gizmo.drawSelectedGizmo(runtimeEditor.selectedObject()->position,
+                                        renderSnapshot.camera.position);
+            }
+        }
+#endif
         DebugRenderer::drawCameraLines(buildCameraDebugLinesSnapshot());
         EndMode3D();
 

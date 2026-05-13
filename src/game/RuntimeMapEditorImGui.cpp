@@ -3,6 +3,7 @@
 #if defined(BS3D_ENABLE_DEV_TOOLS) && BS3D_ENABLE_DEV_TOOLS
 #include "imgui.h"
 
+#include <sstream>
 #include <string>
 #include <vector>
 #endif
@@ -31,7 +32,68 @@ std::string assetSummary(const WorldAssetDefinition& asset) {
     return summary;
 }
 
+const char* zoneTagName(WorldLocationTag tag) {
+    switch (tag) {
+    case WorldLocationTag::Unknown:   return "Unknown";
+    case WorldLocationTag::Block:     return "Block";
+    case WorldLocationTag::Shop:      return "Shop";
+    case WorldLocationTag::Parking:   return "Parking";
+    case WorldLocationTag::Garage:    return "Garage";
+    case WorldLocationTag::Trash:     return "Trash";
+    case WorldLocationTag::RoadLoop:  return "RoadLoop";
+    }
+    return "Unknown";
+}
+
+WorldLocationTag zoneTagFromIndex(int index) {
+    switch (index) {
+    case 0: return WorldLocationTag::Unknown;
+    case 1: return WorldLocationTag::Block;
+    case 2: return WorldLocationTag::Shop;
+    case 3: return WorldLocationTag::Parking;
+    case 4: return WorldLocationTag::Garage;
+    case 5: return WorldLocationTag::Trash;
+    case 6: return WorldLocationTag::RoadLoop;
+    }
+    return WorldLocationTag::Unknown;
+}
+
+int zoneTagIndex(WorldLocationTag tag) {
+    switch (tag) {
+    case WorldLocationTag::Unknown:  return 0;
+    case WorldLocationTag::Block:    return 1;
+    case WorldLocationTag::Shop:     return 2;
+    case WorldLocationTag::Parking:  return 3;
+    case WorldLocationTag::Garage:   return 4;
+    case WorldLocationTag::Trash:    return 5;
+    case WorldLocationTag::RoadLoop: return 6;
+    }
+    return 0;
+}
+
+std::vector<std::string> splitTags(const std::string& text) {
+    std::vector<std::string> tags;
+    std::istringstream stream(text);
+    std::string token;
+    while (std::getline(stream, token, ',')) {
+        while (!token.empty() && token.front() == ' ') {
+            token.erase(0, 1);
+        }
+        while (!token.empty() && token.back() == ' ') {
+            token.pop_back();
+        }
+        if (!token.empty()) {
+            tags.push_back(token);
+        }
+    }
+    return tags;
+}
+
 } // namespace
+
+bool RuntimeMapEditorImGui::showCollision() const {
+    return showCollision_;
+}
 
 void RuntimeMapEditorImGui::draw(RuntimeMapEditor& editor, const WorldAssetRegistry& registry, Vec3 placementPosition) {
 #if defined(BS3D_ENABLE_DEV_TOOLS) && BS3D_ENABLE_DEV_TOOLS
@@ -63,9 +125,40 @@ void RuntimeMapEditorImGui::draw(RuntimeMapEditor& editor, const WorldAssetRegis
         if (ImGui::DragFloat("Yaw", &yaw, 0.01f)) {
             editor.setSelectedYaw(yaw);
         }
+        ImGui::Separator();
         ImGui::Text("ID: %s", selected->id.c_str());
-        ImGui::Text("Asset: %s", selected->assetId.c_str());
-        ImGui::Text("Zone: %d", static_cast<int>(selected->zoneTag));
+
+        // Editable Asset ID
+        static char assetIdBuf[128] = "";
+        if (assetIdBuf[0] == '\0' || editor.selectedObjectId() != lastInspectedId_) {
+            const std::size_t len = selected->assetId.copy(assetIdBuf, sizeof(assetIdBuf) - 1);
+            assetIdBuf[len] = '\0';
+            lastInspectedId_ = editor.selectedObjectId();
+        }
+        if (ImGui::InputText("Asset", assetIdBuf, sizeof(assetIdBuf), ImGuiInputTextFlags_EnterReturnsTrue)) {
+            editor.setSelectedAssetId(assetIdBuf);
+        }
+
+        // Editable Zone Tag (combo)
+        int zoneIdx = zoneTagIndex(selected->zoneTag);
+        if (ImGui::Combo("Zone", &zoneIdx,
+                         "Unknown\0Block\0Shop\0Parking\0Garage\0Trash\0RoadLoop\0")) {
+            editor.setSelectedZoneTag(zoneTagFromIndex(zoneIdx));
+        }
+
+        // Editable Gameplay Tags
+        static char tagsBuf[512] = "";
+        if (tagsBuf[0] == '\0' || editor.selectedObjectId() != lastInspectedId_) {
+            const std::string joined = joinTags(selected->gameplayTags);
+            const std::size_t len = joined.copy(tagsBuf, sizeof(tagsBuf) - 1);
+            tagsBuf[len] = '\0';
+            lastInspectedId_ = editor.selectedObjectId();
+        }
+        if (ImGui::InputText("Tags", tagsBuf, sizeof(tagsBuf), ImGuiInputTextFlags_EnterReturnsTrue)) {
+            editor.setSelectedGameplayTags(splitTags(tagsBuf));
+        }
+
+        ImGui::Separator();
         ImGui::Text("Dirty: %s", editor.dirty() ? "yes" : "no");
         if (editor.canDeleteSelectedOverlayInstance()) {
             if (ImGui::Button("Delete Selected")) {
@@ -113,6 +206,7 @@ void RuntimeMapEditorImGui::draw(RuntimeMapEditor& editor, const WorldAssetRegis
     }
     ImGui::Text("Assets: %d", static_cast<int>(registry.definitions().size()));
     ImGui::Text("Dirty: %s", editor.dirty() ? "yes" : "no");
+    ImGui::Checkbox("Show Collision", &showCollision_);
     if (!lastStatus_.empty()) {
         ImGui::Text("%s", lastStatus_.c_str());
     }

@@ -15,6 +15,13 @@ bool runtimeEditorAssetMatchesFilter(const WorldAssetDefinition& asset, const st
 
 class RuntimeMapEditor {
 public:
+    struct HistoryState {
+        std::vector<WorldObject> objects;
+        std::string selectedObjectId;
+        std::vector<std::string> editedBaseObjectIds;
+        int generatedInstanceCounter = 0;
+    };
+
     void attach(IntroLevelData& level);
     void attach(IntroLevelData& level, const EditorOverlayDocument& loadedOverlay);
     bool selectObject(const std::string& id);
@@ -22,6 +29,7 @@ public:
     WorldObject* selectedObject();
     const WorldObject* selectedObject() const;
     bool setSelectedPosition(Vec3 position);
+    bool setSelectedPositionSilent(Vec3 position);  // no undo push
     bool setSelectedScale(Vec3 scale);
     bool setSelectedYaw(float yawRadians);
     bool setSelectedAssetId(const std::string& assetId);
@@ -40,24 +48,17 @@ public:
     bool dirty() const;
     void clearDirty();
     std::vector<WorldObject*> objects();
+    void markSelectedBaseObjectEdited();
+    HistoryState captureState() const;
+    void pushHistory(HistoryState before);
 
 private:
-    struct HistoryState {
-        std::vector<WorldObject> objects;
-        std::string selectedObjectId;
-        std::vector<std::string> editedBaseObjectIds;
-        int generatedInstanceCounter = 0;
-    };
-
     struct HistoryEntry {
         HistoryState before;
         HistoryState after;
     };
 
-    HistoryState captureState() const;
     void restoreState(const HistoryState& state);
-    void pushHistory(HistoryState before);
-    void markSelectedBaseObjectEdited();
 
     IntroLevelData* level_ = nullptr;
     std::string selectedObjectId_;
