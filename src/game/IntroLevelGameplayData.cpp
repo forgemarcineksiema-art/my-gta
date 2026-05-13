@@ -43,10 +43,13 @@ void IntroLevelAuthoring::addGameplayData(IntroLevelData& level) {
 
     level.landmarks = {
         {"lm_bogus_bench", "Ławka Bogusia", level.npcPosition, "mission_start"},
+        {"lm_block13", "Blok 13", {-16.0f, 0.0f, 16.0f}, "block13"},
         {"lm_shop_zenona", "Sklep Zenona", level.shopEntrancePosition, "shop"},
         {"lm_gruz", "Gruz Ryska", level.vehicleStart, "vehicle"},
+        {"lm_parking_lot", "Parking pod blokiem", {-7.0f, 0.0f, 8.6f}, "parking_lot"},
         {"lm_parking", "Parking", level.dropoffPosition, "dropoff"},
         {"lm_garages", "Garaże Ryska", {-18.0f, 0.0f, 23.0f}, "future_base"},
+        {"lm_trash_shelter", "Smietnik przy sklepie", {9.0f, 0.0f, -4.0f}, "trash"},
         {"lm_main_artery", "Glowna arteria", {5.0f, 0.0f, -30.0f}, "main_artery"},
         {"lm_trash", "Smietniki", {9.0f, 0.0f, -4.0f}, "chaos_playground"},
         {"lm_block11", "Blok 11", {5.0f, 0.0f, 17.0f}, "block11"},

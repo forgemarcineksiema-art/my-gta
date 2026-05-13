@@ -752,6 +752,11 @@ void introLevelDistrictAnchorsStayOnMaterializedObjects() {
     };
 
     const AnchorContract contracts[]{
+        {"block13_core", "block13", "zone_block13", bs3d::WorldLocationTag::Block, 0.35f, 0.35f},
+        {"parking_surface", "parking_lot", "zone_parking", bs3d::WorldLocationTag::Parking, 0.35f, 0.35f},
+        {"garage_row_rysiek", "future_base", "zone_garages", bs3d::WorldLocationTag::Garage, 0.35f, 0.35f},
+        {"trash_shelter_shop_side", "trash", "zone_trash", bs3d::WorldLocationTag::Trash, 0.35f, 0.35f},
+        {"shop_zenona", "shop", "zone_shop", bs3d::WorldLocationTag::Shop, 1.60f, 0.35f},
         {"main_artery_spine", "main_artery", "zone_main_artery", bs3d::WorldLocationTag::RoadLoop, 0.35f, 0.35f},
         {"pavilion_row", "pavilions", "zone_pavilions", bs3d::WorldLocationTag::Shop, 0.35f, 0.35f},
         {"garage_lane", "garage_belt", "zone_garage_belt", bs3d::WorldLocationTag::Garage, 0.35f, 0.35f},
