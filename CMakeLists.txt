@@ -253,6 +253,7 @@ if(BS3D_BUILD_GAME)
         src/game/GameHudRenderers.cpp
         src/game/GameRenderers.cpp
         src/game/RuntimeAudio.cpp
+        src/game/RuntimeWorldState.cpp
         src/game/VehicleArtModel.cpp
         src/game/VehicleExitResolver.cpp
         src/game/VisualBaselineDebug.cpp

@@ -10,6 +10,7 @@
 #include "MissionOutcomeTrigger.h"
 #include "PropSimulationSystem.h"
 #include "RuntimeMapEditor.h"
+#include "RuntimeWorldState.h"
 #include "WorldDataLoader.h"
 #include "WorldObjectInteraction.h"
 #include "VehicleExitResolver.h"
@@ -131,6 +132,15 @@ bool isLowConcretePlayerTrapAsset(const bs3d::WorldObject& object) {
 
 const bs3d::WorldObject* findObject(const bs3d::IntroLevelData& level, const std::string& id) {
     for (const bs3d::WorldObject& object : level.objects) {
+        if (object.id == id) {
+            return &object;
+        }
+    }
+    return nullptr;
+}
+
+bs3d::WorldObject* findMutableObject(bs3d::IntroLevelData& level, const std::string& id) {
+    for (bs3d::WorldObject& object : level.objects) {
         if (object.id == id) {
             return &object;
         }
@@ -3334,6 +3344,35 @@ void worldDataApplyRebuildsDerivedIntroLevelAuthoring() {
     expect(foundShopFallbackProp, "rebuilt level exports a fallback prop for the shop object");
 }
 
+void worldDataApplyCanRebuildWithManifestRegistry() {
+    bs3d::WorldAssetRegistry registry;
+    const bs3d::AssetManifestLoadResult manifest = registry.loadManifest("data/assets/asset_manifest.txt");
+    expect(manifest.loaded, "manifest-aware world data apply test loads asset manifest");
+
+    bs3d::IntroLevelData level = bs3d::IntroLevelBuilder::build();
+    bs3d::WorldDataCatalog catalog;
+    catalog.loaded = true;
+    catalog.world.loaded = true;
+    catalog.mission.loaded = true;
+    catalog.world.playerSpawn = {-3.0f, 0.0f, -4.0f};
+    catalog.world.vehicleSpawn = {-1.0f, 0.0f, 5.0f};
+    catalog.world.npcSpawn = {-5.0f, 0.0f, 2.0f};
+    catalog.world.shopPosition = {4.0f, 0.0f, -9.0f};
+    catalog.world.dropoffPosition = {-6.0f, 0.0f, 7.0f};
+    catalog.mission.phases.push_back({"WalkToShop", "Data objective", "shop_walk_intro"});
+
+    const bs3d::WorldDataApplyResult applied = bs3d::applyWorldDataCatalog(level, catalog, registry);
+
+    expect(applied.applied, "manifest-aware catalog overlay applies to intro level");
+    const bs3d::WorldObject* shop = findObject(level, "shop_zenona");
+    expect(shop != nullptr, "manifest-aware rebuilt level exports shop object");
+    expect(shop->assetId == "shop_zenona_v3", "manifest-aware catalog apply preserves active shop asset override");
+    expect(shop->collisionProfile.blocksCamera,
+           "manifest-aware catalog apply preserves shop camera blocking metadata");
+    expect(hasLayer(*shop, bs3d::CollisionLayer::CameraBlocker),
+           "manifest-aware catalog apply preserves shop camera blocker layer");
+}
+
 void worldDataCatalogAppliesEditorOverlayAfterBaseMap() {
     bs3d::IntroLevelData level = bs3d::IntroLevelBuilder::build();
     bs3d::WorldDataCatalog catalog;
@@ -3414,6 +3453,41 @@ void runtimeMapEditorAddsDefinitionInstanceWithManifestTags() {
            "runtime editor preserves manifest tags in editor overlay output");
 }
 
+void runtimeMapEditorSaveRejectsNonGameplayAssetBeforeWriting() {
+    const std::filesystem::path overlayPath =
+        std::filesystem::temp_directory_path() / "blok13_invalid_overlay_validation.json";
+    std::filesystem::remove(overlayPath);
+
+    bs3d::IntroLevelData level = bs3d::IntroLevelBuilder::build();
+    bs3d::WorldAssetRegistry registry;
+    bs3d::WorldAssetDefinition debugAsset;
+    debugAsset.id = "debug_probe";
+    debugAsset.assetType = "DebugOnly";
+    debugAsset.renderBucket = "DebugOnly";
+    debugAsset.renderInGameplay = false;
+    debugAsset.defaultCollision = "None";
+    registry.addDefinition(debugAsset);
+
+    bs3d::RuntimeMapEditor editor;
+    editor.attach(level);
+    expect(editor.addInstance(debugAsset, {1.0f, 0.0f, 2.0f}),
+           "runtime editor can stage a debug-only asset before save validation");
+
+    std::vector<std::string> warnings;
+    const bool saved = editor.saveOverlay(overlayPath.string(), warnings, registry);
+
+    expect(!saved, "runtime editor refuses to save non-gameplay overlay assets");
+    expect(!std::filesystem::exists(overlayPath), "invalid editor overlay is not written");
+    expect(editor.dirty(), "failed validation keeps runtime editor dirty");
+    bool hasNonGameplayWarning = false;
+    for (const std::string& warning : warnings) {
+        hasNonGameplayWarning = hasNonGameplayWarning ||
+                                textContains(warning, "non-gameplay") ||
+                                textContains(warning, "DebugOnly");
+    }
+    expect(hasNonGameplayWarning, "runtime editor reports why the overlay asset cannot ship");
+}
+
 void runtimeEditorAssetFilterMatchesManifestMetadata() {
     bs3d::WorldAssetDefinition asset;
     asset.id = "irregular_asphalt_patch";
@@ -3453,6 +3527,18 @@ void runtimeEditorOverlayPathUsesDataRoot() {
     expect(overlayPath.find("world") != std::string::npos &&
                overlayPath.find("block13_editor_overlay.json") != std::string::npos,
            "runtime editor overlay path points at the editor overlay under world data");
+}
+
+void runtimeMapEditorInspectorBuffersRefreshFromRevision() {
+    const std::string header = readTextFile("src/game/RuntimeMapEditorImGui.h");
+    const std::string source = readTextFile("src/game/RuntimeMapEditorImGui.cpp");
+
+    expect(textContains(header, "lastAssetRevision_"),
+           "runtime editor UI tracks asset inspector refresh revision");
+    expect(textContains(header, "lastTagsRevision_"),
+           "runtime editor UI tracks tags inspector refresh revision");
+    expect(textContains(source, "editor.revision()"),
+           "runtime editor UI refreshes inspector buffers when undo/redo changes selected object revision");
 }
 
 void runtimeMapEditorEditsSelectedMetadata() {
@@ -3641,6 +3727,97 @@ void runtimeMapEditorUndoRedoRestoresInstanceAddAndDelete() {
            "runtime editor undo restores deleted instance");
     expect(editor.selectedObjectId() == "editor_lamp_post_lowpoly_0",
            "runtime editor undo restores deleted instance selection");
+}
+
+void runtimeMapEditorRevisionTracksDerivedStateMutations() {
+    bs3d::IntroLevelData level = bs3d::IntroLevelBuilder::build();
+    bs3d::RuntimeMapEditor editor;
+    editor.attach(level);
+    expect(editor.selectObject("sign_no_parking"), "runtime editor selects object for revision test");
+
+    const std::uint64_t attachedRevision = editor.revision();
+    bs3d::RuntimeMapEditor::HistoryState beforeDrag = editor.captureState();
+    expect(editor.setSelectedPositionSilent({-4.0f, 0.0f, 6.0f}),
+           "silent drag changes selected object for revision test");
+    expect(editor.revision() > attachedRevision, "silent drag bumps revision for derived-state sync");
+
+    const std::uint64_t draggedRevision = editor.revision();
+    expect(editor.commitCapturedEdit(std::move(beforeDrag)), "committed drag bumps history revision");
+    expect(editor.revision() > draggedRevision, "history commit bumps revision for derived-state sync");
+
+    const std::uint64_t committedRevision = editor.revision();
+    expect(editor.undo(), "undo succeeds in revision test");
+    expect(editor.revision() > committedRevision, "undo bumps revision for derived-state sync");
+}
+
+void runtimeWorldDerivedStateRebuildsStaticCollisionAfterEditorMove() {
+    bs3d::IntroLevelData level;
+    bs3d::WorldObject wall;
+    wall.id = "editor_wall";
+    wall.assetId = "block13_core";
+    wall.position = {0.0f, 0.0f, 0.0f};
+    wall.scale = {4.0f, 3.0f, 4.0f};
+    wall.collision.kind = bs3d::WorldCollisionShapeKind::Box;
+    wall.collision.offset = {0.0f, 1.5f, 0.0f};
+    wall.collision.size = {4.0f, 3.0f, 4.0f};
+    wall.collisionProfile = bs3d::CollisionProfile::solidWorld();
+    level.objects.push_back(wall);
+
+    bs3d::Scene scene;
+    bs3d::WorldCollision collision;
+    bs3d::PropSimulationSystem props;
+    bs3d::WorldInteraction interactions;
+    bs3d::MissionTriggerSystem missionTriggers;
+    bs3d::rebuildRuntimeWorldDerivedState(level, scene, collision, props, interactions, missionTriggers);
+
+    expect(collision.isCircleBlocked({0.0f, 0.0f, 0.0f}, 0.45f, bs3d::CollisionMasks::Player),
+           "initial runtime derived collision blocks at authored position");
+    expect(!collision.isCircleBlocked({8.0f, 0.0f, 0.0f}, 0.45f, bs3d::CollisionMasks::Player),
+           "initial runtime derived collision does not block moved position");
+
+    bs3d::WorldObject* editedWall = findMutableObject(level, "editor_wall");
+    expect(editedWall != nullptr, "editable wall exists for derived-state rebuild test");
+    editedWall->position = {8.0f, 0.0f, 0.0f};
+    bs3d::rebuildRuntimeWorldDerivedState(level, scene, collision, props, interactions, missionTriggers);
+
+    expect(!collision.isCircleBlocked({0.0f, 0.0f, 0.0f}, 0.45f, bs3d::CollisionMasks::Player),
+           "runtime derived collision releases old editor position after rebuild");
+    expect(collision.isCircleBlocked({8.0f, 0.0f, 0.0f}, 0.45f, bs3d::CollisionMasks::Player),
+           "runtime derived collision blocks edited position after rebuild");
+}
+
+void runtimeWorldDerivedStateRebuildsPropSimulationAfterEditorMove() {
+    bs3d::IntroLevelData level;
+    bs3d::WorldObject prop;
+    prop.id = "editor_bin";
+    prop.assetId = "trash_bin_lowpoly";
+    prop.position = {0.0f, 0.0f, 0.0f};
+    prop.scale = {1.0f, 1.0f, 1.0f};
+    prop.collision.kind = bs3d::WorldCollisionShapeKind::Box;
+    prop.collision.offset = {0.0f, 0.5f, 0.0f};
+    prop.collision.size = {1.0f, 1.0f, 1.0f};
+    prop.collisionProfile = bs3d::CollisionProfile::dynamicProp();
+    prop.gameplayTags = {"physical_prop", "dynamic_prop"};
+    level.objects.push_back(prop);
+
+    bs3d::Scene scene;
+    bs3d::WorldCollision collision;
+    bs3d::PropSimulationSystem props;
+    bs3d::WorldInteraction interactions;
+    bs3d::MissionTriggerSystem missionTriggers;
+    bs3d::rebuildRuntimeWorldDerivedState(level, scene, collision, props, interactions, missionTriggers);
+    expect(props.find("editor_bin") != nullptr, "runtime derived state registers editor prop");
+
+    bs3d::WorldObject* editedProp = findMutableObject(level, "editor_bin");
+    expect(editedProp != nullptr, "editable prop exists for derived-state rebuild test");
+    editedProp->position = {5.0f, 0.0f, 0.0f};
+    bs3d::rebuildRuntimeWorldDerivedState(level, scene, collision, props, interactions, missionTriggers);
+    props.syncWorldObjects(level.objects);
+
+    const bs3d::WorldObject* syncedProp = findObject(level, "editor_bin");
+    expect(syncedProp != nullptr, "synced editor prop remains in level");
+    expectNear(syncedProp->position.x, 5.0f, 0.001f,
+               "rebuilt prop simulation preserves editor-authored prop position");
 }
 
 void introLevelV092DecorativeDressingIsCameraSafe() {
@@ -5001,13 +5178,16 @@ int main() {
         runtimeWorldRenderingUsesWorldObjectsAsSingleSourceOfTruth();
         runtimeWorldRenderPassOrderKeepsTransparentAfterOpaqueDynamics();
         worldDataApplyRebuildsDerivedIntroLevelAuthoring();
+        worldDataApplyCanRebuildWithManifestRegistry();
         worldDataCatalogAppliesEditorOverlayAfterBaseMap();
         runtimeMapEditorEditsSelectedObjectAndTracksDirtyState();
         runtimeMapEditorAddsManifestInstance();
         runtimeMapEditorAddsDefinitionInstanceWithManifestTags();
+        runtimeMapEditorSaveRejectsNonGameplayAssetBeforeWriting();
         runtimeEditorAssetFilterMatchesManifestMetadata();
         runtimeMapEditorComputesPlacementInFrontOfCamera();
         runtimeEditorOverlayPathUsesDataRoot();
+        runtimeMapEditorInspectorBuffersRefreshFromRevision();
         runtimeMapEditorEditsSelectedMetadata();
         runtimeMapEditorBuildsOverlayForEditedObjects();
         runtimeMapEditorPreservesLoadedBaseOverridesOnSave();
@@ -5016,6 +5196,9 @@ int main() {
         runtimeMapEditorCommitsSilentDragAsUndoableEdit();
         runtimeMapEditorCommitsSilentDragForEditorInstance();
         runtimeMapEditorUndoRedoRestoresInstanceAddAndDelete();
+        runtimeMapEditorRevisionTracksDerivedStateMutations();
+        runtimeWorldDerivedStateRebuildsStaticCollisionAfterEditorMove();
+        runtimeWorldDerivedStateRebuildsPropSimulationAfterEditorMove();
         introLevelV092DecorativeDressingIsCameraSafe();
         introLevelGlassIsExplicitlyNonBlockingDressing();
         introLevelV093AddsDensityAndGroundTruth();

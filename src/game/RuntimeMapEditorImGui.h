@@ -3,6 +3,7 @@
 #include "RuntimeMapEditor.h"
 #include "WorldAssetRegistry.h"
 
+#include <cstdint>
 #include <string>
 
 namespace bs3d {
@@ -17,7 +18,10 @@ public:
 
 private:
     std::string lastStatus_;
-    std::string lastInspectedId_;
+    std::string lastAssetObjectId_;
+    std::string lastTagsObjectId_;
+    std::uint64_t lastAssetRevision_ = 0;
+    std::uint64_t lastTagsRevision_ = 0;
     bool showCollision_ = false;
 };
 

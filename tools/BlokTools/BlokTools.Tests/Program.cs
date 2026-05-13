@@ -24,7 +24,10 @@ var tests = new (string Name, Action Body)[]
     ("ci verify builds BlokTools app", CiVerifyBuildsBlokToolsApp),
     ("ci verify builds dev-tools preset", CiVerifyBuildsDevToolsPreset),
     ("ci verify runs dev-tools tests", CiVerifyRunsDevToolsTests),
+    ("ci verify runs game smoke", CiVerifyRunsGameSmoke),
     ("ci verify fails on native command errors", CiVerifyFailsOnNativeCommandErrors),
+    ("run dev fails on native command errors", RunDevFailsOnNativeCommandErrors),
+    ("run release smoke fails on native command errors", RunReleaseSmokeFailsOnNativeCommandErrors),
 };
 
 var failures = 0;
@@ -553,6 +556,17 @@ static void CiVerifyRunsDevToolsTests()
         "ci_verify.ps1 should run dev-tools tests after building the dev-tools preset");
 }
 
+static void CiVerifyRunsGameSmoke()
+{
+    var root = WorkspaceRoot();
+    var script = File.ReadAllText(Path.Combine(root, "tools", "ci_verify.ps1"));
+
+    AssertTrue(
+        script.Contains("ci_smoke.ps1", StringComparison.Ordinal) &&
+        script.Contains("-SmokeFrames", StringComparison.Ordinal),
+        "ci_verify.ps1 should run the game smoke script as part of the quality gate");
+}
+
 static void CiVerifyFailsOnNativeCommandErrors()
 {
     var root = WorkspaceRoot();
@@ -562,6 +576,32 @@ static void CiVerifyFailsOnNativeCommandErrors()
         script.Contains("$LASTEXITCODE", StringComparison.Ordinal) &&
         script.Contains("throw", StringComparison.Ordinal),
         "ci_verify.ps1 should fail when a native command exits non-zero");
+}
+
+static void RunDevFailsOnNativeCommandErrors()
+{
+    var root = WorkspaceRoot();
+    var script = File.ReadAllText(Path.Combine(root, "tools", "run_dev.ps1"));
+
+    AssertTrue(
+        script.Contains("Invoke-CheckedNative", StringComparison.Ordinal) &&
+        script.Contains("$LASTEXITCODE", StringComparison.Ordinal) &&
+        script.Contains("\"--preset\"", StringComparison.Ordinal) &&
+        script.Contains("Invoke-CheckedNative $ExePath", StringComparison.Ordinal),
+        "run_dev.ps1 should fail when configure, build, or the game executable exits non-zero");
+}
+
+static void RunReleaseSmokeFailsOnNativeCommandErrors()
+{
+    var root = WorkspaceRoot();
+    var script = File.ReadAllText(Path.Combine(root, "tools", "run_release_smoke.ps1"));
+
+    AssertTrue(
+        script.Contains("Invoke-CheckedNative", StringComparison.Ordinal) &&
+        script.Contains("$LASTEXITCODE", StringComparison.Ordinal) &&
+        script.Contains("\"--preset\"", StringComparison.Ordinal) &&
+        script.Contains("Invoke-CheckedNative $ExePath", StringComparison.Ordinal),
+        "run_release_smoke.ps1 should fail when configure, build, or the game executable exits non-zero");
 }
 
 static string WorkspaceRoot()

@@ -13,6 +13,8 @@
 
 namespace bs3d {
 
+class WorldAssetRegistry;
+
 struct WorldDataBounds {
     Vec3 center{};
     Vec3 size{};
@@ -121,6 +123,9 @@ struct WorldDataApplyResult {
 
 WorldDataCatalog loadWorldDataCatalog(const std::string& dataRoot);
 WorldDataApplyResult applyWorldDataCatalog(IntroLevelData& level, const WorldDataCatalog& catalog);
+WorldDataApplyResult applyWorldDataCatalog(IntroLevelData& level,
+                                           const WorldDataCatalog& catalog,
+                                           const WorldAssetRegistry& registry);
 int applyMissionDataToController(MissionController& mission, const MissionData& data);
 MissionPhase missionPhaseFromDataName(const std::string& phase);
 const ObjectOutcomeData* findObjectOutcomeData(const ObjectOutcomeCatalogData& catalog, const std::string& outcomeId);
