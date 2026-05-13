@@ -824,6 +824,27 @@ void introLevelDistrictAnchorsStayOnMaterializedObjects() {
     }
 }
 
+void introLevelGarageBeltHasMemoryAnchorCoverage() {
+    const bs3d::IntroLevelData level = bs3d::IntroLevelBuilder::build();
+
+    auto coveredByGarageAnchor = [&level](bs3d::Vec3 position) {
+        for (const bs3d::LocationAnchor& anchor : level.locationAnchors) {
+            if (anchor.tag == bs3d::WorldLocationTag::Garage &&
+                bs3d::distanceXZ(anchor.position, position) <= anchor.radius) {
+                return true;
+            }
+        }
+        return false;
+    };
+
+    expect(coveredByGarageAnchor({-38.0f, 0.0f, 10.0f}),
+           "garage belt row 2 resolves to Garage for Przypal/world-memory events");
+    expect(coveredByGarageAnchor({-42.0f, 0.0f, 28.0f}),
+           "garage belt row 3 resolves to Garage for Przypal/world-memory events");
+    expect(coveredByGarageAnchor({-30.75f, 0.0f, 19.0f}),
+           "garage belt lane resolves to Garage for Przypal/world-memory events");
+}
+
 void introLevelFlatDriveSurfacesUseSeparatedRenderHeights() {
     const bs3d::IntroLevelData level = bs3d::IntroLevelBuilder::build();
 
@@ -3445,6 +3466,73 @@ void visualIdentityHeroDetailsExposeCorrectObjectAffordances() {
            "shop hero dressing that reuses garage art does not become a garage prompt");
 }
 
+void garageAndTrashObjectAffordancesStaySemantic() {
+    const bs3d::IntroLevelData level = bs3d::IntroLevelBuilder::build();
+
+    const std::vector<std::string> garageOilDrums{
+        "gb_oil_0",
+        "gb_oil_1",
+        "gb_oil_2"};
+    for (const std::string& objectId : garageOilDrums) {
+        const bs3d::WorldObject* object = findObject(level, objectId);
+        expect(object != nullptr, "garage oil drum exists: " + objectId);
+        if (object != nullptr) {
+            expect(object->assetId != "trash_bin_lowpoly",
+                   "garage oil drum does not reuse trash-bin behavior asset: " + objectId);
+        }
+
+        const std::optional<bs3d::WorldObjectInteractionAffordance> affordance =
+            bs3d::findWorldObjectInteractionAffordance(level.objects, "object:" + objectId);
+        expect(!affordance.has_value() ||
+                   affordance->outcomeId.find("trash_disturbed_") != 0,
+               "garage oil drum does not emit trash disturbance affordance: " + objectId);
+    }
+
+    const std::vector<std::string> visualTrashDressing{
+        "trash_shelter_side_stain",
+        "trash_shelter_graffiti",
+        "fence_trash_boundary"};
+    for (const std::string& objectId : visualTrashDressing) {
+        const std::optional<bs3d::WorldObjectInteractionAffordance> affordance =
+            bs3d::findWorldObjectInteractionAffordance(level.objects, "object:" + objectId);
+        expect(!affordance.has_value(),
+               "pure visual trash dressing does not expose move-trash prompt: " + objectId);
+    }
+
+    const std::optional<bs3d::WorldObjectInteractionAffordance> trashBin =
+        bs3d::findWorldObjectInteractionAffordance(level.objects, "object:trash_green_bin_0");
+    expect(trashBin.has_value() && trashBin->outcomeId == "trash_disturbed_trash_green_bin_0",
+           "real trash bins keep the explicit trash disturbance affordance");
+}
+
+void introLevelGarageDoorFacesAreAuthoredOnce() {
+    const bs3d::IntroLevelData level = bs3d::IntroLevelBuilder::build();
+
+    int duplicateDoorFaces = 0;
+    for (std::size_t lhs = 0; lhs < level.objects.size(); ++lhs) {
+        const bs3d::WorldObject& a = level.objects[lhs];
+        if (a.assetId != "garage_door_segment" || hasTag(a, "story_dressing")) {
+            continue;
+        }
+
+        for (std::size_t rhs = lhs + 1; rhs < level.objects.size(); ++rhs) {
+            const bs3d::WorldObject& b = level.objects[rhs];
+            if (b.assetId != "garage_door_segment" || hasTag(b, "story_dressing")) {
+                continue;
+            }
+
+            const bool sameFace = bs3d::distanceXZ(a.position, b.position) <= 0.12f &&
+                                  std::fabs(a.scale.x - b.scale.x) <= 0.02f &&
+                                  std::fabs(a.scale.y - b.scale.y) <= 0.02f &&
+                                  std::fabs(a.scale.z - b.scale.z) <= 0.02f;
+            duplicateDoorFaces += sameFace ? 1 : 0;
+        }
+    }
+
+    expect(duplicateDoorFaces == 0,
+           "garage door face dressing is authored once per physical door");
+}
+
 void objectAffordancesCanFeedPrzypalAndWorldMemoryWhenNoisy() {
     const bs3d::IntroLevelData level = bs3d::IntroLevelBuilder::build();
 
@@ -5472,6 +5560,7 @@ int main() {
         introLevelMaterializesMainArteryAsDriveableExpansion();
         introLevelPavilionsMarketAnchorsMatchMaterializedPavilionStrip();
         introLevelDistrictAnchorsStayOnMaterializedObjects();
+        introLevelGarageBeltHasMemoryAnchorCoverage();
         introLevelFlatDriveSurfacesUseSeparatedRenderHeights();
         introLevelMainArteryExpansionHasReadableRouteGuidance();
         introLevelMainArteryRouteIsVehicleTraversableByGruz();
@@ -5498,6 +5587,8 @@ int main() {
         introLevelVisualIdentityV2AddsLivedInMicroBreakup();
         worldObjectInteractionsExposeReadableLowPriorityAffordances();
         visualIdentityHeroDetailsExposeCorrectObjectAffordances();
+        garageAndTrashObjectAffordancesStaySemantic();
+        introLevelGarageDoorFacesAreAuthoredOnce();
         objectAffordancesCanFeedPrzypalAndWorldMemoryWhenNoisy();
         introLevelV092HasReadableMissionTargetsAndDriveRoute();
         introLevelSolidWorldObjectsUseBaseAnchoredCollision();

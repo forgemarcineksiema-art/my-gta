@@ -617,14 +617,14 @@ void addIdentityDressing(IntroLevelData& level) {
                    {8.0f, 0.0f, -4.9f},
                    {0.78f, 1.05f, 0.68f},
                    WorldLocationTag::Trash,
-                   {"trash_dressing", "trash_cluster", "public_nuisance", "artkit_v2"},
+                   {"trash_dressing", "trash_interactable", "trash_cluster", "public_nuisance", "artkit_v2"},
                    objectTint(58, 121, 76));
     addTintedDecor("trash_blue_bin_0",
                    "trash_bin_lowpoly",
                    {9.0f, 0.0f, -4.9f},
                    {0.78f, 1.05f, 0.68f},
                    WorldLocationTag::Trash,
-                   {"trash_dressing", "trash_cluster", "public_nuisance", "artkit_v2"},
+                   {"trash_dressing", "trash_interactable", "trash_cluster", "public_nuisance", "artkit_v2"},
                    objectTint(57, 99, 143));
     addDecor("trash_cardboard_stack_0",
              "cardboard_stack",

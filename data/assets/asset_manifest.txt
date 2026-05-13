@@ -51,6 +51,7 @@ grass_wear_patch|models/flat_decal.obj|1,1,1|82,105,73,118|type=Decal;origin=bot
 dirt_patch|models/flat_decal.obj|1,1,1|104,88,67,126|type=Decal;origin=bottom_center;render=Decal;collision=None;cameraBlocks=false;maxHeight=0.02;tags=decal,ground_patch
 oil_stain|models/flat_decal.obj|1,1,1|45,46,43,112|type=Decal;origin=bottom_center;render=Decal;collision=None;cameraBlocks=false;maxHeight=0.02;tags=decal,ground_patch
 trash_bin_lowpoly|models/trash_bin_lowpoly.obj|1,1,1|58,121,76|type=SolidProp;origin=bottom_center;render=Opaque;collision=Prop;cameraBlocks=false;tags=prop,trash,dynamic,midpoly_target
+oil_drum_lowpoly|models/unit_box.obj|1,1,1|52,54,50|type=SolidProp;origin=bottom_center;render=Opaque;collision=Prop;cameraBlocks=false;tags=prop,garage,midpoly_target
 irregular_asphalt_patch|models/irregular_patch.obj|1,1,1|68,70,66,128|type=Decal;origin=bottom_center;render=Decal;collision=None;cameraBlocks=false;maxHeight=0.05;tags=decal,ground_patch
 irregular_grass_patch|models/irregular_patch.obj|1,1,1|82,105,73,118|type=Decal;origin=bottom_center;render=Decal;collision=None;cameraBlocks=false;maxHeight=0.05;tags=decal,ground_patch
 irregular_dirt_patch|models/irregular_patch.obj|1,1,1|104,88,67,126|type=Decal;origin=bottom_center;render=Decal;collision=None;cameraBlocks=false;maxHeight=0.05;tags=decal,ground_patch

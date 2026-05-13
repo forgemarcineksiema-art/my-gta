@@ -230,6 +230,7 @@ void IntroLevelAuthoring::addGameplayData(IntroLevelData& level) {
         {WorldLocationTag::Shop, level.shopPosition, 9.0f, 100},
         {WorldLocationTag::Parking, {-7.0f, 0.0f, 8.6f}, 11.5f, 80},
         {WorldLocationTag::Garage, {-18.0f, 0.0f, 23.0f}, 8.0f, 90},
+        {WorldLocationTag::Garage, {-33.0f, 0.0f, 19.0f}, 18.0f, 85},
         {WorldLocationTag::Trash, {9.0f, 0.0f, -4.0f}, 6.0f, 85},
         {WorldLocationTag::RoadLoop, {0.0f, 0.0f, 0.0f}, 32.0f, 60},
         {WorldLocationTag::RoadLoop, {22.0f, 0.0f, -30.0f}, 14.0f, 76},

@@ -5,7 +5,8 @@
 #include <string>
 #include <utility>
 
-// Ring 2: Garage Belt dressing. 3 rows (Rysiek at -18 + 2 new at -38, -42),
+// Ring 2: Garage Belt dressing. Rysiek row is dressed by the identity pass;
+// this section adds the two belt rows (-38, -42),
 // door segments, number plates, oil drums, tire stacks, signs,
 // wall grime, oil stains, lane markings, lamps.
 // All dressing objects are no-collision decorative.
@@ -59,24 +60,6 @@ void addGarageBeltDressing(IntroLevelData& level) {
                                                 tintOverride,
                                                 yawRadians);
     };
-
-    // === Row 1 (Rysiek, existing at -18,0,23) door segments + plates ===
-    const float g1Z = 21.28f;
-    for (int door = 0; door < 5; ++door) {
-        const float x = -23.0f + static_cast<float>(door) * 2.55f;
-        addDecor("gb1_door_" + std::to_string(door),
-                 "garage_door_segment",
-                 {x, 0.0f, g1Z},
-                 {2.10f, 1.85f, 0.08f},
-                 WorldLocationTag::Garage,
-                 {"garage_identity", "garage_belt", "midpoly_target"});
-        addDecor("gb1_number_" + std::to_string(door),
-                 "garage_number_plate",
-                 {x, 1.86f, g1Z - 0.03f},
-                 {0.52f, 0.24f, 0.06f},
-                 WorldLocationTag::Garage,
-                 {"garage_identity", "garage_belt", "midpoly_target"});
-    }
 
     // === Row 2 (south belt, 3 doors) at (-38, 0, 10) ===
     const float g2Z = 8.5f;
@@ -134,14 +117,14 @@ void addGarageBeltDressing(IntroLevelData& level) {
 
     // === Oil drums, tire stacks, tool crates ===
     addTintedDecor("gb_oil_0",
-                   "trash_bin_lowpoly",
+                   "oil_drum_lowpoly",
                    {-16.0f, 0.0f, 22.2f},
                    {0.55f, 0.85f, 0.55f},
                    WorldLocationTag::Garage,
                    {"garage_identity", "garage_belt", "garage_cluster", "artkit_v2"},
                    objectTint(52, 54, 50));
     addTintedDecor("gb_oil_1",
-                   "trash_bin_lowpoly",
+                   "oil_drum_lowpoly",
                    {-15.2f, 0.0f, 22.5f},
                    {0.55f, 0.78f, 0.55f},
                    WorldLocationTag::Garage,
@@ -176,7 +159,7 @@ void addGarageBeltDressing(IntroLevelData& level) {
                    {"garage_identity", "garage_belt", "garage_cluster"},
                    objectTint(118, 102, 78));
     addTintedDecor("gb_oil_2",
-                   "trash_bin_lowpoly",
+                   "oil_drum_lowpoly",
                    {Row3X + 1.0f, 0.0f, 27.0f},
                    {0.55f, 0.85f, 0.55f},
                    WorldLocationTag::Garage,

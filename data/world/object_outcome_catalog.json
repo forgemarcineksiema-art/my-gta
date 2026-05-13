@@ -114,7 +114,7 @@
     {
       "idPattern": "trash_disturbed_*",
       "label": "Trash disturbed",
-      "source": "tag:trash_dressing",
+      "source": "tag:trash_interactable",
       "category": "object_use",
       "location": "Trash",
       "speaker": "Smietnik",

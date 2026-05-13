@@ -137,7 +137,7 @@ std::optional<WorldObjectInteractionAffordance> worldObjectInteractionAffordance
                           InteractionAction::UseMarker,
                           18);
     }
-    if (object.assetId == "trash_bin_lowpoly" || hasTag(object, "trash_dressing")) {
+    if (object.assetId == "trash_bin_lowpoly" || hasTag(object, "trash_interactable")) {
         return affordance(object,
                           "trash_disturbed_" + object.id,
                           "E: rusz smietnik",
