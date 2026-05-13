@@ -22,6 +22,7 @@ var tests = new (string Name, Action Body)[]
     ("workspace snapshot presents mission editor surface", WorkspaceSnapshotPresentsMissionEditorSurface),
     ("workspace loader validates mission outcome triggers against catalog", WorkspaceLoaderValidatesMissionOutcomeTriggersAgainstCatalog),
     ("ci verify builds BlokTools app", CiVerifyBuildsBlokToolsApp),
+    ("ci verify fails on native command errors", CiVerifyFailsOnNativeCommandErrors),
 };
 
 var failures = 0;
@@ -56,12 +57,13 @@ static void MissionDocumentStoreLoadsCurrentMissionWithDialogue()
 
     AssertEqual("driving_errand_vertical_slice", mission.Id, "mission id");
     AssertEqual("Szybki kurs przez osiedle", mission.Title, "mission title");
-    AssertEqual(4, mission.Steps.Count, "mission step count");
-    AssertEqual("ReachVehicle", mission.Steps[0].Phase, "first phase");
-    AssertEqual("player_enters_vehicle", mission.Steps[0].Trigger, "first trigger");
-    AssertEqual(3, mission.Dialogue.Count, "dialogue count");
-    AssertEqual("Misja", mission.Dialogue[0].Speaker, "first dialogue speaker");
-    AssertEqual(2, mission.NpcReactions.Count, "mission npc reaction count");
+    AssertEqual(6, mission.Steps.Count, "mission step count");
+    AssertEqual("WalkToShop", mission.Steps[0].Phase, "first phase");
+    AssertEqual("shop_walk_intro", mission.Steps[0].Trigger, "first trigger");
+    AssertEqual("ReturnToLot", mission.Steps[^1].Phase, "last phase");
+    AssertEqual(5, mission.Dialogue.Count, "dialogue count");
+    AssertEqual("Boguś", mission.Dialogue[0].Speaker, "first dialogue speaker");
+    AssertEqual(3, mission.NpcReactions.Count, "mission npc reaction count");
     AssertEqual(1, mission.Cutscenes.Count, "mission cutscene count");
 }
 
@@ -415,15 +417,17 @@ static void WorkspaceSnapshotPresentsMissionEditorSurface()
     var snapshot = BlokWorkspaceLoader.Load(root);
 
     AssertEqual("driving_errand_vertical_slice", snapshot.MissionId, "snapshot mission id");
-    AssertEqual(4, snapshot.MissionNodes.Count, "snapshot mission node count");
-    AssertEqual(2, snapshot.NpcReactions.Count, "snapshot npc reaction count");
+    AssertEqual(6, snapshot.MissionNodes.Count, "snapshot mission node count");
+    AssertEqual(3, snapshot.NpcReactions.Count, "snapshot npc reaction count");
     AssertEqual(1, snapshot.CutsceneLines.Count, "snapshot cutscene count");
     AssertEqual(2, snapshot.Shops.Count, "snapshot shop count");
     AssertEqual(4, snapshot.ShopItems.Count, "snapshot shop item count");
     AssertTrue(snapshot.ObjectOutcomeHooks.Count >= 10, "snapshot has outcome hooks from catalog");
     AssertEmpty(snapshot.Issues, "current workspace editor snapshot issues");
-    AssertTrue(snapshot.MissionNodes[0].Text.Contains("player_enters_vehicle", StringComparison.Ordinal),
-        "mission node includes trigger");
+    AssertTrue(snapshot.MissionNodes[0].Text.Contains("shop_walk_intro", StringComparison.Ordinal),
+        "first mission node includes trigger");
+    AssertTrue(snapshot.MissionNodes.Any(node => node.Text.Contains("player_enters_vehicle", StringComparison.Ordinal)),
+        "mission nodes include vehicle entry trigger");
     AssertTrue(snapshot.ObjectOutcomeHooks.Any(hook => hook.Text.Contains("shop_door_checked", StringComparison.Ordinal)),
         "snapshot includes shop door hook");
     AssertTrue(snapshot.ObjectOutcomeHooks.Any(hook =>
@@ -519,6 +523,17 @@ static void CiVerifyBuildsBlokToolsApp()
     AssertTrue(
         script.Contains("BlokTools.App\\BlokTools.App.csproj", StringComparison.Ordinal),
         "ci_verify.ps1 should build the WPF BlokTools app, not only the test project");
+}
+
+static void CiVerifyFailsOnNativeCommandErrors()
+{
+    var root = WorkspaceRoot();
+    var script = File.ReadAllText(Path.Combine(root, "tools", "ci_verify.ps1"));
+
+    AssertTrue(
+        script.Contains("$LASTEXITCODE", StringComparison.Ordinal) &&
+        script.Contains("throw", StringComparison.Ordinal),
+        "ci_verify.ps1 should fail when a native command exits non-zero");
 }
 
 static string WorkspaceRoot()
