@@ -34,7 +34,7 @@ void IntroLevelAuthoring::addGameplayData(IntroLevelData& level) {
         {"zone_trash", WorldLocationTag::Trash, {9.0f, 0.0f, -4.0f}, {7.0f, 2.0f, 5.0f}, 6.0f, 85, WorldZoneShapeKind::Sphere},
         {"zone_road_loop", WorldLocationTag::RoadLoop, {0.0f, 0.0f, 0.0f}, {80.0f, 2.0f, 72.0f}, 42.0f, 60, WorldZoneShapeKind::Sphere},
         {"zone_main_artery", WorldLocationTag::RoadLoop, {5.0f, 0.0f, -30.0f}, {82.0f, 2.0f, 14.0f}, 38.0f, 76, WorldZoneShapeKind::Sphere},
-        {"zone_pavilions", WorldLocationTag::Shop, {25.0f, 0.0f, -32.0f}, {18.0f, 3.0f, 8.0f}, 10.0f, 90, WorldZoneShapeKind::Sphere},
+        {"zone_pavilions", WorldLocationTag::Shop, {25.0f, 0.0f, -36.0f}, {18.0f, 3.0f, 8.0f}, 12.0f, 90, WorldZoneShapeKind::Sphere},
         {"zone_block13", WorldLocationTag::Block, {-16.0f, 0.0f, 16.0f}, {18.0f, 3.0f, 13.0f}, 10.0f, 40, WorldZoneShapeKind::Sphere},
         {"zone_block11", WorldLocationTag::Block, {5.0f, 0.0f, 17.0f}, {16.0f, 3.0f, 10.0f}, 9.0f, 35, WorldZoneShapeKind::Sphere},
         {"zone_playground", WorldLocationTag::Block, {-6.0f, 0.0f, 14.0f}, {12.0f, 3.0f, 10.0f}, 7.0f, 50, WorldZoneShapeKind::Sphere}
@@ -83,7 +83,7 @@ void IntroLevelAuthoring::addGameplayData(IntroLevelData& level) {
         {"pavilions_market",
          "Pawilony i bazarek",
          "Local economy strip for gossip, debts, receipts, services, and small hustles.",
-         {30.0f, 0.0f, -6.0f},
+         {25.0f, 0.0f, -36.0f},
          18.0f,
          false,
          false,
@@ -128,7 +128,7 @@ void IntroLevelAuthoring::addGameplayData(IntroLevelData& level) {
          {{{-10.0f, 0.0f, 10.5f}, 3.0f, "Spod Bloku 13"},
           {level.parkingLanePosition, 3.0f, "Alejka"},
           {level.shopEntrancePosition, 4.2f, "Pod sklep"},
-          {{30.0f, 0.0f, -6.0f}, 4.4f, "Pawilony"}}},
+          {{25.0f, 0.0f, -30.0f}, 4.4f, "Pawilony"}}},
         {"route_block13_garage_belt",
          "block13",
          "garage_belt",
@@ -148,7 +148,11 @@ void IntroLevelAuthoring::addGameplayData(IntroLevelData& level) {
         {"vp_garages", "Garaże Ryska", {-10.5f, 2.0f, 18.4f}, {-18.0f, 1.0f, 23.0f}},
         {"vp_road_loop", "Pętla drogowa", {10.0f, 2.1f, -12.5f}, level.shopRoadPosition},
         {"vp_block13_front_v2", "Blok 13 front v2", {-16.35f, 1.95f, 8.65f}, {-15.08f, 1.12f, 12.42f}},
-        {"vp_block_rear", "Tył bloku i zaplecze", {-21.5f, 2.4f, 23.5f}, {-16.0f, 3.0f, 19.5f}}
+        {"vp_block_rear", "Tył bloku i zaplecze", {-21.5f, 2.4f, 23.5f}, {-16.0f, 3.0f, 19.5f}},
+        {"vp_playground", "Plac zabaw i trzepak", {-8.5f, 2.2f, 7.0f}, {-6.0f, 0.8f, 14.0f}},
+        {"vp_pavilions", "Pawilony przy arterii", {14.5f, 2.4f, -25.5f}, {25.0f, 1.2f, -34.0f}},
+        {"vp_main_artery", "Główna arteria", {4.0f, 2.6f, -21.0f}, {5.0f, 0.7f, -30.0f}},
+        {"vp_garage_belt", "Pas garaży", {-23.5f, 2.4f, 16.0f}, {-30.75f, 0.8f, 19.0f}}
     };
 
     const FallbackPropStyle fallbackStyles[] = {

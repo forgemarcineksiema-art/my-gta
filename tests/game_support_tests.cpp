@@ -591,6 +591,66 @@ void introLevelMaterializesMainArteryAsDriveableExpansion() {
     }
 }
 
+void introLevelPavilionsMarketAnchorsMatchMaterializedPavilionStrip() {
+    const bs3d::IntroLevelData level = bs3d::IntroLevelBuilder::build();
+
+    const bs3d::WorldObject* pavilion = findObject(level, "pavilion_row");
+    const bs3d::WorldObject* artery = findObject(level, "main_artery_spine");
+    expect(pavilion != nullptr, "pavilion row exists before anchor coherence checks");
+    expect(artery != nullptr, "main artery exists before pavilion route checks");
+
+    const bs3d::DistrictRewirPlan* pavilionsRewir = nullptr;
+    for (const bs3d::DistrictRewirPlan& rewir : level.districtRewirs) {
+        if (rewir.id == "pavilions_market") {
+            pavilionsRewir = &rewir;
+            break;
+        }
+    }
+    expect(pavilionsRewir != nullptr, "pavilions market rewir exists");
+    expect(bs3d::distanceXZ(pavilionsRewir->center, pavilion->position) <= 1.0f,
+           "pavilions market rewir center matches the materialized pavilion strip");
+
+    bool hasPavilionZone = false;
+    for (const bs3d::WorldZone& zone : level.zones) {
+        hasPavilionZone = hasPavilionZone ||
+                          (zone.id == "zone_pavilions" &&
+                           zone.tag == bs3d::WorldLocationTag::Shop &&
+                           bs3d::distanceXZ(zone.center, pavilion->position) <= 1.0f &&
+                           zone.radius >= 10.0f);
+    }
+    expect(hasPavilionZone, "pavilions zone is anchored to the materialized pavilion strip");
+
+    const bs3d::WorldLandmark* landmark = findLandmarkByRole(level, "pavilions");
+    expect(landmark != nullptr, "pavilions materialization exports a landmark");
+    if (landmark != nullptr) {
+        expect(bs3d::distanceXZ(landmark->position, pavilion->position) <= 3.0f,
+               "pavilions landmark stays on the pavilion frontage");
+    }
+
+    const bs3d::DistrictRoutePlan* route = nullptr;
+    for (const bs3d::DistrictRoutePlan& candidate : level.districtRoutePlans) {
+        if (candidate.id == "route_block13_pavilions_market") {
+            route = &candidate;
+            break;
+        }
+    }
+    expect(route != nullptr && !route->points.empty(), "pavilions market has an authored approach route");
+    if (route != nullptr && !route->points.empty()) {
+        const bs3d::RoutePoint& endpoint = route->points.back();
+        expect(bs3d::distanceXZ(endpoint.position, pavilion->position) <= 8.0f,
+               "pavilions route ends at the pavilion frontage, not a different yard");
+        expect(!pointInsideBoxCollision(*pavilion, endpoint.position, 0.05f),
+               "pavilions route endpoint stays outside the pavilion building collision");
+        expect(pointInsideVisualFootprint(*artery, endpoint.position, 0.35f),
+               "pavilions route endpoint lands on the artery surface in front of the strip");
+    }
+
+    const float pavilionNorthEdge = pavilion->position.z + pavilion->scale.z * 0.5f;
+    const float arterySouthEdge = artery->position.z - artery->scale.z * 0.5f;
+    expect(pavilionNorthEdge <= arterySouthEdge + 0.05f,
+           "pavilion building footprint sits beside the artery instead of on the drive surface");
+}
+
 void introLevelFlatDriveSurfacesUseSeparatedRenderHeights() {
     const bs3d::IntroLevelData level = bs3d::IntroLevelBuilder::build();
 
@@ -3148,6 +3208,7 @@ void introLevelSolidWorldObjectsUseBaseAnchoredCollision() {
         "future_rewir_wall_west",
         "future_rewir_wall_east",
         "future_rewir_wall_south",
+        "future_rewir_wall_south_east",
         "future_rewir_wall_north"};
 
     for (const std::string& id : baseAnchoredSolids) {
@@ -3160,6 +3221,45 @@ void introLevelSolidWorldObjectsUseBaseAnchoredCollision() {
                    0.001f,
                    "solid world collision is centered above the authored ground anchor: " + id);
     }
+}
+
+void introLevelBoundaryWallsShowTheirWholeBlockingFootprint() {
+    const bs3d::IntroLevelData level = bs3d::IntroLevelBuilder::build();
+
+    const std::vector<std::string> boundaryWalls{
+        "future_rewir_wall_west",
+        "future_rewir_wall_east",
+        "future_rewir_wall_south",
+        "future_rewir_wall_south_east",
+        "future_rewir_wall_north"};
+
+    for (const std::string& id : boundaryWalls) {
+        const bs3d::WorldObject* wall = findObject(level, id);
+        expect(wall != nullptr, "boundary wall exists: " + id);
+        expect(wall->collision.kind == bs3d::WorldCollisionShapeKind::Box,
+               "boundary wall uses box collision: " + id);
+        expect(wall->scale.x + 0.001f >= wall->collision.size.x,
+               "boundary wall visible X footprint covers its blocking X footprint: " + id);
+        expect(wall->scale.z + 0.001f >= wall->collision.size.z,
+               "boundary wall visible Z footprint covers its blocking Z footprint: " + id);
+    }
+}
+
+void introLevelGarageBeltLaneKeepsSixMeterDriveableScale() {
+    const bs3d::IntroLevelData level = bs3d::IntroLevelBuilder::build();
+
+    const bs3d::WorldObject* lane = findObject(level, "garage_lane");
+    const bs3d::WorldObject* row2 = findObject(level, "garage_row_belt_2");
+    expect(lane != nullptr, "garage belt has a side-street lane surface");
+    expect(row2 != nullptr, "garage belt has row 2 for lane clearance checks");
+
+    expect(lane->scale.x >= 5.8f,
+           "garage belt side street is authored at roughly six meters for gruz driving");
+
+    const float laneWestEdge = lane->position.x - lane->scale.x * 0.5f;
+    const float row2EastCollisionEdge = row2->position.x + row2->collision.size.x * 0.5f;
+    expect(laneWestEdge + 0.05f >= row2EastCollisionEdge,
+           "garage belt lane does not visually bury itself inside row 2 collision");
 }
 
 void introLevelBuildWithManifestEnforcesRuntimeAssetContract() {
@@ -3857,6 +3957,58 @@ void visualIdentityV2HasDedicatedQABaselineViewpoints() {
 
     expect(level.visualBaselines.size() >= 9,
            "visual baseline cycle includes original coverage plus v2 identity close-ups");
+}
+
+void expandedRewirBaselinesCoverMaterializedWorldRings() {
+    const bs3d::IntroLevelData level = bs3d::IntroLevelBuilder::build();
+
+    const auto findViewpoint = [&](const std::string& id) -> const bs3d::WorldViewpoint* {
+        for (const bs3d::WorldViewpoint& viewpoint : level.visualBaselines) {
+            if (viewpoint.id == id) {
+                return &viewpoint;
+            }
+        }
+        return nullptr;
+    };
+
+    const bs3d::WorldObject* playground = findObject(level, "playground_court");
+    const bs3d::WorldObject* pavilion = findObject(level, "pavilion_row");
+    const bs3d::WorldObject* artery = findObject(level, "main_artery_spine");
+    const bs3d::WorldObject* garageLane = findObject(level, "garage_lane");
+    expect(playground != nullptr, "playground court exists before baseline checks");
+    expect(pavilion != nullptr, "pavilion row exists before baseline checks");
+    expect(artery != nullptr, "main artery exists before baseline checks");
+    expect(garageLane != nullptr, "garage belt lane exists before baseline checks");
+
+    const bs3d::WorldViewpoint* playgroundView = findViewpoint("vp_playground");
+    const bs3d::WorldViewpoint* pavilionView = findViewpoint("vp_pavilions");
+    const bs3d::WorldViewpoint* arteryView = findViewpoint("vp_main_artery");
+    const bs3d::WorldViewpoint* garageBeltView = findViewpoint("vp_garage_belt");
+
+    expect(playgroundView != nullptr, "visual baseline covers materialized playground");
+    expect(pavilionView != nullptr, "visual baseline covers materialized pavilions");
+    expect(arteryView != nullptr, "visual baseline covers materialized main artery");
+    expect(garageBeltView != nullptr, "visual baseline covers materialized garage belt");
+
+    if (playgroundView != nullptr) {
+        expect(bs3d::distanceXZ(playgroundView->target, playground->position) <= 2.0f,
+               "playground baseline targets the authored playground footprint");
+    }
+    if (pavilionView != nullptr) {
+        expect(bs3d::distanceXZ(pavilionView->target, pavilion->position) <= 2.0f,
+               "pavilion baseline targets the authored pavilion row");
+    }
+    if (arteryView != nullptr) {
+        expect(pointInsideVisualFootprint(*artery, arteryView->target, 0.5f),
+               "main artery baseline target sits on the authored artery surface");
+    }
+    if (garageBeltView != nullptr) {
+        expect(pointInsideVisualFootprint(*garageLane, garageBeltView->target, 0.5f),
+               "garage belt baseline target sits on the side-street lane");
+    }
+
+    expect(level.visualBaselines.size() >= 13,
+           "visual baseline cycle covers the expanded rewir materialization, not only Ring 0");
 }
 
 void introLevelV098GroundPatchesReadAsMaterialsNotBlackArtifacts() {
@@ -4969,6 +5121,7 @@ int main() {
         introLevelExportsDistrictExpansionRoutePlans();
         introLevelBuildsDistrictPlanDebugOverlay();
         introLevelMaterializesMainArteryAsDriveableExpansion();
+        introLevelPavilionsMarketAnchorsMatchMaterializedPavilionStrip();
         introLevelFlatDriveSurfacesUseSeparatedRenderHeights();
         introLevelMainArteryExpansionHasReadableRouteGuidance();
         introLevelMainArteryRouteIsVehicleTraversableByGruz();
@@ -4996,6 +5149,8 @@ int main() {
         objectAffordancesCanFeedPrzypalAndWorldMemoryWhenNoisy();
         introLevelV092HasReadableMissionTargetsAndDriveRoute();
         introLevelSolidWorldObjectsUseBaseAnchoredCollision();
+        introLevelBoundaryWallsShowTheirWholeBlockingFootprint();
+        introLevelGarageBeltLaneKeepsSixMeterDriveableScale();
         introLevelBuildWithManifestEnforcesRuntimeAssetContract();
         introLevelPopulateWorldPreservesAuthoredObjectYaw();
         runtimeWorldRenderingUsesWorldObjectsAsSingleSourceOfTruth();
@@ -5022,6 +5177,7 @@ int main() {
         introLevelV094BalancesScaleAndMaterialCohesion();
         introLevelV095AddsArtKitQualityBaseline();
         visualIdentityV2HasDedicatedQABaselineViewpoints();
+        expandedRewirBaselinesCoverMaterializedWorldRings();
         introLevelV098GroundPatchesReadAsMaterialsNotBlackArtifacts();
         introLevelV099DriveSurfacesDoNotClipBuildingsAndCoverRoute();
         introLevelV096AuthoringSectionsCanBuildTheSameLevel();

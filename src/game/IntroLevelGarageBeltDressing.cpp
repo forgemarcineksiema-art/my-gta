@@ -14,7 +14,7 @@ namespace bs3d::IntroLevelDressingSections {
 
 namespace {
 
-constexpr float LaneX = -31.5f;
+constexpr float LaneX = -30.75f;
 constexpr float Row2X = -38.0f;
 constexpr float Row3X = -42.0f;
 
@@ -200,7 +200,7 @@ void addGarageBeltDressing(IntroLevelData& level) {
     // === Signs ===
     addDecor("gb_sign_private",
              "street_sign",
-             {-31.5f, 0.0f, 12.0f},
+             {LaneX, 0.0f, 12.0f},
              {0.55f, 1.40f, 0.08f},
              WorldLocationTag::Garage,
              {"garage_identity", "garage_belt", "vertical_readability", "midpoly_target"});

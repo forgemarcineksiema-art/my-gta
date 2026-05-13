@@ -16,7 +16,7 @@ namespace {
 
 constexpr float ArterySidewalkY = 0.022f;
 constexpr float ArteryDecalY = -0.002f;
-constexpr float PavZ = -32.0f;
+constexpr float PavZ = -36.0f;
 constexpr float ArteryZ = -30.0f;
 
 } // namespace
@@ -135,7 +135,7 @@ void addArteryAndPavilionsDressing(IntroLevelData& level) {
              3.1416f);
 
     // === Pavilion storefronts ===
-    const float shopFrontZ = PavZ - 2.05f;
+    const float shopFrontZ = PavZ + 2.05f;
 
     // --- Unit 1: Zenon satellite (left) ---
     const float u1x = 20.8f;
@@ -272,7 +272,7 @@ void addArteryAndPavilionsDressing(IntroLevelData& level) {
                    objectTint(224, 190, 68));
 
     // === Pavilion rear: bins, cardboard, wall wear ===
-    const float rearZ = PavZ + 2.05f;
+    const float rearZ = PavZ - 2.05f;
     addTintedDecor("pav_rear_bin_green",
                    "trash_bin_lowpoly",
                    {u1x - 1.0f, 0.0f, rearZ + 0.30f},
