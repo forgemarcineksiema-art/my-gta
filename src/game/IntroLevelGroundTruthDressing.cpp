@@ -77,8 +77,8 @@ void addGroundTruthAndClutter(IntroLevelData& level) {
     addCurb("curb_shop_apron_back", {18.0f, 0.055f, -21.55f}, {12.2f, 0.08f, 0.10f}, WorldLocationTag::Shop);
     addCurb("curb_shop_apron_left", {11.82f, 0.055f, -22.35f}, {0.10f, 0.08f, 1.78f}, WorldLocationTag::Shop);
     addCurb("curb_shop_apron_right", {24.18f, 0.055f, -22.35f}, {0.10f, 0.08f, 1.78f}, WorldLocationTag::Shop);
-    addCurb("curb_block_walk_front", {-16.0f, 0.055f, 10.88f}, {15.6f, 0.08f, 0.10f}, WorldLocationTag::Block);
-    addCurb("curb_block_walk_back", {-16.0f, 0.055f, 12.18f}, {15.6f, 0.08f, 0.10f}, WorldLocationTag::Block);
+    addCurb("curb_block_walk_front", {-16.0f, 0.055f, 10.12f}, {15.6f, 0.08f, 0.10f}, WorldLocationTag::Block);
+    addCurb("curb_block_walk_back", {-16.0f, 0.055f, 11.28f}, {15.6f, 0.08f, 0.10f}, WorldLocationTag::Block);
     addCurb("curb_road_south_inner", {3.0f, 0.050f, -21.45f}, {48.5f, 0.075f, 0.095f}, WorldLocationTag::RoadLoop);
     addCurb("curb_road_south_outer", {3.0f, 0.050f, -26.55f}, {48.5f, 0.075f, 0.095f}, WorldLocationTag::RoadLoop);
     addCurb("curb_road_west_inner", {-28.30f, 0.050f, 0.0f}, {0.095f, 0.075f, 42.5f}, WorldLocationTag::RoadLoop);
@@ -98,13 +98,13 @@ void addGroundTruthAndClutter(IntroLevelData& level) {
     for (int stop = 0; stop < 5; ++stop) {
         addParkingFrame("parking_stop_" + std::to_string(stop),
                         "parking_stop",
-                        {-12.4f + static_cast<float>(stop) * 2.45f, 0.06f, 11.64f},
+                        {-12.4f + static_cast<float>(stop) * 2.45f, 0.06f, 11.05f},
                         {1.10f, 0.16f, 0.30f});
     }
     for (int fence = 0; fence < 5; ++fence) {
         addParkingFrame("parking_fence_back_" + std::to_string(fence),
                         "fence_panel",
-                        {-13.6f + static_cast<float>(fence) * 3.2f, 0.0f, 12.38f},
+                        {-13.6f + static_cast<float>(fence) * 3.2f, 0.0f, 11.28f},
                         {2.45f, 1.30f, 0.10f});
     }
     addParkingFrame("parking_planter_left", "planter_concrete", {-15.80f, 0.0f, 5.10f}, {0.95f, 0.52f, 0.62f});
@@ -165,7 +165,7 @@ void addGroundTruthAndClutter(IntroLevelData& level) {
     addClutter("shop_poster_right", "shop_poster", {21.2f, 0.52f, shopFrontZ - 0.10f}, {0.55f, 0.78f, 0.05f}, WorldLocationTag::Shop, {"shop_identity", "shop_cluster"});
     addClutter("shop_cardboard_by_door", "cardboard_stack", {20.6f, 0.0f, -23.02f}, {0.55f, 0.42f, 0.45f}, WorldLocationTag::Shop, {"shop_identity", "shop_cluster"});
     addClutter("shop_planter_corner", "planter_concrete", {13.0f, 0.0f, -22.92f}, {0.82f, 0.42f, 0.55f}, WorldLocationTag::Shop, {"shop_identity", "shop_cluster"});
-    addClutter("block_notice_stand", "notice_board", {-18.7f, 0.0f, 10.65f}, {1.45f, 1.05f, 0.10f}, WorldLocationTag::Block, {"vertical_readability", "story_dressing", "block_cluster"});
+    addClutter("block_notice_stand", "notice_board", {-18.7f, 0.0f, 9.95f}, {1.45f, 1.05f, 0.10f}, WorldLocationTag::Block, {"vertical_readability", "story_dressing", "block_cluster"});
     addTintedDecor("footpath_weathered_planter",
                    "planter_concrete",
                    {-0.5f, 0.0f, -13.2f},
@@ -174,8 +174,8 @@ void addGroundTruthAndClutter(IntroLevelData& level) {
                    {"osiedle_clutter", "footpath_marker", "block_cluster", "landmark"},
                    objectTint(74, 78, 70),
                    -0.10f);
-    addClutter("block_planter_0", "planter_concrete", {-13.4f, 0.0f, 10.72f}, {1.05f, 0.46f, 0.58f}, WorldLocationTag::Block, {"story_dressing", "block_cluster"});
-    addClutter("block_planter_1", "planter_concrete", {-21.7f, 0.0f, 10.72f}, {1.05f, 0.46f, 0.58f}, WorldLocationTag::Block, {"story_dressing", "block_cluster"});
+    addClutter("block_planter_0", "planter_concrete", {-13.4f, 0.0f, 9.92f}, {1.05f, 0.46f, 0.58f}, WorldLocationTag::Block, {"story_dressing", "block_cluster"});
+    addClutter("block_planter_1", "planter_concrete", {-21.7f, 0.0f, 9.92f}, {1.05f, 0.46f, 0.58f}, WorldLocationTag::Block, {"story_dressing", "block_cluster"});
     addClutter("garage_tool_crate", "cardboard_stack", {-12.0f, 0.0f, 20.45f}, {0.80f, 0.60f, 0.62f}, WorldLocationTag::Garage, {"garage_identity", "garage_cluster"});
     addClutter("garage_oil_sign", "street_sign", {-24.1f, 0.0f, 20.75f}, {0.50f, 1.20f, 0.08f}, WorldLocationTag::Garage, {"garage_identity", "vertical_readability", "garage_cluster"});
     addClutter("garage_tire_stack_placeholder", "concrete_barrier", {-14.2f, 0.0f, 20.50f}, {0.72f, 0.55f, 0.52f}, WorldLocationTag::Garage, {"garage_identity", "garage_cluster"});
@@ -266,7 +266,7 @@ void addGroundTruthAndClutter(IntroLevelData& level) {
     addGroundPatch("grass_wear_block_side", "irregular_grass_patch", {-23.2f, GroundPatchRenderY, 8.0f}, {1.7f, 0.007f, 4.5f}, WorldLocationTag::Block, {"grass_patch", "block_cluster"});
     addGroundPatch("dirt_patch_under_fence", "irregular_dirt_patch", {-7.0f, GroundPatchRenderY, 12.25f}, {7.5f, 0.007f, 0.75f}, WorldLocationTag::Parking, {"grass_patch", "parking_frame"});
 
-    addClutter("lamp_block_front", "lamp_post_lowpoly", {-16.1f, 0.0f, 10.68f}, {0.18f, 3.0f, 0.18f}, WorldLocationTag::Block, {"vertical_readability", "block_cluster", "artkit_v2"});
+    addClutter("lamp_block_front", "lamp_post_lowpoly", {-18.25f, 0.0f, 10.18f}, {0.18f, 3.0f, 0.18f}, WorldLocationTag::Block, {"vertical_readability", "block_cluster", "artkit_v2"});
     addClutter("lamp_garage_mid", "lamp_post_lowpoly", {-18.0f, 0.0f, 20.48f}, {0.18f, 3.0f, 0.18f}, WorldLocationTag::Garage, {"vertical_readability", "garage_cluster", "artkit_v2"});
     addClutter("lamp_trash_area", "lamp_post_lowpoly", {11.5f, 0.0f, -3.8f}, {0.18f, 2.8f, 0.18f}, WorldLocationTag::Trash, {"vertical_readability", "artkit_v2"});
     addClutter("lamp_road_mid_south", "lamp_post_lowpoly", {4.5f, 0.0f, -21.5f}, {0.18f, 3.1f, 0.18f}, WorldLocationTag::RoadLoop, {"vertical_readability", "artkit_v2"});
@@ -280,10 +280,10 @@ void addGroundTruthAndClutter(IntroLevelData& level) {
     addClutter("fence_road_west_outer", "fence_panel", {-33.95f, 0.0f, 0.0f}, {2.8f, 1.30f, 0.10f}, WorldLocationTag::RoadLoop, {"drive_readability"}, 1.5708f);
 
     addClutter("planter_shop_side_right", "planter_concrete", {12.5f, 0.0f, -22.98f}, {0.72f, 0.38f, 0.48f}, WorldLocationTag::Shop, {"shop_identity", "shop_cluster"});
-    addClutter("planter_block_entrance", "planter_concrete", {-13.8f, 0.0f, 10.68f}, {0.88f, 0.42f, 0.52f}, WorldLocationTag::Block, {"story_dressing", "block_cluster"});
+    addClutter("planter_block_entrance", "planter_concrete", {-13.8f, 0.0f, 9.98f}, {0.88f, 0.42f, 0.52f}, WorldLocationTag::Block, {"story_dressing", "block_cluster"});
 
     addClutter("cardboard_garage_scatter", "cardboard_stack", {-15.5f, 0.0f, 20.72f}, {0.62f, 0.45f, 0.50f}, WorldLocationTag::Garage, {"garage_identity", "garage_cluster"});
-    addClutter("cardboard_block_corner", "cardboard_stack", {-23.5f, 0.0f, 10.80f}, {0.58f, 0.38f, 0.46f}, WorldLocationTag::Block, {"story_dressing", "block_cluster"});
+    addClutter("cardboard_block_corner", "cardboard_stack", {-23.5f, 0.0f, 9.98f}, {0.58f, 0.38f, 0.46f}, WorldLocationTag::Block, {"story_dressing", "block_cluster"});
 
     addTintedDecor("garage_wall_stain_top",
                    "wall_stain",
@@ -308,7 +308,7 @@ void addGroundTruthAndClutter(IntroLevelData& level) {
                    objectTint(76, 72, 64, 108));
 
     addClutter("sign_garage_private", "street_sign", {-27.5f, 0.0f, 21.2f}, {0.52f, 1.35f, 0.08f}, WorldLocationTag::Garage, {"garage_identity", "vertical_readability", "garage_cluster"});
-    addClutter("sign_block_info_board", "street_sign", {-18.5f, 0.0f, 10.78f}, {0.55f, 1.55f, 0.08f}, WorldLocationTag::Block, {"vertical_readability", "story_dressing", "block_cluster"});
+    addClutter("sign_block_info_board", "street_sign", {-18.5f, 0.0f, 9.88f}, {0.55f, 1.55f, 0.08f}, WorldLocationTag::Block, {"vertical_readability", "story_dressing", "block_cluster"});
 
     addClutter("barrier_road_edge_north", "concrete_barrier", {0.5f, 0.0f, -16.5f}, {1.80f, 0.55f, 0.42f}, WorldLocationTag::RoadLoop, {"drive_readability"});
     addClutter("barrier_parking_side", "concrete_barrier", {2.2f, 0.0f, 5.8f}, {1.55f, 0.55f, 0.42f}, WorldLocationTag::Parking, {"drive_readability", "parking_frame"});

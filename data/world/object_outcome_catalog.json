@@ -77,6 +77,16 @@
       }
     },
     {
+      "id": "halina_window_witnessed",
+      "label": "Halina witness window checked",
+      "source": "tag:halina_witness",
+      "category": "object_use",
+      "location": "Block",
+      "speaker": "Halina",
+      "line": "Ja tu nie pilnuje, ja tylko wszystko widze.",
+      "missionTag": "halina_witness_check"
+    },
+    {
       "idPattern": "block_notice_read_*",
       "label": "Block notice read",
       "source": "tag:block_notice",

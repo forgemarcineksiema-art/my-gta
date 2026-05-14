@@ -88,8 +88,8 @@ struct DistrictRouteTraversalReport {
 struct IntroLevelBuildConfig {
     Vec3 playerStart{-12.0f, 0.0f, -7.0f};
     Vec3 npcPosition{-12.0f, 0.0f, -10.0f};
-    Vec3 vehicleStart{-7.0f, 0.0f, 9.4f};
-    Vec3 parkingExitPosition{-1.0f, 0.0f, 7.0f};
+    Vec3 vehicleStart{-2.35f, 0.0f, 7.75f};
+    Vec3 parkingExitPosition{-1.0f, 0.0f, 5.0f};
     Vec3 parkingLanePosition{-0.5f, 0.0f, 1.0f};
     Vec3 roadBendPosition{3.0f, 0.0f, -10.0f};
     Vec3 shopRoadPosition{8.0f, 0.0f, -18.0f};
@@ -98,7 +98,7 @@ struct IntroLevelBuildConfig {
     Vec3 zenonPosition{17.2f, 0.0f, -21.2f};
     Vec3 lolekPosition{9.0f, 0.0f, -4.2f};
     Vec3 receiptHolderPosition{2.2f, 0.0f, -12.2f};
-    Vec3 dropoffPosition{-7.0f, 0.0f, 8.6f};
+    Vec3 dropoffPosition{-7.0f, 0.0f, 8.2f};
     Vec3 initialChaserPosition{20.0f, 0.0f, -24.0f};
 };
 
@@ -116,8 +116,8 @@ struct IntroLevelData {
 
     Vec3 playerStart{-12.0f, 0.0f, -7.0f};
     Vec3 npcPosition{-12.0f, 0.0f, -10.0f};
-    Vec3 vehicleStart{-7.0f, 0.0f, 9.4f};
-    Vec3 parkingExitPosition{-1.0f, 0.0f, 7.0f};
+    Vec3 vehicleStart{-2.35f, 0.0f, 7.75f};
+    Vec3 parkingExitPosition{-1.0f, 0.0f, 5.0f};
     Vec3 parkingLanePosition{-0.5f, 0.0f, 1.0f};
     Vec3 roadBendPosition{3.0f, 0.0f, -10.0f};
     Vec3 shopRoadPosition{8.0f, 0.0f, -18.0f};
@@ -126,7 +126,7 @@ struct IntroLevelData {
     Vec3 zenonPosition{17.2f, 0.0f, -21.2f};
     Vec3 lolekPosition{9.0f, 0.0f, -4.2f};
     Vec3 receiptHolderPosition{2.2f, 0.0f, -12.2f};
-    Vec3 dropoffPosition{-7.0f, 0.0f, 8.6f};
+    Vec3 dropoffPosition{-7.0f, 0.0f, 8.2f};
     Vec3 initialChaserPosition{20.0f, 0.0f, -24.0f};
 };
 

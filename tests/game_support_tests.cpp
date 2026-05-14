@@ -3466,6 +3466,50 @@ void visualIdentityHeroDetailsExposeCorrectObjectAffordances() {
            "shop hero dressing that reuses garage art does not become a garage prompt");
 }
 
+void block13HalinaBalconyIsFormalWitnessAffordance() {
+    const bs3d::IntroLevelData level = bs3d::IntroLevelBuilder::build();
+
+    const bs3d::WorldObject* halinaBalcony = findObject(level, "block13_balcony_1");
+    expect(halinaBalcony != nullptr, "Block 13 has an authored Halina witness balcony");
+    if (halinaBalcony != nullptr) {
+        expect(hasTag(*halinaBalcony, "halina_witness"),
+               "Halina balcony is tagged as a formal witness point, not only facade dressing");
+        expectNear(halinaBalcony->position.x, -11.45f, 0.15f,
+                   "Halina witness balcony stays on the right Block 13 column");
+        expect(halinaBalcony->position.y >= 3.0f && halinaBalcony->position.y <= 4.8f,
+               "Halina witness balcony sits above the entry approach at readable resident height");
+        expect(std::fabs(halinaBalcony->position.z - 12.0f) <= 0.85f,
+               "Halina witness balcony faces the Block 13 courtyard");
+    }
+
+    const std::optional<bs3d::WorldObjectInteractionAffordance> witness =
+        bs3d::findWorldObjectInteractionAffordance(level.objects, "object:block13_balcony_1");
+    expect(witness.has_value(), "Halina witness balcony exposes a world affordance");
+    if (witness.has_value()) {
+        expect(witness->outcomeId == "halina_window_witnessed",
+               "Halina witness uses a stable, block-specific outcome id");
+        expect(witness->location == bs3d::WorldLocationTag::Block,
+               "Halina witness affordance belongs to Block 13, not shop glass");
+        expect(witness->speaker == "Halina",
+               "Halina witness affordance speaks as the authored resident witness");
+        expect(textContains(witness->prompt, "balkon"),
+               "Halina witness affordance names the visible balcony");
+        expect(!textContains(witness->line, "sklep"),
+               "Halina witness line does not reuse shop-window fallback text");
+    }
+
+    const bs3d::WorldDataCatalog catalog = bs3d::loadWorldDataCatalog("data");
+    const bs3d::ObjectOutcomeData* outcome =
+        bs3d::findObjectOutcomeData(catalog.objectOutcomes, "halina_window_witnessed");
+    expect(outcome != nullptr, "runtime outcome data exposes Halina witness hook");
+    if (outcome != nullptr) {
+        expect(outcome->worldEvent == std::nullopt,
+               "looking at Halina's witness point is social pressure, not Przypal farming");
+        expect(outcome->speaker == "Halina",
+               "runtime outcome data preserves Halina as speaker");
+    }
+}
+
 void garageAndTrashObjectAffordancesStaySemantic() {
     const bs3d::IntroLevelData level = bs3d::IntroLevelBuilder::build();
 
@@ -4392,6 +4436,121 @@ void visualIdentityV2HasDedicatedQABaselineViewpoints() {
 
     expect(level.visualBaselines.size() >= 9,
            "visual baseline cycle includes original coverage plus v2 identity close-ups");
+}
+
+void block13FrontCompositionKeepsFacadeAndEntryApproachReadable() {
+    const bs3d::IntroLevelData level = bs3d::IntroLevelBuilder::build();
+
+    const bs3d::WorldObject* entrance = findObject(level, "block13_entrance");
+    const bs3d::WorldObject* balcony = findObject(level, "block13_balcony_0");
+    const bs3d::WorldObject* midWindow = findObject(level, "block13_window_mid_0");
+    const bs3d::WorldObject* rightWindow = findObject(level, "block13_window_right_0");
+    const bs3d::WorldObject* sidewalk = findObject(level, "sidewalk_block_front");
+    expect(entrance != nullptr && balcony != nullptr && midWindow != nullptr && rightWindow != nullptr && sidewalk != nullptr,
+           "Block 13 front composition has entrance, Halina balcony, front windows, and sidewalk anchors");
+
+    if (midWindow != nullptr) {
+        expect(std::fabs(midWindow->position.x + 16.0f) <= 0.20f,
+               "middle Block 13 window aligns to the authored core facade centerline");
+    }
+
+    if (balcony != nullptr && rightWindow != nullptr) {
+        expect(std::fabs(balcony->position.x - rightWindow->position.x) <= 0.45f,
+               "Halina/right-column window aligns with the balcony instead of drifting across the facade");
+        expect(rightWindow->scale.x <= 1.75f && rightWindow->scale.y <= 1.05f,
+               "Block 13 front glass panels fit inside authored model recesses instead of oversized overlays");
+        expect(rightWindow->position.y <= 1.85f,
+               "ground-floor Block 13 front windows sit at the modeled first-floor height");
+    }
+
+    if (sidewalk != nullptr) {
+        const float sidewalkRearEdge = sidewalk->position.z + sidewalk->scale.z * 0.5f;
+        expect(sidewalkRearEdge <= 11.35f,
+               "Block 13 front sidewalk stays in front of the raised facade relief instead of sliding under it");
+    }
+
+    for (const bs3d::WorldObject& object : level.objects) {
+        if (!hasTag(object, "parking_frame") ||
+            (object.assetId != "parking_stop" && object.assetId != "fence_panel")) {
+            continue;
+        }
+        const float rearEdge = object.position.z + object.scale.z * 0.5f;
+        expect(rearEdge <= 11.35f,
+               "parking stops/fence stay in front of the Block 13 entry apron instead of crowding the facade: " +
+                   object.id);
+    }
+
+    if (entrance == nullptr) {
+        return;
+    }
+
+    const float corridorMinX = entrance->position.x - 1.05f;
+    const float corridorMaxX = entrance->position.x + 1.05f;
+    const float corridorMinZ = 10.35f;
+    const float corridorMaxZ = 12.45f;
+
+    const auto overlapsEntryCorridor = [&](const bs3d::WorldObject& object) {
+        const float minX = object.position.x - object.scale.x * 0.5f;
+        const float maxX = object.position.x + object.scale.x * 0.5f;
+        const float minZ = object.position.z - object.scale.z * 0.5f;
+        const float maxZ = object.position.z + object.scale.z * 0.5f;
+        return minX <= corridorMaxX && maxX >= corridorMinX &&
+               minZ <= corridorMaxZ && maxZ >= corridorMinZ;
+    };
+
+    int standaloneTallBlockers = 0;
+    std::string blockerIds;
+    for (const bs3d::WorldObject& object : level.objects) {
+        if (object.id == "block13_entrance" ||
+            object.id == "sidewalk_block_front" ||
+            object.id.find("block13_") == 0 ||
+            hasTag(object, "block_facade") ||
+            object.scale.y < 0.90f) {
+            continue;
+        }
+        if (object.assetId != "lamp_post_lowpoly" &&
+            object.assetId != "bollard_red" &&
+            object.assetId != "street_sign" &&
+            object.assetId != "fence_panel") {
+            continue;
+        }
+        if (overlapsEntryCorridor(object)) {
+            ++standaloneTallBlockers;
+            blockerIds += object.id + " ";
+        }
+    }
+
+    expect(standaloneTallBlockers == 0,
+           "Block 13 entrance approach corridor is free of tall standalone props: " + blockerIds);
+}
+
+void block13ParkingStagingKeepsGruzOutOfFacadeForeground() {
+    const bs3d::IntroLevelData level = bs3d::IntroLevelBuilder::build();
+
+    const bs3d::WorldObject* parkingSurface = findObject(level, "parking_surface");
+    const bs3d::WorldObject* entrance = findObject(level, "block13_entrance");
+    expect(parkingSurface != nullptr && entrance != nullptr,
+           "Block 13 parking staging has parking surface and entrance anchors");
+
+    if (parkingSurface != nullptr) {
+        expect(pointInsideVisualFootprint(*parkingSurface, level.vehicleStart, 0.35f),
+               "authored gruz spawn stays on the parking surface");
+        expect(pointInsideVisualFootprint(*parkingSurface, level.dropoffPosition, 0.35f),
+               "authored parking dropoff stays on the parking surface");
+    }
+
+    const float gruzHalfLength = bs3d::vehicleArtModelSpec().bounds.z * 0.5f;
+    const float entryApronMinZ = 10.35f;
+    expect(level.vehicleStart.z + gruzHalfLength <= entryApronMinZ,
+           "parked gruz leaves the Block 13 facade/entry foreground readable");
+    expect(level.vehicleStart.x >= -3.60f,
+           "parked gruz uses the east parking bay so the Block 13 front view is not car-dominated");
+    expect(level.dropoffPosition.z <= 8.35f,
+           "return-to-parking marker resolves in the parking bay area, not under the facade");
+    if (entrance != nullptr) {
+        expect(std::fabs(level.vehicleStart.x - entrance->position.x) >= 7.5f,
+               "parked gruz stays laterally off the Block 13 entrance axis");
+    }
 }
 
 void expandedRewirBaselinesCoverMaterializedWorldRings() {
@@ -5587,6 +5746,7 @@ int main() {
         introLevelVisualIdentityV2AddsLivedInMicroBreakup();
         worldObjectInteractionsExposeReadableLowPriorityAffordances();
         visualIdentityHeroDetailsExposeCorrectObjectAffordances();
+        block13HalinaBalconyIsFormalWitnessAffordance();
         garageAndTrashObjectAffordancesStaySemantic();
         introLevelGarageDoorFacesAreAuthoredOnce();
         objectAffordancesCanFeedPrzypalAndWorldMemoryWhenNoisy();
@@ -5620,6 +5780,8 @@ int main() {
         introLevelV094BalancesScaleAndMaterialCohesion();
         introLevelV095AddsArtKitQualityBaseline();
         visualIdentityV2HasDedicatedQABaselineViewpoints();
+        block13FrontCompositionKeepsFacadeAndEntryApproachReadable();
+        block13ParkingStagingKeepsGruzOutOfFacadeForeground();
         expandedRewirBaselinesCoverMaterializedWorldRings();
         introLevelV098GroundPatchesReadAsMaterialsNotBlackArtifacts();
         introLevelV099DriveSurfacesDoNotClipBuildingsAndCoverRoute();

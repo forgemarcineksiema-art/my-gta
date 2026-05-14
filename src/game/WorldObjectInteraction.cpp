@@ -146,6 +146,15 @@ std::optional<WorldObjectInteractionAffordance> worldObjectInteractionAffordance
                           InteractionAction::UseMarker,
                           18);
     }
+    if (hasTag(object, "halina_witness")) {
+        return affordance(object,
+                          "halina_window_witnessed",
+                          "E: spojrz na balkon",
+                          "Halina",
+                          "Ja tu nie pilnuje, ja tylko wszystko widze.",
+                          InteractionAction::UseMarker,
+                          16);
+    }
     if (hasTag(object, "glass_surface")) {
         return affordance(object,
                           "glass_peeked_" + object.id,

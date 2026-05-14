@@ -335,32 +335,41 @@ void addIdentityDressing(IntroLevelData& level) {
                    objectTint(62, 58, 48, 96));
 
     const float blockFrontZ = 16.0f - 3.58f;
+    const float blockLeftWindowX = -20.35f;
+    const float blockMidWindowX = -16.0f;
+    const float blockRightWindowX = -11.65f;
+    const Vec3 blockFrontWindowScale{1.55f, 0.95f, 0.08f};
     for (int floor = 0; floor < 3; ++floor) {
-        const float y = 2.20f + static_cast<float>(floor) * 2.60f;
+        const float y = 1.72f + static_cast<float>(floor) * 2.70f;
         addDecor("block13_window_left_" + std::to_string(floor),
                  "block_window_strip",
-                 {-20.1f, y, blockFrontZ},
-                 {2.20f, 1.20f, 0.08f},
+                 {blockLeftWindowX, y, blockFrontZ},
+                 blockFrontWindowScale,
                  WorldLocationTag::Block,
                  {"block_facade", "glass_surface"});
         addDecor("block13_window_mid_" + std::to_string(floor),
                  "block_window_strip",
-                 {-16.4f, y, blockFrontZ},
-                 {2.20f, 1.20f, 0.08f},
+                 {blockMidWindowX, y, blockFrontZ},
+                 blockFrontWindowScale,
                  WorldLocationTag::Block,
                  {"block_facade", "glass_surface"});
         addDecor("block13_window_right_" + std::to_string(floor),
                  "block_window_strip",
-                 {-12.8f, y, blockFrontZ},
-                 {2.20f, 1.20f, 0.08f},
+                 {blockRightWindowX, y, blockFrontZ},
+                 blockFrontWindowScale,
                  WorldLocationTag::Block,
                  {"block_facade", "glass_surface"});
+        std::vector<std::string> balconyTags{"block_facade", "halina_windows"};
+        if (floor == 1) {
+            balconyTags.push_back("halina_witness");
+            balconyTags.push_back("block_hero_v2");
+        }
         addDecor("block13_balcony_" + std::to_string(floor),
                  "balcony_stack",
                  {-11.45f, y - 0.18f, blockFrontZ - 0.42f},
                  {1.65f, 1.0f, 1.0f},
                  WorldLocationTag::Block,
-                 {"block_facade", "halina_windows"});
+                 std::move(balconyTags));
     }
     addDecor("block13_entrance",
              "block_entrance",
@@ -391,14 +400,14 @@ void addIdentityDressing(IntroLevelData& level) {
                    objectTint(74, 68, 58, 120));
     addTintedDecor("block13_front_stain_left",
                    "wall_stain",
-                   {-20.1f, 3.35f, blockFrontZ - 0.13f},
+                   {blockLeftWindowX, 3.35f, blockFrontZ - 0.13f},
                    {1.35f, 0.34f, 0.040f},
                    WorldLocationTag::Block,
                    {"block_facade", "block_hero_v2", "front_facade_stain", "subtle_decal"},
                    objectTint(72, 66, 58, 104));
     addTintedDecor("block13_front_stain_right",
                    "wall_stain",
-                   {-12.8f, 5.48f, blockFrontZ - 0.13f},
+                   {blockRightWindowX, 5.48f, blockFrontZ - 0.13f},
                    {1.10f, 0.30f, 0.040f},
                    WorldLocationTag::Block,
                    {"block_facade", "block_hero_v2", "front_facade_stain", "subtle_decal"},
@@ -570,8 +579,8 @@ void addIdentityDressing(IntroLevelData& level) {
     for (int lane = 0; lane < 6; ++lane) {
         addDecor("parking_bay_line_" + std::to_string(lane),
                  "parking_line",
-                 {-13.2f + static_cast<float>(lane) * 2.45f, 0.065f, 8.55f},
-                 {0.08f, 0.025f, 5.85f},
+                 {-13.2f + static_cast<float>(lane) * 2.45f, 0.065f, 8.25f},
+                 {0.08f, 0.025f, 5.30f},
                  WorldLocationTag::Parking,
                  {"parking_paint"});
     }
@@ -583,7 +592,7 @@ void addIdentityDressing(IntroLevelData& level) {
              {"parking_paint"});
     addDecor("parking_back_line",
              "parking_line",
-             {-7.0f, 0.065f, 11.52f},
+             {-7.0f, 0.065f, 10.96f},
              {14.2f, 0.025f, 0.08f},
              WorldLocationTag::Parking,
              {"parking_paint"});
@@ -601,13 +610,13 @@ void addIdentityDressing(IntroLevelData& level) {
              {"road_readability", "drive_readability"});
     addDecor("parking_bollard_corner_left",
              "bollard_red",
-             {-15.4f, 0.0f, 12.05f},
+             {-14.55f, 0.0f, 10.88f},
              {0.25f, 1.05f, 0.25f},
              WorldLocationTag::Parking,
              {"parking_paint", "drive_readability"});
     addDecor("parking_bollard_corner_right",
              "bollard_red",
-             {1.5f, 0.0f, 12.05f},
+             {1.5f, 0.0f, 10.88f},
              {0.25f, 1.05f, 0.25f},
              WorldLocationTag::Parking,
              {"parking_paint", "drive_readability"});
@@ -668,7 +677,7 @@ void addIdentityDressing(IntroLevelData& level) {
              {"story_dressing", "drive_readability"});
     addDecor("sidewalk_block_front",
              "sidewalk_slab",
-             {-16.0f, 0.035f, 11.55f},
+             {-16.0f, 0.035f, 10.75f},
              {15.0f, 0.05f, 1.20f},
              WorldLocationTag::Block,
              {"story_dressing"});
