@@ -3510,6 +3510,77 @@ void block13HalinaBalconyIsFormalWitnessAffordance() {
     }
 }
 
+void block13EntryPortalAndHalinaWitnessReadAsPrimarySocialAnchor() {
+    const bs3d::IntroLevelData level = bs3d::IntroLevelBuilder::build();
+
+    const bs3d::WorldObject* entrance = findObject(level, "block13_entrance");
+    const bs3d::WorldObject* halinaBalcony = findObject(level, "block13_balcony_1");
+    expect(entrance != nullptr && halinaBalcony != nullptr,
+           "Block 13 entry/witness pass has entrance and Halina balcony anchors");
+
+    const std::vector<std::string> requiredPortalObjects{
+        "block13_entry_frame_left",
+        "block13_entry_frame_right",
+        "block13_entry_frame_top",
+        "block13_entry_canopy",
+        "block13_number_plate",
+        "block13_entry_lamp",
+        "block13_threshold_wear"};
+    for (const std::string& objectId : requiredPortalObjects) {
+        expect(findObject(level, objectId) != nullptr,
+               "Block 13 entrance portal detail exists: " + objectId);
+    }
+
+    int portalDetails = 0;
+    int halinaWitnessVisuals = 0;
+    for (const bs3d::WorldObject& object : level.objects) {
+        if (hasTag(object, "block_entry_portal")) {
+            ++portalDetails;
+            expect(object.zoneTag == bs3d::WorldLocationTag::Block,
+                   "Block entry portal detail keeps Block location: " + object.id);
+            expect(object.collision.kind == bs3d::WorldCollisionShapeKind::None,
+                   "Block entry portal details are facade dressing, not new blockers: " + object.id);
+            if (entrance != nullptr && object.id != "block13_threshold_wear") {
+                expect(std::fabs(object.position.x - entrance->position.x) <= 1.35f,
+                       "Block entry portal detail clusters around the authored entrance: " + object.id);
+                expect(object.position.z <= entrance->position.z + 0.08f,
+                       "Block entry portal detail stays on the visible front face: " + object.id);
+            }
+        }
+        if (hasTag(object, "halina_witness_visual")) {
+            ++halinaWitnessVisuals;
+            expect(object.zoneTag == bs3d::WorldLocationTag::Block,
+                   "Halina witness visual keeps Block location: " + object.id);
+            if (halinaBalcony != nullptr) {
+                expect(std::fabs(object.position.x - halinaBalcony->position.x) <= 0.95f,
+                       "Halina witness visual is attached to the witness balcony column: " + object.id);
+                expect(std::fabs(object.position.y - halinaBalcony->position.y) <= 0.95f,
+                       "Halina witness visual sits on the authored witness balcony height: " + object.id);
+            }
+        }
+    }
+
+    const bs3d::WorldObject* numberPlate = findObject(level, "block13_number_plate");
+    if (entrance != nullptr && numberPlate != nullptr) {
+        expect(numberPlate->position.y >= 2.0f && numberPlate->scale.x <= 0.55f,
+               "Block 13 number plate is readable above the entrance without becoming a signboard");
+    }
+
+    const bs3d::WorldObject* threshold = findObject(level, "block13_threshold_wear");
+    if (entrance != nullptr && threshold != nullptr) {
+        expect(threshold->position.y <= 0.10f,
+               "Block 13 threshold wear sits on the ground plane");
+        expect(std::fabs(threshold->position.x - entrance->position.x) <= 0.35f &&
+                   threshold->position.z < entrance->position.z,
+               "Block 13 threshold wear sits directly in front of the entrance");
+    }
+
+    expect(portalDetails >= 7,
+           "Block 13 entrance has enough portal details to read as the primary access point");
+    expect(halinaWitnessVisuals >= 2,
+           "Halina witness balcony has visible local identity, not only an invisible affordance tag");
+}
+
 void garageAndTrashObjectAffordancesStaySemantic() {
     const bs3d::IntroLevelData level = bs3d::IntroLevelBuilder::build();
 
@@ -5747,6 +5818,7 @@ int main() {
         worldObjectInteractionsExposeReadableLowPriorityAffordances();
         visualIdentityHeroDetailsExposeCorrectObjectAffordances();
         block13HalinaBalconyIsFormalWitnessAffordance();
+        block13EntryPortalAndHalinaWitnessReadAsPrimarySocialAnchor();
         garageAndTrashObjectAffordancesStaySemantic();
         introLevelGarageDoorFacesAreAuthoredOnce();
         objectAffordancesCanFeedPrzypalAndWorldMemoryWhenNoisy();
